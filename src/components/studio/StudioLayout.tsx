@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from "react";
 import AudioUploader from "./AudioUploader";
 import RecordingControls from "./RecordingControls";
 import VisualizerCanvas from "@/components/visualizer/VisualizerCanvas";
-
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 const StudioLayout: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -21,8 +22,13 @@ const StudioLayout: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <header className="mb-6">
+      <header className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Audio Visual Studio</h1>
+        <nav className="flex items-center gap-2">
+          <Link to="/admin">
+            <Button variant="secondary">Admin</Button>
+          </Link>
+        </nav>
       </header>
       <main className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-2">
