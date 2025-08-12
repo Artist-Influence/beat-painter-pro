@@ -1,52 +1,44 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.warn("getUser error", error.message);
-      }
-      if (!mounted) return;
-      setUser(user ?? null);
-      setLoading(false);
-    };
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      // Ensure profile row exists
-      if (u) {
-        try {
-          await supabase.from("user_profiles").upsert(
-            { id: u.id, email: u.email },
-            { onConflict: "id" }
-          );
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn("upsert profile failed", e);
-        }
-      }
+    // 1) Listen for auth changes first (sync-only in callback)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
+      setUser(session?.user ?? null);
     });
 
-    init();
+    // 2) Then fetch current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
+
+  // Ensure a profile row exists for the authenticated user (deferred, no deadlocks)
+  useEffect(() => {
+    if (!user) return;
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.from("profiles").upsert(
+          { user_id: user.id, email: user.email },
+          { onConflict: "user_id" }
+        );
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("upsert profile failed", e);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [user]);
 
   return { user, loading };
 };

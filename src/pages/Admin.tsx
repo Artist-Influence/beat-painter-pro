@@ -6,7 +6,7 @@ import AdminSEO from "./admin/AdminSEO";
 import UserStatsGrid from "./admin/components/UserStatsGrid";
 import UsersTable from "./admin/components/UsersTable";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { useEngagementTracker } from "@/hooks/useEngagementTracker";
 
 const Admin: React.FC = () => {
