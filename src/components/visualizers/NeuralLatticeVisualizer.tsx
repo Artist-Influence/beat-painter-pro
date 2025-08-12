@@ -1,0 +1,160 @@
+import React, { useRef, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Environment } from "@react-three/drei";
+import * as THREE from "three";
+import { VisualizerProps } from ".";
+
+function NeuralLattice({ audioData }: any) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const groupRef = useRef<THREE.Group>(null);
+
+  const extractedColors = (window as any).extractedColors;
+  const primaryColor = extractedColors?.primary || '#ffffff';
+  const secondaryColor = extractedColors?.secondary || '#ffffff';
+  const accentColor = extractedColors?.accent || '#ffffff';
+
+  const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const amplitude = safeAudioData.amplitude || 0;
+
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const positions: number[] = [];
+    const colors: number[] = [];
+    
+    for (let i = 0; i < 2000; i++) {
+      const r = Math.random() * 2.5 + 0.2;
+      const theta = Math.random() * 2 * Math.PI;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+      positions.push(x, y, z);
+
+      const colorChoice = Math.random();
+      let color: THREE.Color;
+      if (colorChoice < 0.4) {
+        color = new THREE.Color(primaryColor);
+      } else if (colorChoice < 0.7) {
+        color = new THREE.Color(secondaryColor);
+      } else {
+        color = new THREE.Color(accentColor);
+      }
+      colors.push(color.r, color.g, color.b);
+    }
+    
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    return geo;
+  }, [primaryColor, secondaryColor, accentColor]);
+
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return sum / 86 / 255;
+  }, [frequency]);
+
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return sum / 85 / 255;
+  }, [frequency]);
+
+  const highs = useMemo(() => {
+    let sum = 0;
+    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
+    return sum / 85 / 255;
+  }, [frequency]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    
+    if (groupRef.current) {
+      const explosiveScale = 1 + bass * 2.5 + 0.3 * Math.sin(t * 6);
+      const beatExplosion = bass > 0.6 ? 1 + bass * 3.0 : 1;
+      groupRef.current.scale.setScalar(explosiveScale * beatExplosion);
+      
+      groupRef.current.rotation.y = t * 1.2 + mids * 4.0;
+      groupRef.current.rotation.x = Math.sin(t * 1.5) * 1.0 + bass * 2.5;
+      groupRef.current.rotation.z = Math.cos(t * 0.8) * 0.8 + highs * 2.0;
+      
+      groupRef.current.position.y = Math.sin(t * 3.0) * 1.0 + amplitude * 2.0 + (bass > 0.7 ? bass * 3.0 : 0);
+    }
+    
+    if (pointsRef.current && pointsRef.current.material) {
+      const material = pointsRef.current.material as THREE.PointsMaterial;
+      material.size = 0.02 + highs * 0.15 + bass * 0.1 + 0.03 * Math.sin(t * 12);
+      material.opacity = 0.5 + highs * 1.5 + bass * 0.8 + 0.2 * Math.sin(t * 8);
+      
+      if (extractedColors?.isNeon) {
+        material.opacity = Math.min(material.opacity * 2.0, 1.0);
+        material.size *= 1.5;
+      }
+      
+      material.needsUpdate = true;
+    }
+  });
+
+  return (
+    <group ref={groupRef} scale={0.08}>
+      <points ref={pointsRef} geometry={geometry}>
+        <pointsMaterial
+          vertexColors
+          size={0.04}
+          sizeAttenuation
+          depthWrite={false}
+          transparent
+          opacity={0.6}
+          blending={extractedColors?.isNeon ? THREE.AdditiveBlending : THREE.NormalBlending}
+        />
+      </points>
+      <mesh>
+        <sphereGeometry args={[2.0, 32, 32]} />
+        <meshBasicMaterial 
+          color={primaryColor} 
+          wireframe 
+          transparent 
+          opacity={0.1 + mids * 0.8 + bass * 0.6}
+        />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[2.8, 16, 16]} />
+        <meshBasicMaterial 
+          color={secondaryColor} 
+          wireframe 
+          transparent 
+          opacity={0.05 + highs * 0.5}
+        />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[3.5, 8, 8]} />
+        <meshBasicMaterial 
+          color={accentColor} 
+          wireframe 
+          transparent 
+          opacity={0.03 + bass * 0.4}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+export default function NeuralLatticeVisualizer({
+  audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 },
+  styleAdjustments = { brightness: 100, saturation: 100, contrast: 100 },
+  width = 1080,
+  height = 1080,
+  zoomLevel = 1,
+  backgroundColor = '#00FF00',
+}: VisualizerProps & { 
+  styleAdjustments?: { brightness: number; saturation: number; contrast: number };
+}) {
+  return (
+    <>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[4, 7, 6]} intensity={0.8} />
+      <Environment preset="city" />
+      <NeuralLattice audioData={audioData} />
+    </>
+  );
+}
