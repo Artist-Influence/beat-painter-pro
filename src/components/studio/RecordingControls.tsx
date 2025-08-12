@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { visualizerRegistry } from "@/components/visualizers";
 import { useWebMRecorder } from "@/hooks/useWebMRecorder";
 import { useStudioStore } from "@/stores/studioStore";
+import { logEvent } from "@/lib/analytics";
 
 interface RecordingControlsProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -22,7 +23,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Visualizer</Label>
-        <Select value={selected} onValueChange={(v) => setSelected(v as any)}>
+        <Select value={selected} onValueChange={(v) => { setSelected(v as any); logEvent("visualizer_selected", { visualizer_key: v }); }}>
           <SelectTrigger>
             <SelectValue placeholder="Select visualizer" />
           </SelectTrigger>
@@ -68,7 +69,9 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
         onClick={() => {
           if (isRecording) {
             stopRecording();
+            logEvent("recording_stopped", { visualizer_key: selected });
           } else {
+            logEvent("recording_started", { visualizer_key: selected });
             startRecording(startAt, backgroundColor, selected);
           }
         }}

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AdminSEO from "./admin/AdminSEO";
 import UserStatsGrid from "./admin/components/UserStatsGrid";
+import WeeklySessionsChart from "./admin/components/WeeklySessionsChart";
 import UsersTable from "./admin/components/UsersTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,7 @@ const Admin: React.FC = () => {
     queryKey: ["admin-dashboard"],
     queryFn: async () => {
       const [profilesRes, sessionsRes, eventsRes] = await Promise.all([
-        supabase.from("profiles").select("id,email"),
+        supabase.from("profiles").select("user_id,email"),
         supabase.from("user_sessions").select("user_id,started_at,duration_seconds"),
         supabase.from("visualizer_events").select("user_id"),
       ]);
@@ -27,7 +28,8 @@ const Admin: React.FC = () => {
       const usersMap: Record<string, { id: string; email: string | null; visualizers: number; totalMinutes: number; lastActive: string | null }> = {};
 
       profiles.forEach((p: any) => {
-        usersMap[p.id] = { id: p.id, email: p.email, visualizers: 0, totalMinutes: 0, lastActive: null };
+        if (!p.user_id) return;
+        usersMap[p.user_id] = { id: p.user_id, email: p.email, visualizers: 0, totalMinutes: 0, lastActive: null };
       });
 
       events.forEach((e: any) => {
@@ -52,7 +54,25 @@ const Admin: React.FC = () => {
       const since = Date.now() - 24 * 60 * 60 * 1000;
       const activeLast24h = users.filter((u) => (u.lastActive ? new Date(u.lastActive).getTime() >= since : false)).length;
 
-      return { users, stats: { totalUsers, totalVisualizers, totalMinutes, activeLast24h } };
+      // Build last 7 days sessions chart
+      const now = new Date();
+      const dayKeys: string[] = [];
+      const labels: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        dayKeys.push(key);
+        labels.push(d.toLocaleDateString(undefined, { weekday: "short" }));
+      }
+      const counts: Record<string, number> = Object.fromEntries(dayKeys.map((k) => [k, 0]));
+      sessions.forEach((s: any) => {
+        const k = new Date(s.started_at).toISOString().slice(0, 10);
+        if (k in counts) counts[k] += 1;
+      });
+      const weekly = dayKeys.map((k, idx) => ({ day: labels[idx], sessions: counts[k] }));
+
+      return { users, stats: { totalUsers, totalVisualizers, totalMinutes, activeLast24h }, weekly };
     },
   });
 
@@ -81,6 +101,7 @@ const Admin: React.FC = () => {
         ) : data ? (
           <>
             <UserStatsGrid stats={data.stats} />
+            <WeeklySessionsChart data={data.weekly} />
             <UsersTable users={data.users} />
           </>
         ) : (
