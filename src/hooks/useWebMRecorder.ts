@@ -1,5 +1,6 @@
 import { useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 interface UseRecorderProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -76,6 +77,19 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
         setIsRecording(false);
         toast.success("Recording saved!");
+
+        // Log a visualizer creation event for the authenticated user
+        (async () => {
+          try {
+            const { data } = await supabase.auth.getUser();
+            const u = data?.user;
+            if (u) {
+              await supabase.from("visualizer_events").insert({ user_id: u.id, created_at: new Date().toISOString() });
+            }
+          } catch (e) {
+            console.warn("Failed to log visualizer event", e);
+          }
+        })();
       };
 
       mediaRecorder.onerror = (event) => {
