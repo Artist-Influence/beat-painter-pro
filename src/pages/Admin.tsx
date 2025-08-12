@@ -7,13 +7,15 @@ import UserStatsGrid from "./admin/components/UserStatsGrid";
 import UsersTable from "./admin/components/UsersTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { useEngagementTracker } from "@/hooks/useEngagementTracker";
 
 const Admin: React.FC = () => {
+  useEngagementTracker();
   const { data, isLoading } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: async () => {
       const [profilesRes, sessionsRes, eventsRes] = await Promise.all([
-        supabase.from("user_profiles").select("id,email"),
+        supabase.from("profiles").select("id,email"),
         supabase.from("user_sessions").select("user_id,started_at,duration_seconds"),
         supabase.from("visualizer_events").select("user_id"),
       ]);
