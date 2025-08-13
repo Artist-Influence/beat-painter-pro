@@ -56,7 +56,7 @@ function CrackedCrystalOrb({ audioData }: any) {
     const beat = Math.max(beatStrength, bass);
     
     const scalePulse = 1 + 0.3 * beat + 0.1 * Math.sin(time * 4);
-    const baseScale = 0.3 + 0.2 * amp;
+    const baseScale = 0.6 + 0.3 * amp;
     
     const beatExplosion = beat > 0.7 ? 1 + beat * 0.4 : 1;
 

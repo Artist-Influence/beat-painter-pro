@@ -109,17 +109,6 @@ function NeuralLattice({ audioData }: any) {
 
   return (
     <group ref={groupRef} scale={0.08}>
-      <points ref={pointsRef} geometry={geometry}>
-        <pointsMaterial
-          vertexColors
-          size={0.04}
-          sizeAttenuation
-          depthWrite={false}
-          transparent
-          opacity={0.6}
-          blending={extractedColors?.isNeon ? THREE.AdditiveBlending : THREE.NormalBlending}
-        />
-      </points>
       <mesh>
         <sphereGeometry args={[2.0, 32, 32]} />
         <meshStandardMaterial 

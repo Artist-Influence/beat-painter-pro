@@ -76,11 +76,11 @@ function GlassShard({ index, audioData }: any) {
     <mesh ref={meshRef}>
       <coneGeometry args={[0.05, 0.2, 6]} />
       <meshStandardMaterial
-        color={primaryColor}
+        color={texture ? '#ffffff' : primaryColor}
         metalness={extractedColors?.isMetallic ? 1 : 0.3}
         roughness={extractedColors?.isMetallic ? 0.1 : 0.5}
         emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
+        emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0.1}
         map={texture}
         transparent
         opacity={0.9 + highs * 0.3}
@@ -161,9 +161,9 @@ function GlassSphereVisualizer({ audioData }: any) {
       <mesh ref={centerSphereRef}>
         <sphereGeometry args={[0.1, 32, 32]} />
         <meshStandardMaterial 
-          color={primaryColor}
+          color={texture ? '#ffffff' : primaryColor}
           emissive={extractedColors?.isNeon ? primaryColor : accentColor}
-          emissiveIntensity={extractedColors?.isNeon ? 1.5 : 1.0}
+          emissiveIntensity={extractedColors?.isNeon ? 0.5 : 0.3}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
           map={texture}
