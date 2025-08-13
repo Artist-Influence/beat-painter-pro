@@ -8,6 +8,18 @@ function Feather({ index, side, audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   
   const extractedColors = (window as any).extractedColors;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
   
   const angle = (index / 20) * Math.PI * 0.8;
@@ -51,12 +63,13 @@ function Feather({ index, side, audioData }: any) {
         color={primaryColor}
         roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
         metalness={extractedColors?.isMetallic ? 1 : 0.2}
-        transparent
-        opacity={0.9 + mids * 0.5}
-        side={THREE.DoubleSide}
-        emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-        emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
-      />
+          transparent
+          opacity={0.9 + mids * 0.5}
+          side={THREE.DoubleSide}
+          map={texture || undefined}
+          emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
+          emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
+        />
     </mesh>
   );
 }
@@ -137,11 +150,11 @@ function HologramWings({ audioData }: any) {
       <Wing side={1} audioData={audioData} />
       <Wing side={-1} audioData={audioData} />
       <Sparkles
-        count={40 + highs * 150 + bass * 100}
-        scale={[2.5, 2.5, 2.5]}
-        size={5 + highs * 15 + bass * 12}
-        speed={1 + highs * 4 + bass * 3}
-        opacity={0.6 + highs * 0.8}
+        count={20 + highs * 60 + bass * 40}
+        scale={[1.5, 1.5, 1.5]}
+        size={3 + highs * 8 + bass * 6}
+        speed={0.8 + highs * 2 + bass * 1.5}
+        opacity={0.3 + highs * 0.4}
         color={accentColor}
         position={[0, 0.8, 0]}
       />

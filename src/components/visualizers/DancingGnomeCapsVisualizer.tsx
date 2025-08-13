@@ -8,6 +8,18 @@ function GlassShard({ index, audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   const extractedColors = (window as any).extractedColors;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
   const secondaryColor = extractedColors?.secondary || '#ffffff';
 
@@ -67,11 +79,12 @@ function GlassShard({ index, audioData }: any) {
         color={primaryColor}
         metalness={extractedColors?.isMetallic ? 1 : 0.3}
         roughness={extractedColors?.isMetallic ? 0.1 : 0.5}
-        emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
-        transparent
-        opacity={0.9 + highs * 0.3}
-      />
+          emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
+          emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
+          map={texture || undefined}
+          transparent
+          opacity={0.9 + highs * 0.3}
+        />
     </mesh>
   );
 }
@@ -82,6 +95,18 @@ function GlassSphereVisualizer({ audioData }: any) {
   const shardCount = 40;
   
   const extractedColors = (window as any).extractedColors;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
   const accentColor = extractedColors?.accent || '#ffffff';
 
@@ -141,14 +166,15 @@ function GlassSphereVisualizer({ audioData }: any) {
           emissiveIntensity={extractedColors?.isNeon ? 1.5 : 1.0}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
+          map={texture || undefined}
         />
       </mesh>
       <Sparkles
-        count={50 + highs * 200 + bass * 150}
-        scale={[2.5, 2.5, 2.5]}
-        size={2 + highs * 15 + bass * 12}
-        speed={3 + highs * 6.0 + bass * 5.0}
-        opacity={0.5 + highs * 0.7}
+        count={25 + highs * 80 + bass * 60}
+        scale={[1.5, 1.5, 1.5]}
+        size={1.5 + highs * 6 + bass * 5}
+        speed={1.5 + highs * 3 + bass * 2.5}
+        opacity={0.25 + highs * 0.35}
         color={accentColor}
       />
     </group>

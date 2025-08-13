@@ -9,7 +9,18 @@ function NeuralLattice({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
 
   const extractedColors = (window as any).extractedColors;
-  const appliedTexture = (window as any).appliedTexture;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
   const secondaryColor = extractedColors?.secondary || '#ffffff';
   const accentColor = extractedColors?.accent || '#ffffff';
@@ -111,29 +122,32 @@ function NeuralLattice({ audioData }: any) {
       </points>
       <mesh>
         <sphereGeometry args={[2.0, 32, 32]} />
-        <meshBasicMaterial 
+        <meshStandardMaterial 
           color={primaryColor} 
           wireframe 
           transparent 
           opacity={0.25 + mids * 0.4 + bass * 0.3}
+          map={texture || undefined}
         />
       </mesh>
       <mesh>
         <sphereGeometry args={[2.8, 16, 16]} />
-        <meshBasicMaterial 
+        <meshStandardMaterial 
           color={secondaryColor} 
           wireframe 
           transparent 
           opacity={0.15 + highs * 0.35}
+          map={texture || undefined}
         />
       </mesh>
       <mesh>
         <sphereGeometry args={[3.5, 8, 8]} />
-        <meshBasicMaterial 
+        <meshStandardMaterial 
           color={accentColor} 
           wireframe 
           transparent 
           opacity={0.1 + bass * 0.25}
+          map={texture || undefined}
         />
       </mesh>
     </group>

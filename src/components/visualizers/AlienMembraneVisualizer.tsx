@@ -8,6 +8,17 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
 
   const extractedColors = (window as any).extractedColors;
+
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
   
   const primaryColor = extractedColors?.primary || '#ffffff';
   const secondaryColor = extractedColors?.secondary || '#ffffff';
@@ -66,6 +77,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     uAccentColor: { value: new THREE.Vector3(accentRgb.r, accentRgb.g, accentRgb.b) },
     uIsNeon: { value: extractedColors?.isNeon ? 1.0 : 0.0 },
     uIsMetallic: { value: extractedColors?.isMetallic ? 1.0 : 0.0 },
+    uTexture: { value: texture || null },
   }), [primaryRgb, secondaryRgb, accentRgb, extractedColors]);
 
   return (
@@ -77,9 +89,11 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
         uniform float uBass;
         varying vec3 vNormal;
         varying vec3 vPosition;
+        varying vec2 vUv;
         void main() {
           vNormal = normal;
           vPosition = position;
+          vUv = uv;
           
           float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 2.5 * sin(uTime * 4.0 + uBass * 15.0);
           float violentSidePulse = 1.2 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 12.0);
@@ -101,13 +115,20 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
         uniform vec3 uAccentColor;
         uniform float uIsNeon;
         uniform float uIsMetallic;
+        uniform sampler2D uTexture;
         varying vec3 vNormal;
         varying vec3 vPosition;
+        varying vec2 vUv;
         void main() {
           float intensity = 0.7 + 0.3 * sin(uTime * 6.0 + vPosition.y * 15.0);
           
           vec3 glow = mix(uPrimaryColor, uSecondaryColor, intensity);
           vec3 chroma = glow + 0.1 * uAccentColor * vec3(sin(vPosition.x * 10.0), sin(vPosition.y * 10.0), sin(vPosition.z * 10.0));
+          
+          if (uTexture != null) {
+            vec4 texColor = texture2D(uTexture, vUv);
+            chroma = mix(chroma, texColor.rgb, 0.3);
+          }
           
           if (uIsNeon > 0.5) {
             chroma *= (1.0 + uHighs * 2.0);
@@ -176,11 +197,11 @@ function AlienMembrane({ audioData }: any) {
         <AlienMembraneShaderMaterial audioData={audioData} />
       </mesh>
       <Sparkles
-        count={20 + highs * 300}
-        scale={[5, 5, 5]}
-        size={4 + highs * 40 + bass * 30}
-        speed={1 + highs * 6 + bass * 8}
-        opacity={0.5 + highs * 1.5}
+        count={10 + highs * 80}
+        scale={[2, 2, 2]}
+        size={2 + highs * 12 + bass * 8}
+        speed={0.8 + highs * 2 + bass * 1.5}
+        opacity={0.2 + highs * 0.4}
         color={accentColor}
       />
     </group>

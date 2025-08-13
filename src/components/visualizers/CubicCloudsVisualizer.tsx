@@ -8,6 +8,18 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   
   const extractedColors = (window as any).extractedColors;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -55,13 +67,14 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   return (
     <mesh ref={meshRef}>
       <boxGeometry args={[0.05, 0.05, 0.05]} />
-      <meshStandardMaterial 
-        color={primaryColor}
-        metalness={extractedColors?.isMetallic ? 1 : 0.3}
-        roughness={extractedColors?.isMetallic ? 0.2 : 0.7}
-        emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-        emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0}
-      />
+        <meshStandardMaterial
+          color={primaryColor}
+          metalness={extractedColors?.isMetallic ? 1 : 0.3}
+          roughness={extractedColors?.isMetallic ? 0.2 : 0.7}
+          emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
+          emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0}
+          map={texture || undefined}
+        />
     </mesh>
   );
 }
@@ -73,6 +86,18 @@ function OrbitingCubesVisualizer({ audioData }: any) {
   const angles = useMemo(() => Array.from({ length: cubeCount }, (_, i) => (i / cubeCount) * Math.PI * 2), []);
 
   const extractedColors = (window as any).extractedColors;
+  
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+  
   const primaryColor = extractedColors?.primary || '#ffffff';
   const accentColor = extractedColors?.accent || '#ffffff';
 
@@ -131,14 +156,15 @@ function OrbitingCubesVisualizer({ audioData }: any) {
           emissiveIntensity={extractedColors?.isNeon ? 1.5 : 1.0}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
+          map={texture || undefined}
         />
       </mesh>
       <Sparkles
-        count={50 + highs * 200 + bass * 150}
-        scale={[2.5, 2.5, 2.5]}
-        size={2 + highs * 15 + bass * 12}
-        speed={3 + highs * 6.0 + bass * 5.0}
-        opacity={0.5 + highs * 0.7}
+        count={25 + highs * 80 + bass * 60}
+        scale={[1.5, 1.5, 1.5]}
+        size={1.5 + highs * 6 + bass * 5}
+        speed={1.5 + highs * 3 + bass * 2.5}
+        opacity={0.25 + highs * 0.35}
         color={accentColor}
       />
     </group>
