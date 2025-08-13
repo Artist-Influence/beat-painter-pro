@@ -108,7 +108,7 @@ function NeuralLattice({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.08}>
+    <group ref={groupRef} scale={0.14}>
       <mesh>
         <sphereGeometry args={[2.0, 32, 32]} />
         <meshStandardMaterial 

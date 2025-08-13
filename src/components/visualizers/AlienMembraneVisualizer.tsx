@@ -193,7 +193,7 @@ function AlienMembrane({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.4}>
+    <group ref={groupRef} scale={0.7}>
       <mesh ref={meshRef} scale={1 + bass * 0.6}>
         <icosahedronGeometry args={[1.4, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />
