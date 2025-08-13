@@ -36,9 +36,7 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
   let textureUrl = canvas.toDataURL("image/png");
   const colors = getStyleColors(styles);
 
-  // Try Supabase Edge Function for Hugging Face image generation (if secret configured)
-  const complex = ["Organic Flow", "Marble Veins", "Aurora Borealis"];
-  if (styles.some((s) => complex.includes(s))) {
+  try {
     const prompt = `abstract ${styles.join(" ")} texture, seamless pattern, no objects, pure abstract art, variation ${seed}`;
     const negativePrompt = "photo, realistic, person, face, landscape, object, text, figurative";
     const { data, error } = await supabase.functions.invoke("generate-image", {
@@ -51,6 +49,9 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
       // eslint-disable-next-line no-console
       console.warn("HF generation unavailable, using procedural texture.", error);
     }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn("HF generation error, using procedural texture.", error);
   }
 
   return { textureUrl, colors };

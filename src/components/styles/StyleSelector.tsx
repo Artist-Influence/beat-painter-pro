@@ -71,12 +71,11 @@ export function StyleSelector() {
   const generatePreviews = async () => {
     if (selectedStyles.length === 0) return;
     setIsGenerating(true);
-    const urls: string[] = [];
+    setPreviews([]);
     for (let i = 0; i < 3; i++) {
       const { textureUrl } = await generateStyleTexture(selectedStyles, i);
-      urls.push(textureUrl);
+      setPreviews((prev) => [...prev, textureUrl]);
     }
-    setPreviews(urls);
     setIsGenerating(false);
     setIsDropdownOpen(false);
   };
@@ -119,69 +118,68 @@ export function StyleSelector() {
 
 {isDropdownOpen &&
           createPortal(
-            <div
-              ref={menuRef}
-              className="fixed z-[9999] max-h-96 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl"
-              style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
-              role="listbox"
-            >
-              <div className="p-2">
-                {ALL_STYLES.map((style) => {
-                  const checked = selectedStyles.includes(style);
-                  const disabled = !checked && !canAddMore;
-                  return (
-                    <label
-                      key={style}
-                      className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                        checked ? "bg-accent/40" : "hover:bg-accent/30"
-                      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleStyle(style)}
-                        disabled={disabled}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-foreground">{style}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              <div className="border-t border-border p-2">
-                <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
-                  {isGenerating ? "Generating..." : "Generate Previews"}
-                </Button>
+            <div ref={menuRef} className="fixed z-[9999] rounded-lg border border-border bg-popover shadow-xl" style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }} role="listbox">
+              <div className="max-h-96 overflow-y-auto">
+                <div className="sticky top-0 z-[1] border-b border-border bg-popover p-2">
+                  <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
+                    {isGenerating ? "Generating..." : "Generate Previews"}
+                  </Button>
+                </div>
+                <div className="p-2">
+                  {ALL_STYLES.map((style) => {
+                    const checked = selectedStyles.includes(style);
+                    const disabled = !checked && !canAddMore;
+                    return (
+                      <label key={style} className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${checked ? "bg-accent/40" : "hover:bg-accent/30"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleStyle(style)} disabled={disabled} className="h-4 w-4" />
+                        <span className="text-foreground">{style}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>,
             document.body
           )}
       </div>
 
-      {/* Inline previews */}
-      {previews.length > 0 && (
+{/* Inline previews / loading */}
+      {(isGenerating || previews.length > 0) && (
         <div>
-          <div className="grid grid-cols-3 gap-2">
-            {previews.map((src, i) => (
-              <button
-                key={i}
-                className="group relative overflow-hidden rounded-lg border border-border"
-                onClick={() => setSelectedPreview(i)}
+          {isGenerating && previews.length === 0 ? (
+            <>
+              <div className="mb-2 text-xs text-muted-foreground">Generating previews...</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-20 w-full rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {previews.map((src, i) => (
+                  <button
+                    key={i}
+                    className="group relative overflow-hidden rounded-lg border border-border"
+                    onClick={() => setSelectedPreview(i)}
+                  >
+                    <img src={src} alt={`Style preview ${i + 1}`} className="h-20 w-full object-cover" loading="lazy" />
+                    <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-foreground/10 group-hover:flex">
+                      <span className="text-xs font-medium">View</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <Button
+                onClick={() => selectedPreview !== null && applyStyle(selectedPreview)}
+                disabled={selectedPreview === null || isGenerating}
+                className="mt-2 w-full"
               >
-                <img src={src} alt={`Style preview ${i + 1}`} className="h-20 w-full object-cover" loading="lazy" />
-                <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-foreground/10 group-hover:flex">
-                  <span className="text-xs font-medium">View</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          <Button
-            onClick={() => selectedPreview !== null && applyStyle(selectedPreview)}
-            disabled={selectedPreview === null}
-            className="mt-2 w-full"
-          >
-            Apply Selected Style
-          </Button>
+                Apply Selected Style
+              </Button>
+            </>
+          )}
         </div>
       )}
 
