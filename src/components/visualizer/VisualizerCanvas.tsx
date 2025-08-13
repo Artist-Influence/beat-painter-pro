@@ -91,6 +91,10 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
 
   const scale = VISUALIZER_SCALES[selected] ?? 0.25;
 
+  const filterStyle = {
+    filter: `brightness(${((filters.brightness ?? 100) - 0) / 100}) saturate(${((filters.saturation ?? 100) - 0) / 100}) contrast(${((filters.contrast ?? 100) - 0) / 100})`
+  } as React.CSSProperties;
+
   return (
     <div className="w-full max-w-3xl rounded-lg border border-border bg-card shadow">
       <AspectRatio ratio={1}>
@@ -106,6 +110,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
             }}
             dpr={[1, 2]}
             camera={{ position: [0, 0, 3], fov: 50 }}
+            style={filterStyle}
           >
             <fog attach="fog" args={[backgroundColor, 5, 15]} />
             <color attach="background" args={[backgroundColor]} />
