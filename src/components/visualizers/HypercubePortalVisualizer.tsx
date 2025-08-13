@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, Trail } from "@react-three/drei";
 import * as THREE from "three";
@@ -9,6 +9,10 @@ function Tesseract({ audioData, textureData }) {
   const innerRef = useRef<THREE.Mesh>(null);
   const outerRef = useRef<THREE.Mesh>(null);
   const connectionsRef = useRef<THREE.Group>(null);
+  
+  // Store materials to update them when texture changes
+  const [innerMaterial, setInnerMaterial] = React.useState<THREE.Material | null>(null);
+  const [outerMaterial, setOuterMaterial] = React.useState<THREE.Material | null>(null);
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -66,6 +70,36 @@ function Tesseract({ audioData, textureData }) {
   const primaryColor = textureData.colors.primary;
   const accentColor = textureData.colors.accent;
   
+  // Update materials when texture changes
+  useEffect(() => {
+    const newInnerMaterial = createVisualizerMaterial(
+      primaryColor,
+      textureData,
+      {
+        emissive: primaryColor,
+        emissiveIntensity: 1.0,
+        wireframe: false, // Changed to show texture better
+        metalness: 0.2,
+        roughness: 0.8,
+      }
+    );
+    
+    const newOuterMaterial = createVisualizerMaterial(
+      accentColor,
+      textureData,
+      {
+        emissive: accentColor,
+        emissiveIntensity: 0.8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.7,
+      }
+    );
+    
+    setInnerMaterial(newInnerMaterial);
+    setOuterMaterial(newOuterMaterial);
+  }, [textureData.textureVersion, primaryColor, accentColor]);
+  
   // Create vertices for hypercube connections
   const connections = useMemo(() => {
     const points = [];
@@ -81,56 +115,34 @@ function Tesseract({ audioData, textureData }) {
   return (
     <group>
       {/* Inner cube - represents higher dimension */}
-      <mesh
-        ref={innerRef}
-        material={createVisualizerMaterial(
-          primaryColor,
-          textureData,
-          {
-            emissive: primaryColor,
-            emissiveIntensity: 0.5 + bass,
-            wireframe: true,
-          }
-        )}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-      </mesh>
+      {innerMaterial && (
+        <mesh ref={innerRef} material={innerMaterial}>
+          <boxGeometry args={[1, 1, 1]} />
+        </mesh>
+      )}
       
       {/* Outer cube - current dimension */}
-      <mesh
-        ref={outerRef}
-        material={createVisualizerMaterial(
-          accentColor,
-          textureData,
-          {
-            emissive: accentColor,
-            emissiveIntensity: 0.3 + highs,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.5,
-          }
-        )}
-      >
-        <boxGeometry args={[2, 2, 2]} />
-      </mesh>
+      {outerMaterial && (
+        <mesh ref={outerRef} material={outerMaterial}>
+          <boxGeometry args={[2, 2, 2]} />
+        </mesh>
+      )}
       
-      {/* Dimensional connections */}
+      {/* Dimensional connections - make them more visible */}
       <group ref={connectionsRef}>
         {connections.map((point, i) => (
           <mesh 
             key={i} 
             position={point}
-            material={createVisualizerMaterial(
-              primaryColor,
-              textureData,
-              {
-                transparent: true,
-                opacity: 0.5,
-                emissiveIntensity: 0.2,
-              }
-            )}
           >
-            <cylinderGeometry args={[0.01, 0.01, 2]} />
+            <cylinderGeometry args={[0.02, 0.02, 2]} />
+            <meshStandardMaterial
+              color={primaryColor}
+              emissive={primaryColor}
+              emissiveIntensity={0.8}
+              transparent
+              opacity={0.8}
+            />
           </mesh>
         ))}
       </group>
@@ -149,6 +161,27 @@ export default function HypercubePortalVisualizer({
   const portalRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
   
+  // Create portal ring materials that update with texture
+  const [ringMaterials, setRingMaterials] = React.useState<THREE.Material[]>([]);
+  
+  useEffect(() => {
+    const materials = [1, 1.5, 2, 2.5, 3].map((_, i) => 
+      createVisualizerMaterial(
+        textureData.colors.accent,
+        textureData,
+        {
+          emissive: textureData.colors.accent,
+          emissiveIntensity: 0.6,
+          transparent: true,
+          opacity: 0.4 - i * 0.05,
+          metalness: 0.9,
+          roughness: 0.1,
+        }
+      )
+    );
+    setRingMaterials(materials);
+  }, [textureData.textureVersion, textureData.colors.accent]);
+  
   useFrame(({ clock }) => {
     if (portalRef.current) {
       // Slow portal rotation for hypnotic effect
@@ -166,21 +199,13 @@ export default function HypercubePortalVisualizer({
         <Tesseract audioData={audioData} textureData={textureData} />
         
         {/* Portal rings - create tunnel illusion */}
-        {[1, 1.5, 2, 2.5, 3].map((scale, i) => (
+        {ringMaterials.length > 0 && [1, 1.5, 2, 2.5, 3].map((scale, i) => (
           <mesh 
             key={i} 
             scale={scale}
-            material={createVisualizerMaterial(
-              textureData.colors.accent,
-              textureData,
-              {
-                transparent: true,
-                opacity: 0.3 - i * 0.05,
-                emissiveIntensity: 0.3,
-              }
-            )}
+            material={ringMaterials[i]}
           >
-            <torusGeometry args={[1, 0.02, 16, 100]} />
+            <torusGeometry args={[1, 0.04, 16, 100]} />
           </mesh>
         ))}
       </group>

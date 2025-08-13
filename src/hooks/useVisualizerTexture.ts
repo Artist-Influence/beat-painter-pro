@@ -73,8 +73,8 @@ export const createVisualizerMaterial = (
   } = {}
 ) => {
   const material = new THREE.MeshStandardMaterial({
-    color: baseColor,
-    emissive: options.emissive || baseColor,
+    color: new THREE.Color(baseColor),
+    emissive: new THREE.Color(options.emissive || baseColor),
     emissiveIntensity: options.emissiveIntensity || 0.3,
     metalness: options.metalness || 0.8,
     roughness: options.roughness || 0.2,
@@ -85,10 +85,19 @@ export const createVisualizerMaterial = (
 
   // Apply texture if available
   if (textureData.texture) {
-    material.map = textureData.texture;
-    material.emissiveMap = textureData.texture;
+    // For wireframe materials, we'll use emissive map to show texture
+    if (options.wireframe) {
+      material.emissiveMap = textureData.texture;
+      material.emissiveIntensity = Math.max(options.emissiveIntensity || 0.3, 0.8);
+    } else {
+      material.map = textureData.texture;
+      material.emissiveMap = textureData.texture;
+    }
     material.needsUpdate = true;
   }
+
+  // Force material update when texture version changes
+  material.userData = { textureVersion: textureData.textureVersion };
 
   return material;
 };
