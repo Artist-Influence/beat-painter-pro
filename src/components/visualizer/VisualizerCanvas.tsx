@@ -32,14 +32,35 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     (window as any).appliedTexture = (window as any).appliedTexture || null;
   }, []);
 
-  // Set up audio analyser when audio element available
+  // Set up audio analyser when audio element available (singleton AudioContext + reused source)
   useEffect(() => {
     if (!audioElement) return;
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const source = ctx.createMediaElementSource(audioElement);
+
+    const W = window as any;
+    // Singleton AudioContext across the app to prevent duplicate MediaElementSourceNodes
+    if (!W.__AUDIO_CTX__) {
+      W.__AUDIO_CTX__ = new (window.AudioContext || W.webkitAudioContext)();
+    }
+    const ctx: AudioContext = W.__AUDIO_CTX__ as AudioContext;
+
+    // WeakMap to reuse MediaElementAudioSourceNode per HTMLMediaElement
+    if (!W.__MEDIA_ELEMENT_SOURCES__) {
+      W.__MEDIA_ELEMENT_SOURCES__ = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
+    }
+    const sourceMap: WeakMap<HTMLMediaElement, MediaElementAudioSourceNode> = W.__MEDIA_ELEMENT_SOURCES__;
+
+    let source = sourceMap.get(audioElement);
+    if (!source) {
+      source = ctx.createMediaElementSource(audioElement);
+      sourceMap.set(audioElement, source);
+    }
+
+    // Create an analyser for this session and wire the graph: source -> analyser -> destination
     const analyserNode = ctx.createAnalyser();
     analyserNode.fftSize = 2048;
     analyserNode.smoothingTimeConstant = 0.8;
+
+    // Connect our analyser; we only disconnect this analyser in cleanup
     source.connect(analyserNode);
     analyserNode.connect(ctx.destination);
     setAnalyser(analyserNode);
@@ -53,7 +74,9 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     return () => {
       audioElement.removeEventListener("play", onPlay);
       audioElement.removeEventListener("pause", onPause);
-      try { ctx.close(); } catch {}
+      try {
+        analyserNode.disconnect();
+      } catch {}
     };
   }, [audioElement]);
 
