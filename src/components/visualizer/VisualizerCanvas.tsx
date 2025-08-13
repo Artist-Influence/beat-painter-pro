@@ -1,7 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { EffectComposer, BrightnessContrast } from "@react-three/postprocessing";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES } from "@/components/visualizers";
@@ -119,13 +118,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
                 )}
               </Suspense>
             </group>
-            {/* Post-processing effects limited to canvas only (not the UI) */}
-            <EffectComposer>
-              <BrightnessContrast
-                brightness={((filters.brightness ?? 100) - 100) / 100}
-                contrast={((filters.contrast ?? 100) - 100) / 100}
-              />
-            </EffectComposer>
             <OrbitControls enablePan={false} enableZoom={false} />
           </Canvas>
       </AspectRatio>
