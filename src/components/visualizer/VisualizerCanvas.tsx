@@ -1,6 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { EffectComposer, BrightnessContrast, HueSaturation } from "@react-three/postprocessing";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES } from "@/components/visualizers";
@@ -88,14 +89,11 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     }
   }, [canvasRef]);
 
-  const filterStyle = {
-    filter: `brightness(${(filters.brightness || 100) / 100}) saturate(${(filters.saturation || 100) / 100}) contrast(${(filters.contrast || 100) / 100})`
-  } as React.CSSProperties;
 
   const scale = VISUALIZER_SCALES[selected] ?? 0.25;
 
   return (
-    <div className="w-full max-w-3xl rounded-lg border border-border bg-card shadow" style={filterStyle}>
+    <div className="w-full max-w-3xl rounded-lg border border-border bg-card shadow">
       <AspectRatio ratio={1}>
         <Canvas
             onCreated={handleCreated}
@@ -109,6 +107,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
             }}
             dpr={[1, 2]}
             camera={{ position: [0, 0, 3], fov: 50 }}
+            performance={{ min: 0.5 }}
           >
             <fog attach="fog" args={[backgroundColor, 5, 15]} />
             <color attach="background" args={[backgroundColor]} />
@@ -121,6 +120,16 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
                 )}
               </Suspense>
             </group>
+            {/* Post-processing effects limited to canvas only (not the UI) */}
+            <EffectComposer>
+              <BrightnessContrast
+                brightness={((filters.brightness ?? 100) - 100) / 100}
+                contrast={((filters.contrast ?? 100) - 100) / 100}
+              />
+              <HueSaturation
+                saturation={((filters.saturation ?? 100) - 100) / 100}
+              />
+            </EffectComposer>
             <OrbitControls enablePan={false} enableZoom={false} />
           </Canvas>
       </AspectRatio>

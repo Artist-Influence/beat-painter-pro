@@ -22,6 +22,7 @@ const AudioUploader: React.FC = () => {
         ref={fileInputRef}
         type="file"
         accept="audio/*"
+        className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);
