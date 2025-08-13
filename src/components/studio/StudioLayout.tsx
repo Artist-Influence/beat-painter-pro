@@ -7,9 +7,12 @@ import VisualizerCanvas from "@/components/visualizer/VisualizerCanvas";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useStudioStore } from "@/stores/studioStore";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 const StudioLayout: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { audioElement } = useStudioStore();
+  useKeyboardShortcuts();
+  
   useEffect(() => {
     document.title = "Audio Visual Studio – 3D Visualizers";
     const meta = document.querySelector('meta[name="description"]');
