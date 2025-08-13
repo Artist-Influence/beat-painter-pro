@@ -103,7 +103,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   } as React.CSSProperties;
 
   return (
-    <div className="w-full max-w-3xl rounded-lg border border-border shadow" style={{ backgroundColor }}>
+    <div className="w-full h-full rounded-lg" style={{ backgroundColor }}>
       <AspectRatio ratio={1}>
         <Canvas
             onCreated={handleCreated}

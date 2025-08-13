@@ -18,6 +18,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
   const { startRecording, stopRecording, isRecording } = useWebMRecorder({ canvasRef, audioElement });
 
   const visualizerOptions = useMemo(() => Object.keys(visualizerRegistry), []);
+  const formatVisualizerName = (name: string) => name.replace(/Visualizer$/, '');
 
   return (
     <div className="space-y-4">
@@ -29,7 +30,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
           </SelectTrigger>
           <SelectContent className="max-h-64">
             {visualizerOptions.map((k) => (
-              <SelectItem key={k} value={k}>{k}</SelectItem>
+              <SelectItem key={k} value={k}>{formatVisualizerName(k)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
