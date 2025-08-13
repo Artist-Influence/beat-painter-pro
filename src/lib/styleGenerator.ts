@@ -1,5 +1,31 @@
-
 import { supabase } from "@/integrations/supabase/client";
+
+const STYLE_DESCRIPTORS: Record<string, string> = {
+  "Organic Flow": "organic flowing contours, fluid sine patterns, cellular noise, smooth curvature",
+  "Marble Veins": "marble stone veins, calcite streaks, high-contrast veining, natural stone texture",
+  "Aurora Borealis": "aurora ribbons, atmospheric scattering, chromatic bands, luminous wisps",
+  "Cyberpunk Grid": "emissive neon grid, circuit traces, scanlines, tech paneling",
+  "Retro Wave": "80s retrowave gradient ramps, neon airbrush, scanline grain",
+  "Crystal Shards": "faceted crystalline shards, refractive facets, hard edges",
+  "Holographic Film": "iridescent diffraction film, rainbow specular, micro-prismatic",
+  "Lava Flow": "molten lava rivers, cooling crust cracks, glowing fissures",
+  "Electric Storm": "lightning filaments, plasma arcs, branching bolts",
+  "Hex Mesh": "hexagonal mesh lattice, repeating honeycomb grid, beveled edges",
+  "Honeycomb Pattern": "beeswax honeycomb cells, hexagonal tiling, waxy translucency",
+  "Liquid Metal": "mercurial liquid metal ripples, mirror reflections, smooth waves",
+  "Nebula Clouds": "nebular gas clouds, volumetric wisps, star dust",
+  "Tech Blueprint": "technical blueprint linework, orthographic schematics, grid and annotations",
+  "Wireframe Blueprint": "wireframe 3D mesh, blueprint lines, thin strokes",
+  "Voronoi Foam": "voronoi tessellation, foam cells, irregular polygons",
+  "Noise Cells": "cellular noise, Worley noise, mottled texture",
+  "Halftone Dots": "printer halftone dot matrix, screen tone",
+  "Checker Warp": "checkerboard warped grid, lens distortion, wave deformations",
+  "Wave Interference": "interference ripples, moiré wave superposition",
+  "Chromatic Aberration": "RGB separation fringes, lens dispersion, prismatic edges",
+  "Shattered Glass": "cracked shards, fracture lines, splinters",
+  "Velvet Texture": "soft velvet microfibers, diffuse sheen, plush fabric",
+  "Satin Sheen": "satin weave, gentle anisotropic highlights, soft luster",
+};
 
 export async function generateStyleTexture(styles: string[], seed: number = 0): Promise<{ textureUrl: string; colors: string[] }>
 {
@@ -37,8 +63,10 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
   const colors = getStyleColors(styles);
 
   try {
-    const prompt = `abstract ${styles.join(" ")} texture, seamless pattern, no objects, pure abstract art, variation ${seed}`;
-    const negativePrompt = "photo, realistic, person, face, landscape, object, text, figurative";
+    const descriptorText = styles.map((s) => STYLE_DESCRIPTORS[s] ?? s).join(", ");
+    const colorHints = getStyleColors(styles).join(", ");
+    const prompt = `Seamless ${descriptorText} texture tile, high-frequency detail, rich microstructure, PBR-friendly, depth and relief, color palette: ${colorHints}, no text, no logos, no central object, seed ${seed}`;
+    const negativePrompt = "flat gradient, banding, low detail, blurry, photographic scene, person, face, landscape, typography, logo, watermark";
     const { data, error } = await supabase.functions.invoke("generate-image", {
       body: { prompt, negativePrompt, seed },
     });

@@ -162,22 +162,18 @@ export function StyleSelector() {
                   <button
                     key={i}
                     className="group relative overflow-hidden rounded-lg border border-border"
-                    onClick={() => setSelectedPreview(i)}
+                    onClick={() => applyStyle(i)}
+                    onDoubleClick={() => setSelectedPreview(i)}
+                    title="Click to apply • Double-click to view"
                   >
                     <img src={src} alt={`Style preview ${i + 1}`} className="h-20 w-full object-cover" loading="lazy" />
                     <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-foreground/10 group-hover:flex">
-                      <span className="text-xs font-medium">View</span>
+                      <span className="text-xs font-medium">Double‑click to view</span>
                     </div>
                   </button>
                 ))}
               </div>
-              <Button
-                onClick={() => selectedPreview !== null && applyStyle(selectedPreview)}
-                disabled={selectedPreview === null || isGenerating}
-                className="mt-2 w-full"
-              >
-                Apply Selected Style
-              </Button>
+              <div className="mt-2 text-center text-xs text-muted-foreground">Click a preview to apply • Double‑click to view larger</div>
             </>
           )}
         </div>
