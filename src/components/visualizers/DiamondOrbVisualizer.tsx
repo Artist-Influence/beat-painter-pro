@@ -55,15 +55,15 @@ function CrackedCrystalOrb({ audioData }: any) {
     const amp = amplitude;
     const beat = Math.max(beatStrength, bass);
     
-    const scalePulse = 1 + 0.6 * beat + 0.15 * Math.sin(time * 6);
-    const baseScale = 0.4 + 0.3 * amp;
+    const scalePulse = 1 + 0.3 * beat + 0.1 * Math.sin(time * 4);
+    const baseScale = 0.3 + 0.2 * amp;
     
-    const beatExplosion = beat > 0.7 ? 1 + beat * 0.8 : 1;
+    const beatExplosion = beat > 0.7 ? 1 + beat * 0.4 : 1;
 
     if (group.current) {
-      group.current.rotation.y = time * 0.8 + mids * 2.0;
-      group.current.rotation.x = Math.sin(time * 1.5) * 0.6 + beat * 1.2;
-      group.current.position.y = 0.8 * Math.sin(time * 3) + beat * 2.0;
+      group.current.rotation.y = time * 0.8 + mids * 1.5;
+      group.current.rotation.x = Math.sin(time * 1.5) * 0.4 + beat * 0.8;
+      group.current.position.y = 0.5 * Math.sin(time * 2) + beat * 1.0;
       group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
     }
 
