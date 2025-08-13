@@ -1,8 +1,7 @@
-import React, { useState } from "react";
-import { Check, Sparkles, X } from "lucide-react";
-import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
+import React, { useMemo, useState } from "react";
+import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
 
 const ALL_STYLES = [
   "Neon Glow", "Metallic Chrome", "Organic Flow", "Cyberpunk Grid",
@@ -17,19 +16,18 @@ const ALL_STYLES = [
   "Low Poly", "Speckled Granite", "Weathered Metal", "Velvet Texture",
   "Satin Sheen", "Volumetric Fog", "Shattered Glass", "Halftone Dots",
   "Wave Interference", "Checker Warp", "Gradient Flow", "Noise Cells",
-  "Ripple Grid", "Voronoi Foam", "Polar Kaleidoscope", "Sunburst Rays"
+  "Ripple Grid", "Voronoi Foam", "Polar Kaleidoscope", "Sunburst Rays",
 ];
 
 export function StyleSelector() {
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPreview, setSelectedPreview] = useState<number | null>(null);
 
-  const filteredStyles = ALL_STYLES.filter((style) =>
-    style.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const canAddMore = selectedStyles.length < 3;
+  const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
 
   const toggleStyle = (style: string) => {
     setSelectedStyles((prev) =>
@@ -51,95 +49,118 @@ export function StyleSelector() {
     }
     setPreviews(urls);
     setIsGenerating(false);
+    setIsDropdownOpen(false);
   };
 
-  const applyStyle = async (idx: number) => {
-    const texture = previews[idx];
+  const applyStyle = async (previewIndex: number) => {
+    const texture = previews[previewIndex];
     const colors = getStyleColors(selectedStyles);
     (window as any).appliedTexture = texture;
     (window as any).extractedColors = colors;
-    setIsOpen(false);
     setPreviews([]);
+    setSelectedStyles([]);
+    setSelectedPreview(null);
   };
 
   return (
-    <div className="relative">
-      <Button onClick={() => setIsOpen((v) => !v)} variant="secondary" className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4" /> Styles ({selectedStyles.length}/3)
-      </Button>
+    <div className="space-y-3">
+      {/* Trigger */}
+      <div className="relative">
+        <Button
+          type="button"
+          onClick={() => setIsDropdownOpen((v) => !v)}
+          variant="secondary"
+          className="flex w-full items-center justify-between"
+          aria-haspopup="listbox"
+          aria-expanded={isDropdownOpen}
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            {selectedLabel}
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+        </Button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-          <div className="w-[640px] max-h-[80vh] overflow-hidden rounded-xl border border-border bg-card p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-xl font-semibold">Select Styles (up to 3)</h3>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} aria-label="Close">
-                <X className="h-5 w-5" />
+        {isDropdownOpen && (
+          <div className="absolute left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl">
+            <div className="p-2">
+              {ALL_STYLES.map((style) => {
+                const checked = selectedStyles.includes(style);
+                const disabled = !checked && !canAddMore;
+                return (
+                  <label
+                    key={style}
+                    className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                      checked ? "bg-accent/40" : "hover:bg-accent/30"
+                    } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleStyle(style)}
+                      disabled={disabled}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-foreground">{style}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="border-t border-border p-2">
+              <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
+                {isGenerating ? "Generating..." : "Generate Previews"}
               </Button>
             </div>
+          </div>
+        )}
+      </div>
 
-            <Input
-              placeholder="Search styles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4"
-            />
-
-            <div className="mb-4 grid max-h-[300px] grid-cols-3 gap-2 overflow-y-auto">
-              {filteredStyles.map((style) => (
-                <button
-                  key={style}
-                  onClick={() => toggleStyle(style)}
-                  disabled={!selectedStyles.includes(style) && selectedStyles.length >= 3}
-                  className={`relative rounded-lg border px-3 py-2 text-sm transition-colors ${
-                    selectedStyles.includes(style)
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-border bg-card hover:bg-accent"
-                  } ${
-                    !selectedStyles.includes(style) && selectedStyles.length >= 3
-                      ? "cursor-not-allowed opacity-50"
-                      : ""
-                  }`}
-                >
-                  {style}
-                  {selectedStyles.includes(style) && (
-                    <Check className="absolute right-1 top-1 h-3 w-3 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {selectedStyles.length > 0 && (
-              <div className="mb-4 rounded-lg bg-secondary p-3">
-                <p className="mb-2 text-sm font-medium">Selected:</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedStyles.map((style) => (
-                    <span key={style} className="rounded bg-secondary px-2 py-1 text-sm">
-                      {style}
-                    </span>
-                  ))}
+      {/* Inline previews */}
+      {previews.length > 0 && (
+        <div>
+          <div className="grid grid-cols-3 gap-2">
+            {previews.map((src, i) => (
+              <button
+                key={i}
+                className="group relative overflow-hidden rounded-lg border border-border"
+                onClick={() => setSelectedPreview(i)}
+              >
+                <img src={src} alt={`Style preview ${i + 1}`} className="h-20 w-full object-cover" loading="lazy" />
+                <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-foreground/10 group-hover:flex">
+                  <span className="text-xs font-medium">View</span>
                 </div>
-              </div>
-            )}
+              </button>
+            ))}
+          </div>
+          <Button
+            onClick={() => selectedPreview !== null && applyStyle(selectedPreview)}
+            disabled={selectedPreview === null}
+            className="mt-2 w-full"
+          >
+            Apply Selected Style
+          </Button>
+        </div>
+      )}
 
-            {selectedStyles.length > 0 && previews.length === 0 && (
-              <Button onClick={generatePreviews} disabled={isGenerating} className="w-full">
-                {isGenerating ? "Generating..." : "Generate Preview Styles"}
-              </Button>
-            )}
-
-            {previews.length > 0 && (
-              <div className="grid grid-cols-3 gap-4">
-                {previews.map((preview, index) => (
-                  <button key={index} className="group relative cursor-pointer" onClick={() => applyStyle(index)}>
-                    <img src={preview} alt={`Style preview ${index + 1}`} className="h-32 w-full rounded-lg object-cover" />
-                    <div className="absolute inset-0 hidden items-center justify-center rounded-lg bg-foreground/10 group-hover:flex">
-                      <span className="text-sm font-medium">Apply Style {index + 1}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* Modal */}
+      {selectedPreview !== null && previews[selectedPreview] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => setSelectedPreview(null)}>
+          <div className="relative max-h-[80vh] w-full max-w-3xl p-4" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedPreview(null)}
+              className="absolute right-4 top-4 rounded-full border border-border bg-card/80 p-2 backdrop-blur"
+              aria-label="Close preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={previews[selectedPreview]}
+              alt={`Large style preview ${selectedPreview + 1}`}
+              className="h-full w-full rounded-xl object-contain"
+            />
+            <div className="mt-3 flex justify-center">
+              <Button onClick={() => applyStyle(selectedPreview)}>Apply This Style</Button>
+            </div>
           </div>
         </div>
       )}

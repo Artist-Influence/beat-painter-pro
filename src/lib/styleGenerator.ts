@@ -29,8 +29,32 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
   }
   ctx.putImageData(imgData, 0, 0);
 
-  const textureUrl = canvas.toDataURL("image/png");
+  // Procedural result as default
+  let textureUrl = canvas.toDataURL("image/png");
   const colors = getStyleColors(styles);
+
+  // Optional: try Supabase Edge Function for Hugging Face image generation (if deployed)
+  const complex = ["Organic Flow", "Marble Veins", "Aurora Borealis"]; 
+  if (styles.some((s) => complex.includes(s))) {
+    const prompt = `abstract ${styles.join(' ')} texture, seamless pattern, no objects, pure abstract art, variation ${seed}`;
+    const negativePrompt = "photo, realistic, person, face, landscape, object, text, figurative";
+    try {
+      const res = await fetch("/functions/v1/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, negativePrompt, seed }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.image === "string" && data.image.startsWith("data:image")) {
+          textureUrl = data.image;
+        }
+      }
+    } catch (e) {
+      console.warn("HF generation unavailable, using procedural texture.", e);
+    }
+  }
+
   return { textureUrl, colors };
 }
 

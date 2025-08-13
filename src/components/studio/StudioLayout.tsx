@@ -24,26 +24,42 @@ const StudioLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="container mx-auto p-4">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Audio Visual Studio</h1>
-        <nav className="flex items-center gap-2">
-          <Link to="/admin">
-            <Button variant="secondary">Admin</Button>
-          </Link>
-        </nav>
+    <div className="min-h-screen bg-background">
+      <header className="fixed top-0 z-40 w-full border-b border-border bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <h1 className="text-lg font-semibold text-foreground">Audio Visual Studio</h1>
+          <nav className="flex items-center gap-2">
+            <Link to="/admin">
+              <Button variant="secondary">Admin</Button>
+            </Link>
+          </nav>
+        </div>
       </header>
-      <main className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2">
-          <VisualizerCanvas canvasRef={canvasRef} />
-        </section>
-        <aside className="lg:col-span-1 space-y-4">
-          <AudioUploader />
-          <AudioControls audioElement={audioElement} />
-          <StyleSelector />
-          <RecordingControls canvasRef={canvasRef} />
-        </aside>
-      </main>
+
+      <div className="container mx-auto px-4 pt-20 pb-8">
+        <main className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <section className="lg:col-span-2">
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-card/80 shadow-xl backdrop-blur">
+              <VisualizerCanvas canvasRef={canvasRef} />
+              <div className="pointer-events-auto absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/80 to-transparent p-4">
+                <AudioControls audioElement={audioElement} />
+              </div>
+            </div>
+          </section>
+
+          <aside className="space-y-4 lg:col-span-1">
+            <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur">
+              <AudioUploader />
+            </div>
+            <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur">
+              <StyleSelector />
+            </div>
+            <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur">
+              <RecordingControls canvasRef={canvasRef} />
+            </div>
+          </aside>
+        </main>
+      </div>
     </div>
   );
 };
