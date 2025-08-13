@@ -8,7 +8,7 @@ import DancingGnomeCapsVisualizer from "./DancingGnomeCapsVisualizer";
 export type { VisualizerProps } from "../visualizer";
 
 export const VISUALIZER_SCALES: Record<string, number> = {
-  DiamondOrbVisualizer: 0.05,
+  DiamondOrbVisualizer: 0.15,
   AlienMembraneVisualizer: 0.08,
   NeuralLatticeVisualizer: 0.033,
   AngelWingsVisualizer: 0.6,
