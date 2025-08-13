@@ -5,6 +5,7 @@ import AngelWingsVisualizer from "./AngelWingsVisualizer";
 import CubicCloudsVisualizer from "./CubicCloudsVisualizer";
 import DancingGnomeCapsVisualizer from "./DancingGnomeCapsVisualizer";
 import PsychedelicMandalaVisualizer from "./PsychedelicMandalaVisualizer";
+import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -16,6 +17,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   CubicCloudsVisualizer: 0.2,
   DancingGnomeCapsVisualizer: 0.25,
   PsychedelicMandalaVisualizer: 0.3,
+  HypercubePortalVisualizer: 0.4,
 };
 
 export const visualizerRegistry = {
@@ -26,6 +28,7 @@ export const visualizerRegistry = {
   CubicCloudsVisualizer,
   DancingGnomeCapsVisualizer,
   PsychedelicMandalaVisualizer,
+  HypercubePortalVisualizer,
 };
 
 export type VisualizerKey = keyof typeof visualizerRegistry;

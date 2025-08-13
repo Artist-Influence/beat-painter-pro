@@ -1,0 +1,189 @@
+import React, { useRef, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Environment, Trail } from "@react-three/drei";
+import * as THREE from "three";
+import type { VisualizerProps } from "../visualizer";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+
+function Tesseract({ audioData, textureData }) {
+  const innerRef = useRef<THREE.Mesh>(null);
+  const outerRef = useRef<THREE.Mesh>(null);
+  const connectionsRef = useRef<THREE.Group>(null);
+  
+  const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const frequency = safeAudioData.frequency || Array(256).fill(0);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 86 / 255, 1.0);
+  }, [frequency]);
+  
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 85 / 255, 1.0);
+  }, [frequency]);
+  
+  const highs = useMemo(() => {
+    let sum = 0;
+    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 85 / 255, 1.0);
+  }, [frequency]);
+  
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    
+    if (innerRef.current && outerRef.current) {
+      // 4D rotation projection - mind-bending effect
+      innerRef.current.rotation.x = t * 0.7 + bass * 2;
+      innerRef.current.rotation.y = t * 0.5 + mids * 1.5;
+      innerRef.current.rotation.z = t * 0.3 + highs;
+      
+      outerRef.current.rotation.x = -t * 0.4 + bass;
+      outerRef.current.rotation.y = -t * 0.6 + mids * 2;
+      outerRef.current.rotation.z = -t * 0.2 + highs * 1.5;
+      
+      // Dimensional shifting - creates "impossible space" illusion
+      const shift = 0.5 + Math.sin(t * 2) * 0.3 + bass * 0.5;
+      innerRef.current.scale.setScalar(shift);
+      
+      // Portal pulsing effect
+      const portal = 1 + Math.sin(t * 10) * highs * 0.3;
+      outerRef.current.scale.setScalar(portal);
+    }
+    
+    if (connectionsRef.current) {
+      // Connecting lines phase in and out - subliminal connectivity message
+      connectionsRef.current.children.forEach((child, i) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          (child.material as THREE.Material & { opacity: number }).opacity = 0.3 + Math.sin(t * 3 + i) * 0.3 + mids * 0.4;
+        }
+      });
+    }
+  });
+  
+  const primaryColor = textureData.colors.primary;
+  const accentColor = textureData.colors.accent;
+  
+  // Create vertices for hypercube connections
+  const connections = useMemo(() => {
+    const points = [];
+    for (let i = 0; i < 8; i++) {
+      const x = (i & 1) ? 1 : -1;
+      const y = (i & 2) ? 1 : -1;
+      const z = (i & 4) ? 1 : -1;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    return points;
+  }, []);
+  
+  return (
+    <group>
+      {/* Inner cube - represents higher dimension */}
+      <mesh
+        ref={innerRef}
+        material={createVisualizerMaterial(
+          primaryColor,
+          textureData,
+          {
+            emissive: primaryColor,
+            emissiveIntensity: 0.5 + bass,
+            wireframe: true,
+          }
+        )}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </mesh>
+      
+      {/* Outer cube - current dimension */}
+      <mesh
+        ref={outerRef}
+        material={createVisualizerMaterial(
+          accentColor,
+          textureData,
+          {
+            emissive: accentColor,
+            emissiveIntensity: 0.3 + highs,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5,
+          }
+        )}
+      >
+        <boxGeometry args={[2, 2, 2]} />
+      </mesh>
+      
+      {/* Dimensional connections */}
+      <group ref={connectionsRef}>
+        {connections.map((point, i) => (
+          <mesh 
+            key={i} 
+            position={point}
+            material={createVisualizerMaterial(
+              primaryColor,
+              textureData,
+              {
+                transparent: true,
+                opacity: 0.5,
+                emissiveIntensity: 0.2,
+              }
+            )}
+          >
+            <cylinderGeometry args={[0.01, 0.01, 2]} />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+export default function HypercubePortalVisualizer({
+  audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 },
+  styleAdjustments = { brightness: 100, saturation: 100, contrast: 100 },
+  width = 1080,
+  height = 1080,
+  zoomLevel = 1,
+  backgroundColor = '#FFFFFF',
+}: VisualizerProps) {
+  const portalRef = useRef<THREE.Group>(null);
+  const textureData = useVisualizerTexture();
+  
+  useFrame(({ clock }) => {
+    if (portalRef.current) {
+      // Slow portal rotation for hypnotic effect
+      portalRef.current.rotation.y = clock.getElapsedTime() * 0.2;
+    }
+  });
+  
+  return (
+    <>
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 5, 5]} intensity={0.5} />
+      <Environment preset="city" />
+      
+      <group ref={portalRef}>
+        <Tesseract audioData={audioData} textureData={textureData} />
+        
+        {/* Portal rings - create tunnel illusion */}
+        {[1, 1.5, 2, 2.5, 3].map((scale, i) => (
+          <mesh 
+            key={i} 
+            scale={scale}
+            material={createVisualizerMaterial(
+              textureData.colors.accent,
+              textureData,
+              {
+                transparent: true,
+                opacity: 0.3 - i * 0.05,
+                emissiveIntensity: 0.3,
+              }
+            )}
+          >
+            <torusGeometry args={[1, 0.02, 16, 100]} />
+          </mesh>
+        ))}
+      </group>
+    </>
+  );
+}
