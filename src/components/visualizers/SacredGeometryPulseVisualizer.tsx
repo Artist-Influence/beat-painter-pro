@@ -31,8 +31,9 @@ function FlowerOfLife({ audioData, textureData }) {
   useEffect(() => {
     materialsRef.current.forEach(material => {
       if (material instanceof THREE.MeshStandardMaterial) {
-        material.color.setHex(parseInt(textureData.colors.primary.replace('#', '0x')));
-        material.emissive.setHex(parseInt(textureData.colors.primary.replace('#', '0x')));
+        const primaryColor = textureData.colors?.primary || '#ffd700';
+        material.color.setHex(parseInt(primaryColor.replace('#', '0x')));
+        material.emissive.setHex(parseInt(primaryColor.replace('#', '0x')));
         
         if (textureData.texture) {
           material.map = textureData.texture;
@@ -72,7 +73,7 @@ function FlowerOfLife({ audioData, textureData }) {
     return result;
   }, []);
   
-  const material = createVisualizerMaterial(textureData.colors.primary, textureData, {
+  const material = createVisualizerMaterial(textureData.colors?.primary || '#ffd700', textureData, {
     emissiveIntensity: 0.8 + bass * 1.5,
     metalness: 0.9,
     roughness: 0.1,
@@ -120,7 +121,7 @@ function Metatron({ audioData, textureData }) {
     }
   });
 
-  const material = createVisualizerMaterial(textureData.colors.accent, textureData, {
+  const material = createVisualizerMaterial(textureData.colors?.accent || '#ff00ff', textureData, {
     wireframe: true,
     emissiveIntensity: 0.8 + highs * 2,
   });
@@ -132,8 +133,9 @@ function Metatron({ audioData, textureData }) {
 
   useEffect(() => {
     if (materialRef.current instanceof THREE.MeshStandardMaterial) {
-      materialRef.current.color.setHex(parseInt(textureData.colors.accent.replace('#', '0x')));
-      materialRef.current.emissive.setHex(parseInt(textureData.colors.accent.replace('#', '0x')));
+      const accentColor = textureData.colors?.accent || '#ff00ff';
+      materialRef.current.color.setHex(parseInt(accentColor.replace('#', '0x')));
+      materialRef.current.emissive.setHex(parseInt(accentColor.replace('#', '0x')));
       
       if (textureData.texture) {
         materialRef.current.emissiveMap = textureData.texture;
@@ -175,7 +177,7 @@ export default function SacredGeometryPulseVisualizer({
   // Create particle material
   const particleMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
-      color: new THREE.Color(textureData.colors.primary),
+      color: new THREE.Color(textureData.colors?.primary || '#ffd700'),
       transparent: true,
       opacity: 0.7,
     });
@@ -185,7 +187,8 @@ export default function SacredGeometryPulseVisualizer({
   useEffect(() => {
     particleMaterialsRef.current.forEach(material => {
       if (material instanceof THREE.MeshBasicMaterial) {
-        material.color.setHex(parseInt(textureData.colors.primary.replace('#', '0x')));
+        const primaryColor = textureData.colors?.primary || '#ffd700';
+        material.color.setHex(parseInt(primaryColor.replace('#', '0x')));
         material.needsUpdate = true;
       }
     });
