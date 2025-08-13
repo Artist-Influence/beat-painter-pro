@@ -55,10 +55,10 @@ function CrackedCrystalOrb({ audioData }: any) {
     const amp = amplitude;
     const beat = Math.max(beatStrength, bass);
     
-    const scalePulse = 1 + 2.5 * beat + 0.4 * Math.sin(time * 8);
-    const baseScale = 0.4 + 1.2 * amp;
+    const scalePulse = 1 + 0.6 * beat + 0.15 * Math.sin(time * 6);
+    const baseScale = 0.4 + 0.3 * amp;
     
-    const beatExplosion = beat > 0.7 ? 1 + beat * 3 : 1;
+    const beatExplosion = beat > 0.7 ? 1 + beat * 0.8 : 1;
 
     if (group.current) {
       group.current.rotation.y = time * 0.8 + mids * 2.0;
@@ -68,7 +68,7 @@ function CrackedCrystalOrb({ audioData }: any) {
     }
 
     if (orb.current) {
-      const orbPulse = 1 + beat * 2.0 + highs * 1.5;
+      const orbPulse = 1 + beat * 0.8 + highs * 0.6;
       orb.current.scale.setScalar(orbPulse);
       
       if (beat > 0.6) {
@@ -83,24 +83,24 @@ function CrackedCrystalOrb({ audioData }: any) {
     if (innerCore.current) {
       innerCore.current.rotation.y = time * 3.0 + mids * 4.0;
       innerCore.current.rotation.x = time * 2.5 + highs * 3.0;
-      const coreScale = 0.3 + 1.4 * Math.sin(time * 6) + beat * 2.5;
+      const coreScale = 0.3 + 0.4 * Math.sin(time * 4) + beat * 0.8;
       innerCore.current.scale.setScalar(coreScale);
     }
 
     shards.current.forEach((shard, i) => {
       if (shard) {
         const angle = (i / shards.current.length) * Math.PI * 2 + time * 2;
-        const radius = 1.0 + 1.5 * Math.sin(time * 4 + i) + beat * 3.0;
+        const radius = 1.0 + 0.8 * Math.sin(time * 3 + i) + beat * 1.2;
         
-        shard.position.x = Math.cos(angle) * radius + (Math.random() - 0.5) * beat * 0.8;
-        shard.position.z = Math.sin(angle) * radius + (Math.random() - 0.5) * beat * 0.8;
-        shard.position.y = Math.sin(time * 3 + i) * 0.8 + beat * 1.5;
+        shard.position.x = Math.cos(angle) * radius + (Math.random() - 0.5) * beat * 0.4;
+        shard.position.z = Math.sin(angle) * radius + (Math.random() - 0.5) * beat * 0.4;
+        shard.position.y = Math.sin(time * 2.5 + i) * 0.6 + beat * 0.8;
         
         shard.rotation.y = time * 4.0 + i * 0.5;
         shard.rotation.x = time * 3.0 + beat * 6.0;
         shard.rotation.z = time * 2.0 + highs * 8.0;
         
-        const shardScale = 0.8 + beat * 1.5 + highs * 0.8;
+        const shardScale = 0.8 + beat * 0.6 + highs * 0.4;
         shard.scale.setScalar(shardScale);
       }
     });

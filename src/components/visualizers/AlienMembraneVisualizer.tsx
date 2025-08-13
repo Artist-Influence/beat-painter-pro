@@ -78,6 +78,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     uIsNeon: { value: extractedColors?.isNeon ? 1.0 : 0.0 },
     uIsMetallic: { value: extractedColors?.isMetallic ? 1.0 : 0.0 },
     uTexture: { value: texture || null },
+    uHasTexture: { value: texture ? 1.0 : 0.0 },
   }), [primaryRgb, secondaryRgb, accentRgb, extractedColors, texture]);
 
   return (
@@ -116,6 +117,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
         uniform float uIsNeon;
         uniform float uIsMetallic;
         uniform sampler2D uTexture;
+        uniform float uHasTexture;
         varying vec3 vNormal;
         varying vec3 vPosition;
         varying vec2 vUv;
@@ -125,7 +127,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           vec3 glow = mix(uPrimaryColor, uSecondaryColor, intensity);
           vec3 chroma = glow + 0.1 * uAccentColor * vec3(sin(vPosition.x * 10.0), sin(vPosition.y * 10.0), sin(vPosition.z * 10.0));
           
-          if (uTexture != null) {
+          if (uHasTexture > 0.5) {
             vec4 texColor = texture2D(uTexture, vUv);
             chroma = mix(chroma, texColor.rgb, 0.4);
           }

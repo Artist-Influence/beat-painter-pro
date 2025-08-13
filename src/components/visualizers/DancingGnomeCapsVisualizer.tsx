@@ -75,10 +75,10 @@ function GlassShard({ index, audioData }: any) {
   return (
     <mesh ref={meshRef}>
       <coneGeometry args={[0.05, 0.2, 6]} />
-      <meshStandardMaterial
-        color={primaryColor}
-        metalness={extractedColors?.isMetallic ? 1 : 0.3}
-        roughness={extractedColors?.isMetallic ? 0.1 : 0.5}
+        <meshStandardMaterial
+          color={primaryColor}
+          metalness={extractedColors?.isMetallic ? 1 : 0.3}
+          roughness={extractedColors?.isMetallic ? 0.1 : 0.5}
           emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
           emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
           map={texture || undefined}
