@@ -21,8 +21,8 @@ interface StudioState {
 }
 
 export const useStudioStore = create<StudioState>((set) => ({
-  selected: "DiamondOrbVisualizer",
-  backgroundColor: "#00FF00",
+  selected: "PsychedelicMandalaVisualizer",
+  backgroundColor: "#FFFFFF",
   filters: { brightness: 100, saturation: 100, contrast: 100 },
   zoomLevel: 1,
   audioElement: null,

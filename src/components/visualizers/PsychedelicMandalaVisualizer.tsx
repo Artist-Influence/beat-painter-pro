@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
@@ -90,6 +90,22 @@ export default function PsychedelicMandalaVisualizer({
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
   
+  const [textureVersion, setTextureVersion] = useState(0);
+
+  // Listen for texture changes
+  useEffect(() => {
+    const handleTextureApplied = () => setTextureVersion(v => v + 1);
+    const handleTextureCleared = () => setTextureVersion(v => v + 1);
+    
+    window.addEventListener('texture:applied', handleTextureApplied);
+    window.addEventListener('texture:cleared', handleTextureCleared);
+    
+    return () => {
+      window.removeEventListener('texture:applied', handleTextureApplied);
+      window.removeEventListener('texture:cleared', handleTextureCleared);
+    };
+  }, []);
+
   useFrame(({ clock }) => {
     if (groupRef.current) {
       // Slow hypnotic rotation for trance induction

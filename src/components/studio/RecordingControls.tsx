@@ -7,6 +7,7 @@ import { visualizerRegistry } from "@/components/visualizers";
 import { useWebMRecorder } from "@/hooks/useWebMRecorder";
 import { useStudioStore } from "@/stores/studioStore";
 import { logEvent } from "@/lib/analytics";
+import TextureControls from "./TextureControls";
 
 interface RecordingControlsProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -59,6 +60,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
         <Label>Zoom: {zoomLevel.toFixed(2)}x</Label>
         <Slider value={[zoomLevel]} min={0.5} max={2} step={0.01} onValueChange={([v]) => setZoom(v)} />
       </div>
+
+      <TextureControls />
 
       <div className="flex items-center gap-2">
         <Label className="whitespace-nowrap">Start at (s)</Label>
