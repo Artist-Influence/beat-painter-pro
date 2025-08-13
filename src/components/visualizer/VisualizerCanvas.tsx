@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -38,7 +38,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = ctx.createMediaElementSource(audioElement);
     const analyserNode = ctx.createAnalyser();
-    analyserNode.fftSize = 512; // 256 bins
+    analyserNode.fftSize = 2048;
+    analyserNode.smoothingTimeConstant = 0.8;
     source.connect(analyserNode);
     analyserNode.connect(ctx.destination);
     setAnalyser(analyserNode);
@@ -73,14 +74,32 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   return (
     <div className="w-full max-w-3xl rounded-lg border border-border bg-card shadow" style={filterStyle}>
       <AspectRatio ratio={1}>
-        <Canvas onCreated={handleCreated} gl={{ preserveDrawingBuffer: true }} dpr={[1, 2]} camera={{ position: [0, 0, 3] }}>
-          <color attach="background" args={[backgroundColor]} />
-          <ambientLight intensity={0.3} />
-          <group scale={zoomLevel * scale}>
-            {Visualizer && <Visualizer audioData={audioData} backgroundColor={backgroundColor} />}
-          </group>
-          <OrbitControls enablePan={false} enableZoom={false} />
-        </Canvas>
+        <Canvas
+            onCreated={handleCreated}
+            gl={{
+              preserveDrawingBuffer: true,
+              antialias: true,
+              alpha: true,
+              powerPreference: "high-performance",
+              stencil: false,
+              depth: true,
+            }}
+            dpr={[1, 2]}
+            camera={{ position: [0, 0, 3], fov: 50 }}
+          >
+            <fog attach="fog" args={[backgroundColor, 5, 15]} />
+            <color attach="background" args={[backgroundColor]} />
+            <ambientLight intensity={0.5} />
+            <pointLight position={[10, 10, 10]} intensity={0.5} />
+            <group scale={zoomLevel * scale}>
+              <Suspense fallback={null}>
+                {Visualizer && (
+                  <Visualizer audioData={audioData} backgroundColor={backgroundColor} />
+                )}
+              </Suspense>
+            </group>
+            <OrbitControls enablePan={false} enableZoom={false} />
+          </Canvas>
       </AspectRatio>
     </div>
   );

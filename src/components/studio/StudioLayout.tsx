@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from "react";
 import AudioUploader from "./AudioUploader";
 import RecordingControls from "./RecordingControls";
+import { AudioControls } from "./AudioControls";
+import { StyleSelector } from "@/components/styles/StyleSelector";
 import VisualizerCanvas from "@/components/visualizer/VisualizerCanvas";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useStudioStore } from "@/stores/studioStore";
 const StudioLayout: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
+  const { audioElement } = useStudioStore();
   useEffect(() => {
     document.title = "Audio Visual Studio – 3D Visualizers";
     const meta = document.querySelector('meta[name="description"]');
@@ -36,6 +39,8 @@ const StudioLayout: React.FC = () => {
         </section>
         <aside className="lg:col-span-1 space-y-4">
           <AudioUploader />
+          <AudioControls audioElement={audioElement} />
+          <StyleSelector />
           <RecordingControls canvasRef={canvasRef} />
         </aside>
       </main>
