@@ -160,11 +160,11 @@ function CrackedCrystalOrb({ audioData }: any) {
         </mesh>
       ))}
       <Sparkles
-        count={15 + highs * 80}
-        scale={[2, 2, 2]}
-        size={3 + highs * 15 + Math.max(beatStrength, bass) * 12}
-        speed={0.8 + highs * 2 + Math.max(beatStrength, bass) * 3}
-        opacity={0.2 + 0.6 * highs + Math.max(beatStrength, bass) * 0.4}
+        count={8 + highs * 20}
+        scale={[1, 1, 1]}
+        size={1 + highs * 3 + Math.max(beatStrength, bass) * 2}
+        speed={0.4 + highs * 1 + Math.max(beatStrength, bass) * 1.5}
+        opacity={0.02 + 0.03 * highs + Math.max(beatStrength, bass) * 0.02}
         color={accentColor}
       />
     </group>

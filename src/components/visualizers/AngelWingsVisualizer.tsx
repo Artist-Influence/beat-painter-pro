@@ -150,11 +150,11 @@ function HologramWings({ audioData }: any) {
       <Wing side={1} audioData={audioData} />
       <Wing side={-1} audioData={audioData} />
       <Sparkles
-        count={20 + highs * 60 + bass * 40}
-        scale={[1.5, 1.5, 1.5]}
-        size={3 + highs * 8 + bass * 6}
-        speed={0.8 + highs * 2 + bass * 1.5}
-        opacity={0.3 + highs * 0.4}
+        count={5 + highs * 12 + bass * 8}
+        scale={[0.8, 0.8, 0.8]}
+        size={1 + highs * 2 + bass * 1.5}
+        speed={0.3 + highs * 0.8 + bass * 0.6}
+        opacity={0.01 + highs * 0.04}
         color={accentColor}
         position={[0, 0.8, 0]}
       />

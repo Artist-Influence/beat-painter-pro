@@ -78,7 +78,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     uIsNeon: { value: extractedColors?.isNeon ? 1.0 : 0.0 },
     uIsMetallic: { value: extractedColors?.isMetallic ? 1.0 : 0.0 },
     uTexture: { value: texture || null },
-  }), [primaryRgb, secondaryRgb, accentRgb, extractedColors]);
+  }), [primaryRgb, secondaryRgb, accentRgb, extractedColors, texture]);
 
   return (
     <shaderMaterial
@@ -127,7 +127,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           
           if (uTexture != null) {
             vec4 texColor = texture2D(uTexture, vUv);
-            chroma = mix(chroma, texColor.rgb, 0.3);
+            chroma = mix(chroma, texColor.rgb, 0.4);
           }
           
           if (uIsNeon > 0.5) {
@@ -197,11 +197,11 @@ function AlienMembrane({ audioData }: any) {
         <AlienMembraneShaderMaterial audioData={audioData} />
       </mesh>
       <Sparkles
-        count={10 + highs * 80}
-        scale={[2, 2, 2]}
-        size={2 + highs * 12 + bass * 8}
-        speed={0.8 + highs * 2 + bass * 1.5}
-        opacity={0.2 + highs * 0.4}
+        count={4 + highs * 15}
+        scale={[1, 1, 1]}
+        size={1 + highs * 2 + bass * 1.5}
+        speed={0.3 + highs * 0.8 + bass * 0.6}
+        opacity={0.01 + highs * 0.04}
         color={accentColor}
       />
     </group>
