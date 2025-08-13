@@ -7,6 +7,7 @@ import DancingGnomeCapsVisualizer from "./DancingGnomeCapsVisualizer";
 import PsychedelicMandalaVisualizer from "./PsychedelicMandalaVisualizer";
 import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
+import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -20,6 +21,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   PsychedelicMandalaVisualizer: 0.3,
   HypercubePortalVisualizer: 0.4,
   SacredGeometryPulseVisualizer: 0.35,
+  StroboscopicTunnelVisualizer: 0.3,
 };
 
 export const visualizerRegistry = {
@@ -32,6 +34,7 @@ export const visualizerRegistry = {
   PsychedelicMandalaVisualizer,
   HypercubePortalVisualizer,
   SacredGeometryPulseVisualizer,
+  StroboscopicTunnelVisualizer,
 };
 
 export type VisualizerKey = keyof typeof visualizerRegistry;

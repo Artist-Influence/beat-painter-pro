@@ -8,7 +8,7 @@ import { analyzeAudio } from "@/lib/visualizerUtils";
 
 function FlowerOfLife({ audioData, textureData }) {
   const groupRef = useRef<THREE.Group>(null);
-  const materialsRef = useRef<THREE.Material[]>([]);
+  const materialRef = useRef<THREE.MeshStandardMaterial>();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -25,24 +25,23 @@ function FlowerOfLife({ audioData, textureData }) {
       const breathe = 1 + Math.sin(t * 0.6) * 0.2 + mids * 0.3;
       groupRef.current.scale.setScalar(breathe);
     }
+    
+    // Update emissive intensity based on audio
+    if (materialRef.current) {
+      materialRef.current.emissiveIntensity = 0.8 + bass * 1.5;
+    }
   });
 
-  // Update materials when texture changes
-  useEffect(() => {
-    materialsRef.current.forEach(material => {
-      if (material instanceof THREE.MeshStandardMaterial) {
-        const primaryColor = textureData.colors?.primary || '#ffd700';
-        material.color.setHex(parseInt(primaryColor.replace('#', '0x')));
-        material.emissive.setHex(parseInt(primaryColor.replace('#', '0x')));
-        
-        if (textureData.texture) {
-          material.map = textureData.texture;
-          material.emissiveMap = textureData.texture;
-          material.needsUpdate = true;
-        }
-      }
+  // Create material that updates with texture changes
+  const material = useMemo(() => {
+    const mat = createVisualizerMaterial(textureData.colors?.primary || '#ffd700', textureData, {
+      emissiveIntensity: 0.8,
+      metalness: 0.9,
+      roughness: 0.1,
     });
-  }, [textureData.textureVersion, textureData.colors.primary]);
+    materialRef.current = mat;
+    return mat;
+  }, [textureData.textureVersion, textureData.colors?.primary]);
   
   // Create Flower of Life pattern
   const circles = useMemo(() => {
@@ -73,20 +72,6 @@ function FlowerOfLife({ audioData, textureData }) {
     return result;
   }, []);
   
-  const material = createVisualizerMaterial(textureData.colors?.primary || '#ffd700', textureData, {
-    emissiveIntensity: 0.8 + bass * 1.5,
-    metalness: 0.9,
-    roughness: 0.1,
-  });
-
-  // Store material reference for updates
-  useEffect(() => {
-    materialsRef.current = [material];
-    return () => {
-      material.dispose();
-    };
-  }, [material]);
-  
   return (
     <group ref={groupRef}>
       {circles.map((pos, i) => (
@@ -100,7 +85,7 @@ function FlowerOfLife({ audioData, textureData }) {
 
 function Metatron({ audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.Material>();
+  const materialRef = useRef<THREE.MeshStandardMaterial>();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -119,30 +104,22 @@ function Metatron({ audioData, textureData }) {
       const expand = 1 + highs * 0.5;
       meshRef.current.scale.setScalar(expand);
     }
-  });
-
-  const material = createVisualizerMaterial(textureData.colors?.accent || '#ff00ff', textureData, {
-    wireframe: true,
-    emissiveIntensity: 0.8 + highs * 2,
-  });
-
-  // Update material when texture changes
-  useEffect(() => {
-    materialRef.current = material;
-  }, [material]);
-
-  useEffect(() => {
-    if (materialRef.current instanceof THREE.MeshStandardMaterial) {
-      const accentColor = textureData.colors?.accent || '#ff00ff';
-      materialRef.current.color.setHex(parseInt(accentColor.replace('#', '0x')));
-      materialRef.current.emissive.setHex(parseInt(accentColor.replace('#', '0x')));
-      
-      if (textureData.texture) {
-        materialRef.current.emissiveMap = textureData.texture;
-        materialRef.current.needsUpdate = true;
-      }
+    
+    // Update emissive intensity based on audio
+    if (materialRef.current) {
+      materialRef.current.emissiveIntensity = 0.8 + highs * 2;
     }
-  }, [textureData.textureVersion, textureData.colors.accent]);
+  });
+
+  // Create material that updates with texture changes
+  const material = useMemo(() => {
+    const mat = createVisualizerMaterial(textureData.colors?.accent || '#ff00ff', textureData, {
+      wireframe: true,
+      emissiveIntensity: 0.8,
+    });
+    materialRef.current = mat;
+    return mat;
+  }, [textureData.textureVersion, textureData.colors?.accent]);
   
   return (
     <mesh ref={meshRef} material={material}>
@@ -160,7 +137,6 @@ export default function SacredGeometryPulseVisualizer({
   backgroundColor = '#00FF00',
 }: VisualizerProps) {
   const containerRef = useRef<THREE.Group>(null);
-  const particleMaterialsRef = useRef<THREE.Material[]>([]);
   const textureData = useVisualizerTexture();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -174,33 +150,14 @@ export default function SacredGeometryPulseVisualizer({
     }
   });
 
-  // Create particle material
+  // Create particle material that updates with texture changes
   const particleMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#ffd700'),
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.5 + bass * 0.5,
     });
-  }, [textureData.colors.primary]);
-
-  // Update particle materials when texture changes
-  useEffect(() => {
-    particleMaterialsRef.current.forEach(material => {
-      if (material instanceof THREE.MeshBasicMaterial) {
-        const primaryColor = textureData.colors?.primary || '#ffd700';
-        material.color.setHex(parseInt(primaryColor.replace('#', '0x')));
-        material.needsUpdate = true;
-      }
-    });
-  }, [textureData.textureVersion, textureData.colors.primary]);
-
-  // Store particle material references
-  useEffect(() => {
-    particleMaterialsRef.current = [particleMaterial];
-    return () => {
-      particleMaterial.dispose();
-    };
-  }, [particleMaterial]);
+  }, [textureData.colors?.primary, bass]);
   
   return (
     <>
