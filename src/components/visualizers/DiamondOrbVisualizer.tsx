@@ -121,7 +121,7 @@ function CrackedCrystalOrb({ audioData }: any) {
   }, []);
 
   return (
-    <group ref={group} scale={5.6}>
+    <group ref={group} scale={16.8}>
       <mesh ref={orb} geometry={outerGeom}>
         <meshStandardMaterial 
           color={primaryColor} 
