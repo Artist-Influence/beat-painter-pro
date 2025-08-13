@@ -1,10 +1,11 @@
-import React, { useRef, useMemo, useState, useEffect } from "react";
+import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import type { VisualizerProps } from "../visualizer";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 
-function MandalaRing({ radius, segments, depth, audioData }) {
+function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   const meshRef = useRef<THREE.Group>(null);
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -43,9 +44,8 @@ function MandalaRing({ radius, segments, depth, audioData }) {
     }
   });
   
-  const extractedColors = (window as any).extractedColors;
-  const primaryColor = extractedColors?.primary || '#ff00ff';
-  const accentColor = extractedColors?.accent || '#00ffff';
+  const primaryColor = textureData.colors.primary;
+  const accentColor = textureData.colors.accent;
   
   return (
     <group ref={meshRef}>
@@ -54,16 +54,20 @@ function MandalaRing({ radius, segments, depth, audioData }) {
         const x = Math.cos(angle) * radius;
         const y = Math.sin(angle) * radius;
         
+        const material = createVisualizerMaterial(
+          i % 2 === 0 ? primaryColor : accentColor,
+          textureData,
+          {
+            emissive: i % 2 === 0 ? primaryColor : accentColor,
+            emissiveIntensity: 0.5 + bass * 2,
+            metalness: 0.8,
+            roughness: 0.2,
+          }
+        );
+
         return (
-          <mesh key={i} position={[x, y, 0]}>
+          <mesh key={i} position={[x, y, 0]} material={material}>
             <torusGeometry args={[0.1, 0.05, 8, 16]} />
-            <meshStandardMaterial
-              color={i % 2 === 0 ? primaryColor : accentColor}
-              emissive={i % 2 === 0 ? primaryColor : accentColor}
-              emissiveIntensity={0.5 + bass * 2}
-              metalness={0.8}
-              roughness={0.2}
-            />
           </mesh>
         );
       })}
@@ -80,6 +84,7 @@ export default function PsychedelicMandalaVisualizer({
   backgroundColor = '#00FF00',
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const textureData = useVisualizerTexture();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -89,22 +94,6 @@ export default function PsychedelicMandalaVisualizer({
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
-  
-  const [textureVersion, setTextureVersion] = useState(0);
-
-  // Listen for texture changes
-  useEffect(() => {
-    const handleTextureApplied = () => setTextureVersion(v => v + 1);
-    const handleTextureCleared = () => setTextureVersion(v => v + 1);
-    
-    window.addEventListener('texture:applied', handleTextureApplied);
-    window.addEventListener('texture:cleared', handleTextureCleared);
-    
-    return () => {
-      window.removeEventListener('texture:applied', handleTextureApplied);
-      window.removeEventListener('texture:cleared', handleTextureCleared);
-    };
-  }, []);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
@@ -125,20 +114,24 @@ export default function PsychedelicMandalaVisualizer({
       
       <group ref={groupRef}>
         {/* Multiple concentric rings create depth illusion */}
-        <MandalaRing radius={0.5} segments={8} depth={0} audioData={audioData} />
-        <MandalaRing radius={1} segments={16} depth={1} audioData={audioData} />
-        <MandalaRing radius={1.5} segments={24} depth={2} audioData={audioData} />
-        <MandalaRing radius={2} segments={32} depth={3} audioData={audioData} />
+        <MandalaRing radius={0.5} segments={8} depth={0} audioData={audioData} textureData={textureData} />
+        <MandalaRing radius={1} segments={16} depth={1} audioData={audioData} textureData={textureData} />
+        <MandalaRing radius={1.5} segments={24} depth={2} audioData={audioData} textureData={textureData} />
+        <MandalaRing radius={2} segments={32} depth={3} audioData={audioData} textureData={textureData} />
         
         {/* Sacred geometry center - attracts focus */}
-        <mesh>
+        <mesh
+          material={createVisualizerMaterial(
+            textureData.colors.primary,
+            textureData,
+            {
+              emissive: textureData.colors.primary,
+              emissiveIntensity: 1 + bass * 2,
+              wireframe: true,
+            }
+          )}
+        >
           <octahedronGeometry args={[0.3, 2]} />
-          <meshStandardMaterial
-            color={(window as any).extractedColors?.primary || '#ff00ff'}
-            emissive={(window as any).extractedColors?.primary || '#ff00ff'}
-            emissiveIntensity={1 + bass * 2}
-            wireframe
-          />
         </mesh>
         
         <Sparkles
@@ -147,7 +140,7 @@ export default function PsychedelicMandalaVisualizer({
           size={2 + bass * 5}
           speed={2 + bass * 3}
           opacity={0.8}
-          color={(window as any).extractedColors?.accent || '#00ffff'}
+          color={textureData.colors.accent}
         />
       </group>
     </>
