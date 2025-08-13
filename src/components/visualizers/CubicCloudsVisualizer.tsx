@@ -186,7 +186,7 @@ export default function CubicCloudsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={0.8}>
+      <group scale={1.6}>
         <OrbitingCubesVisualizer audioData={audioData} />
       </group>
     </>
