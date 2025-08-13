@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { EffectComposer, BrightnessContrast, HueSaturation } from "@react-three/postprocessing";
+import { EffectComposer, BrightnessContrast } from "@react-three/postprocessing";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES } from "@/components/visualizers";
@@ -107,7 +107,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
             }}
             dpr={[1, 2]}
             camera={{ position: [0, 0, 3], fov: 50 }}
-            performance={{ min: 0.5 }}
           >
             <fog attach="fog" args={[backgroundColor, 5, 15]} />
             <color attach="background" args={[backgroundColor]} />
@@ -125,9 +124,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
               <BrightnessContrast
                 brightness={((filters.brightness ?? 100) - 100) / 100}
                 contrast={((filters.contrast ?? 100) - 100) / 100}
-              />
-              <HueSaturation
-                saturation={((filters.saturation ?? 100) - 100) / 100}
               />
             </EffectComposer>
             <OrbitControls enablePan={false} enableZoom={false} />
