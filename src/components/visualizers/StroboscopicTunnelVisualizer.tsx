@@ -50,7 +50,7 @@ function StrobeRing({ distance, index, audioData, textureData }) {
     });
     materialRef.current = mat;
     return mat;
-  }, [textureData.textureVersion, colors[index % 3]]);
+  }, [textureData.textureVersion, colors[index % 3], textureData.texture]);
   
   return (
     <mesh ref={meshRef} position={[0, 0, distance]} material={material}>
@@ -119,7 +119,7 @@ export default function StroboscopicTunnelVisualizer({
     });
     beamMaterialRef.current = material;
     return material;
-  }, [textureData.colors?.primary]);
+  }, [textureData.colors?.primary, textureData.textureVersion]);
 
   // Create flash material
   const flashMaterial = useMemo(() => {

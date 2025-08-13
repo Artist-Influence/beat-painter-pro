@@ -41,7 +41,7 @@ function FlowerOfLife({ audioData, textureData }) {
     });
     materialRef.current = mat;
     return mat;
-  }, [textureData.textureVersion, textureData.colors?.primary]);
+  }, [textureData.textureVersion, textureData.colors?.primary, textureData.texture]);
   
   // Create Flower of Life pattern
   const circles = useMemo(() => {
@@ -119,7 +119,7 @@ function Metatron({ audioData, textureData }) {
     });
     materialRef.current = mat;
     return mat;
-  }, [textureData.textureVersion, textureData.colors?.accent]);
+  }, [textureData.textureVersion, textureData.colors?.accent, textureData.texture]);
   
   return (
     <mesh ref={meshRef} material={material}>
@@ -157,7 +157,7 @@ export default function SacredGeometryPulseVisualizer({
       transparent: true,
       opacity: 0.5 + bass * 0.5,
     });
-  }, [textureData.colors?.primary, bass]);
+  }, [textureData.textureVersion, textureData.colors?.primary, bass]);
   
   return (
     <>

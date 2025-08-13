@@ -17,9 +17,18 @@ export const useVisualizerTexture = () => {
   const [textureVersion, setTextureVersion] = useState(0);
   
   useEffect(() => {
-    const handleTextureApplied = () => setTextureVersion(v => v + 1);
-    const handleTextureCleared = () => setTextureVersion(v => v + 1);
-    const handleStyleApplied = () => setTextureVersion(v => v + 1);
+    const handleTextureApplied = () => {
+      console.log('Texture applied event fired');
+      setTextureVersion(v => v + 1);
+    };
+    const handleTextureCleared = () => {
+      console.log('Texture cleared event fired');
+      setTextureVersion(v => v + 1);
+    };
+    const handleStyleApplied = () => {
+      console.log('Style applied event fired');
+      setTextureVersion(v => v + 1);
+    };
     
     window.addEventListener('texture:applied', handleTextureApplied);
     window.addEventListener('texture:cleared', handleTextureCleared);
