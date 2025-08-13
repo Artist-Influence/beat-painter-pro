@@ -30,6 +30,8 @@ export function StyleSelector() {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+  const [appliedIndex, setAppliedIndex] = useState<number | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const canAddMore = selectedStyles.length < 3;
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
@@ -71,13 +73,16 @@ export function StyleSelector() {
   const generatePreviews = async () => {
     if (selectedStyles.length === 0) return;
     setIsGenerating(true);
+    setProgress(0);
     setPreviews([]);
     for (let i = 0; i < 3; i++) {
       const { textureUrl } = await generateStyleTexture(selectedStyles, i);
       setPreviews((prev) => [...prev, textureUrl]);
+      setProgress(i + 1);
     }
     setIsGenerating(false);
     setIsDropdownOpen(false);
+    setProgress(0);
   };
 
   const applyStyle = async (previewIndex: number) => {
@@ -85,58 +90,57 @@ export function StyleSelector() {
     const colors = getStyleColors(selectedStyles);
     (window as any).appliedTexture = texture;
     (window as any).extractedColors = colors;
-    setPreviews([]);
-    setSelectedStyles([]);
-    setSelectedPreview(null);
+    setAppliedIndex(previewIndex);
   };
 
   return (
     <div className="space-y-3">
-      {/* Trigger */}
       <div className="relative">
-        <Button
-          type="button"
-          ref={buttonRef}
-          onClick={() => {
-            if (!isDropdownOpen && buttonRef.current) {
-              const rect = buttonRef.current.getBoundingClientRect();
-              setMenuPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
-            }
-            setIsDropdownOpen((v) => !v);
-          }}
-          variant="secondary"
-          className="flex w-full items-center justify-between"
-          aria-haspopup="listbox"
-          aria-expanded={isDropdownOpen}
-        >
-          <span className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            {selectedLabel}
-          </span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            ref={buttonRef}
+            onClick={() => {
+              if (!isDropdownOpen && buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect();
+                setMenuPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+              }
+              setIsDropdownOpen((v) => !v);
+            }}
+            variant="secondary"
+            className="flex w-full items-center justify-between"
+            aria-haspopup="listbox"
+            aria-expanded={isDropdownOpen}
+          >
+            <span className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              {selectedLabel}
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+          </Button>
+          <Button
+            onClick={generatePreviews}
+            disabled={isGenerating || selectedStyles.length === 0}
+            aria-label="Generate style previews"
+          >
+            {isGenerating ? `Generating ${progress}/3…` : "Generate Previews"}
+          </Button>
+        </div>
 
 {isDropdownOpen &&
           createPortal(
             <div ref={menuRef} className="fixed z-[9999] rounded-lg border border-border bg-popover shadow-xl" style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }} role="listbox">
-              <div className="max-h-96 overflow-y-auto">
-                <div className="sticky top-0 z-[1] border-b border-border bg-popover p-2">
-                  <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
-                    {isGenerating ? "Generating..." : "Generate Previews"}
-                  </Button>
-                </div>
-                <div className="p-2">
-                  {ALL_STYLES.map((style) => {
-                    const checked = selectedStyles.includes(style);
-                    const disabled = !checked && !canAddMore;
-                    return (
-                      <label key={style} className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${checked ? "bg-accent/40" : "hover:bg-accent/30"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
-                        <input type="checkbox" checked={checked} onChange={() => toggleStyle(style)} disabled={disabled} className="h-4 w-4" />
-                        <span className="text-foreground">{style}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+              <div className="max-h-96 overflow-y-auto p-2">
+                {ALL_STYLES.map((style) => {
+                  const checked = selectedStyles.includes(style);
+                  const disabled = !checked && !canAddMore;
+                  return (
+                    <label key={style} className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${checked ? "bg-accent/40" : "hover:bg-accent/30"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleStyle(style)} disabled={disabled} className="h-4 w-4" />
+                      <span className="text-foreground">{style}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>,
             document.body
