@@ -1,3 +1,6 @@
+
+import { supabase } from "@/integrations/supabase/client";
+
 export async function generateStyleTexture(styles: string[], seed: number = 0): Promise<{ textureUrl: string; colors: string[] }>
 {
   const size = 256;
@@ -33,25 +36,20 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
   let textureUrl = canvas.toDataURL("image/png");
   const colors = getStyleColors(styles);
 
-  // Optional: try Supabase Edge Function for Hugging Face image generation (if deployed)
-  const complex = ["Organic Flow", "Marble Veins", "Aurora Borealis"]; 
+  // Try Supabase Edge Function for Hugging Face image generation (if secret configured)
+  const complex = ["Organic Flow", "Marble Veins", "Aurora Borealis"];
   if (styles.some((s) => complex.includes(s))) {
-    const prompt = `abstract ${styles.join(' ')} texture, seamless pattern, no objects, pure abstract art, variation ${seed}`;
+    const prompt = `abstract ${styles.join(" ")} texture, seamless pattern, no objects, pure abstract art, variation ${seed}`;
     const negativePrompt = "photo, realistic, person, face, landscape, object, text, figurative";
-    try {
-      const res = await fetch("/functions/v1/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, negativePrompt, seed }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (typeof data.image === "string" && data.image.startsWith("data:image")) {
-          textureUrl = data.image;
-        }
-      }
-    } catch (e) {
-      console.warn("HF generation unavailable, using procedural texture.", e);
+    const { data, error } = await supabase.functions.invoke("generate-image", {
+      body: { prompt, negativePrompt, seed },
+    });
+
+    if (!error && data && typeof (data as any).image === "string" && (data as any).image.startsWith("data:image")) {
+      textureUrl = (data as any).image as string;
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn("HF generation unavailable, using procedural texture.", error);
     }
   }
 
@@ -73,7 +71,7 @@ function hashCode(str: string) {
 }
 
 function hashArray(arr: string[]) {
-  return arr.reduce((acc, s) => acc + '-' + s, '');
+  return arr.reduce((acc, s) => acc + "-" + s, "");
 }
 
 function mulberry32(aStr: string) {
