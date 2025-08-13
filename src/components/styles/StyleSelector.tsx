@@ -91,12 +91,14 @@ export function StyleSelector() {
     (window as any).appliedTexture = texture;
     (window as any).extractedColors = colors;
     setAppliedIndex(previewIndex);
+    // Notify visualizers to refresh
+    window.dispatchEvent(new CustomEvent('style:applied', { detail: { texture, colors } }));
   };
 
   return (
     <div className="space-y-3">
       <div className="relative">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Button
             type="button"
             ref={buttonRef}
@@ -108,7 +110,7 @@ export function StyleSelector() {
               setIsDropdownOpen((v) => !v);
             }}
             variant="secondary"
-            className="flex w-full items-center justify-between"
+            className="w-full justify-between"
             aria-haspopup="listbox"
             aria-expanded={isDropdownOpen}
           >
@@ -122,6 +124,7 @@ export function StyleSelector() {
             onClick={generatePreviews}
             disabled={isGenerating || selectedStyles.length === 0}
             aria-label="Generate style previews"
+            className="w-full"
           >
             {isGenerating ? `Generating ${progress}/3…` : "Generate Previews"}
           </Button>

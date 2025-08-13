@@ -15,8 +15,18 @@ function CrackedCrystalOrb({ audioData }: any) {
   const amplitude = safeAudioData.amplitude || 0;
   const beatStrength = safeAudioData.beatStrength || 0;
 
-  const appliedTexture = (window as any).appliedTexture;
   const extractedColors = (window as any).extractedColors;
+
+  const texture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
   
   const primaryColor = extractedColors?.primary || '#ffffff';
   const secondaryColor = extractedColors?.secondary || '#ffffff';
@@ -117,7 +127,7 @@ function CrackedCrystalOrb({ audioData }: any) {
           color={primaryColor} 
           roughness={extractedColors?.isMetallic ? 0.1 : 0.25} 
           metalness={extractedColors?.isMetallic ? 0.95 : 0.9}
-          map={appliedTexture || undefined}
+           map={texture || undefined}
           emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
           emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
         />
@@ -127,7 +137,7 @@ function CrackedCrystalOrb({ audioData }: any) {
           color={secondaryColor} 
           roughness={extractedColors?.isMetallic ? 0.15 : 0.3} 
           metalness={extractedColors?.isMetallic ? 0.9 : 0.85}
-          map={appliedTexture || undefined}
+           map={texture || undefined}
           emissive={extractedColors?.isNeon ? secondaryColor : '#000000'}
           emissiveIntensity={extractedColors?.isNeon ? 0.2 : 0}
         />
@@ -143,7 +153,7 @@ function CrackedCrystalOrb({ audioData }: any) {
             color={accentColor} 
             roughness={extractedColors?.isMetallic ? 0.05 : 0.2} 
             metalness={extractedColors?.isMetallic ? 0.98 : 0.95}
-            map={appliedTexture || undefined}
+             map={texture || undefined}
             emissive={extractedColors?.isNeon ? accentColor : '#000000'}
             emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0}
           />

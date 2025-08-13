@@ -19,6 +19,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   const [audioData, setAudioData] = useState<AudioData>({ frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 });
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [styleVersion, setStyleVersion] = useState(0);
 
   // Initialize defaults for global styles used by visualizers
   useEffect(() => {
@@ -82,6 +83,12 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
 
   useAudioAnalysis(analyser, isPlaying, setAudioData);
 
+  useEffect(() => {
+    const handler = () => setStyleVersion((v) => v + 1);
+    window.addEventListener("style:applied", handler);
+    return () => window.removeEventListener("style:applied", handler);
+  }, []);
+
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
       (canvasRef as any).current = gl.domElement as HTMLCanvasElement;
@@ -96,7 +103,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   } as React.CSSProperties;
 
   return (
-    <div className="w-full max-w-3xl rounded-lg border border-border bg-card shadow">
+    <div className="w-full max-w-3xl rounded-lg border border-border shadow" style={{ backgroundColor }}>
       <AspectRatio ratio={1}>
         <Canvas
             onCreated={handleCreated}
@@ -112,14 +119,14 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
             camera={{ position: [0, 0, 3], fov: 50 }}
             style={filterStyle}
           >
-            <fog attach="fog" args={[backgroundColor, 5, 15]} />
-            <color attach="background" args={[backgroundColor]} />
+            
+            
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} intensity={0.5} />
             <group scale={zoomLevel * scale}>
               <Suspense fallback={null}>
                 {Visualizer && (
-                  <Visualizer audioData={audioData} backgroundColor={backgroundColor} />
+                  <Visualizer key={styleVersion} audioData={audioData} backgroundColor={backgroundColor} />
                 )}
               </Suspense>
             </group>

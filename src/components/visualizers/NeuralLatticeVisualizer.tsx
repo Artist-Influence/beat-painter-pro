@@ -9,6 +9,7 @@ function NeuralLattice({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
 
   const extractedColors = (window as any).extractedColors;
+  const appliedTexture = (window as any).appliedTexture;
   const primaryColor = extractedColors?.primary || '#ffffff';
   const secondaryColor = extractedColors?.secondary || '#ffffff';
   const accentColor = extractedColors?.accent || '#ffffff';
@@ -83,12 +84,12 @@ function NeuralLattice({ audioData }: any) {
     
     if (pointsRef.current && pointsRef.current.material) {
       const material = pointsRef.current.material as THREE.PointsMaterial;
-      material.size = 0.02 + highs * 0.15 + bass * 0.1 + 0.03 * Math.sin(t * 12);
-      material.opacity = 0.5 + highs * 1.5 + bass * 0.8 + 0.2 * Math.sin(t * 8);
+      material.size = 0.012 + highs * 0.06 + bass * 0.04 + 0.02 * Math.sin(t * 10);
+      material.opacity = 0.22 + highs * 0.5 + bass * 0.3 + 0.1 * Math.sin(t * 6);
       
       if (extractedColors?.isNeon) {
-        material.opacity = Math.min(material.opacity * 2.0, 1.0);
-        material.size *= 1.5;
+        material.opacity = Math.min(material.opacity * 1.25, 0.85);
+        material.size *= 1.15;
       }
       
       material.needsUpdate = true;
@@ -114,7 +115,7 @@ function NeuralLattice({ audioData }: any) {
           color={primaryColor} 
           wireframe 
           transparent 
-          opacity={0.1 + mids * 0.8 + bass * 0.6}
+          opacity={0.25 + mids * 0.4 + bass * 0.3}
         />
       </mesh>
       <mesh>
@@ -123,7 +124,7 @@ function NeuralLattice({ audioData }: any) {
           color={secondaryColor} 
           wireframe 
           transparent 
-          opacity={0.05 + highs * 0.5}
+          opacity={0.15 + highs * 0.35}
         />
       </mesh>
       <mesh>
@@ -132,7 +133,7 @@ function NeuralLattice({ audioData }: any) {
           color={accentColor} 
           wireframe 
           transparent 
-          opacity={0.03 + bass * 0.4}
+          opacity={0.1 + bass * 0.25}
         />
       </mesh>
     </group>
