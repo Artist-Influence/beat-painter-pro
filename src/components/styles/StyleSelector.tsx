@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
@@ -26,8 +27,36 @@ export function StyleSelector() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState<number | null>(null);
 
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
   const canAddMore = selectedStyles.length < 3;
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const updatePos = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+    };
+    updatePos();
+    const closeOnOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && buttonRef.current && !buttonRef.current.contains(target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    document.addEventListener("mousedown", closeOnOutside);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+      document.removeEventListener("mousedown", closeOnOutside);
+    };
+  }, [isDropdownOpen]);
 
   const toggleStyle = (style: string) => {
     setSelectedStyles((prev) =>
@@ -68,7 +97,14 @@ export function StyleSelector() {
       <div className="relative">
         <Button
           type="button"
-          onClick={() => setIsDropdownOpen((v) => !v)}
+          ref={buttonRef}
+          onClick={() => {
+            if (!isDropdownOpen && buttonRef.current) {
+              const rect = buttonRef.current.getBoundingClientRect();
+              setMenuPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+            }
+            setIsDropdownOpen((v) => !v);
+          }}
           variant="secondary"
           className="flex w-full items-center justify-between"
           aria-haspopup="listbox"
@@ -81,38 +117,45 @@ export function StyleSelector() {
           <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
         </Button>
 
-        {isDropdownOpen && (
-          <div className="absolute left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl">
-            <div className="p-2">
-              {ALL_STYLES.map((style) => {
-                const checked = selectedStyles.includes(style);
-                const disabled = !checked && !canAddMore;
-                return (
-                  <label
-                    key={style}
-                    className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                      checked ? "bg-accent/40" : "hover:bg-accent/30"
-                    } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleStyle(style)}
-                      disabled={disabled}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-foreground">{style}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <div className="border-t border-border p-2">
-              <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
-                {isGenerating ? "Generating..." : "Generate Previews"}
-              </Button>
-            </div>
-          </div>
-        )}
+{isDropdownOpen &&
+          createPortal(
+            <div
+              ref={menuRef}
+              className="fixed z-[9999] max-h-96 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl"
+              style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+              role="listbox"
+            >
+              <div className="p-2">
+                {ALL_STYLES.map((style) => {
+                  const checked = selectedStyles.includes(style);
+                  const disabled = !checked && !canAddMore;
+                  return (
+                    <label
+                      key={style}
+                      className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                        checked ? "bg-accent/40" : "hover:bg-accent/30"
+                      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleStyle(style)}
+                        disabled={disabled}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-foreground">{style}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="border-t border-border p-2">
+                <Button onClick={generatePreviews} disabled={isGenerating || selectedStyles.length === 0} className="w-full">
+                  {isGenerating ? "Generating..." : "Generate Previews"}
+                </Button>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
 
       {/* Inline previews */}
