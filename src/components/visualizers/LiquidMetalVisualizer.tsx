@@ -61,8 +61,8 @@ function LiquidBlob({ position, index, audioData, textureData }) {
         speed={2 + blobFreq * 3}
         roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
         metalness={extractedColors?.isMetallic ? 0.9 : 0.7}
-        emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-        emissiveIntensity={extractedColors?.isNeon ? 0.5 + blobFreq * 1.5 : 0.2 + blobFreq * 0.8}
+        emissive={extractedColors?.isNeon ? primaryColor : primaryColor}
+        emissiveIntensity={extractedColors?.isNeon ? 2.0 + blobFreq * 3.0 : 1.5 + blobFreq * 2.0}
         map={appliedTexture}
       />
     </mesh>

@@ -39,8 +39,8 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   const buildingMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: new THREE.Color(primaryColor),
-      emissive: new THREE.Color(extractedColors?.isNeon ? primaryColor : '#000000'),
-      emissiveIntensity: extractedColors?.isNeon ? 0.8 : 0.3,
+      emissive: new THREE.Color(extractedColors?.isNeon ? primaryColor : primaryColor),
+      emissiveIntensity: extractedColors?.isNeon ? 2.0 : 1.2,
       metalness: extractedColors?.isMetallic ? 0.9 : 0.7,
       roughness: extractedColors?.isMetallic ? 0.1 : 0.3,
       map: appliedTexture,
@@ -52,7 +52,7 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(primaryColor),
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.9,
     });
   }, [primaryColor]);
 
@@ -77,7 +77,7 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
       // Keep buildings on ground level - no Y movement
       buildingRef.current.scale.set(audioWidth, height, audioDepth);
       buildingRef.current.position.set(0, height / 2, 0);
-      buildingMaterial.emissiveIntensity = 0.3 + buildingFreq * 3 + pulse * 0.5;
+      buildingMaterial.emissiveIntensity = 1.2 + buildingFreq * 4 + pulse * 1.0;
     }
     
     if (glowRef.current && glowMaterial) {
