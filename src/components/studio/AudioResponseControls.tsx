@@ -23,13 +23,18 @@ const ResettableSlider = ({
 }) => {
   return (
     <div 
-      onDoubleClick={() => onValueChange([defaultValue])}
-      className="cursor-pointer"
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onValueChange([defaultValue]);
+      }}
+      className="cursor-pointer relative"
       title="Double-click to reset to default"
     >
       <Slider
         value={value}
         onValueChange={onValueChange}
+        className="relative z-10 pointer-events-auto"
         {...props}
       />
     </div>
