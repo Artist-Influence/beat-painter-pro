@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, Upload } from 'lucide-react';
 import { TabButton } from './TabButton';
-import AudioResponseControls from '../AudioResponseControls';
+import { AudioResponseControls } from '../AudioResponseControls';
 import { UploadSection } from './UploadSection';
 
 type RightPanelType = 'controls' | 'upload' | null;

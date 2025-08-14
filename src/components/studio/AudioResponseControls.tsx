@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { useStudioStore } from "@/stores/studioStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const AudioResponseControls: React.FC = () => {
+export const AudioResponseControls: React.FC = () => {
   const { audioSensitivity, setAudioSensitivity, setAudioPreset } = useStudioStore();
   
   const presets = [
