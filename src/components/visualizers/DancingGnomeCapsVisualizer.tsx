@@ -50,11 +50,11 @@ function GlassShard({ index, audioData }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
 
-    // Enhanced audio-reactive movement
-    const speed = 1.0 + bass * 6.0 + mids * 4.0;
-    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 2.0);
-    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 2.0);
-    const y = Math.sin((t + index) * 5.0) * 0.6 + bass * 2.5 + highs * 1.5;
+    // Balanced audio-reactive movement
+    const speed = 1.0 + bass * 3.0 + mids * 1.5;
+    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 1.2);
+    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 1.2);
+    const y = Math.sin((t + index) * 3.0) * 0.4 + bass * 1.8 + highs * 0.8;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
@@ -79,12 +79,12 @@ function GlassShard({ index, audioData }: any) {
     <mesh ref={meshRef}>
       <coneGeometry args={[0.08, 0.3, 6]} />
       <meshStandardMaterial
-        color={texture ? '#ffffff' : primaryColor}
+        color={primaryColor}
         metalness={extractedColors?.isMetallic ? 1 : 0.5}
         roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
         emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
         emissiveIntensity={extractedColors?.isNeon ? 0.8 : 0.3}
-        map={texture}
+        map={texture || undefined}
         transparent
         opacity={0.9 + highs * 0.1}
       />
@@ -139,11 +139,11 @@ function CircumferenceCap({ index, audioData }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
 
-    // Enhanced audio-reactive cap movement
-    const speed = 0.8 + bass * 4.0 + mids * 2.5;
-    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 1.5);
-    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 1.5);
-    const y = Math.sin((t + index) * 4.0) * 0.4 + bass * 1.8 + mids * 1.2;
+    // Balanced audio-reactive cap movement
+    const speed = 0.8 + bass * 2.5 + mids * 1.2;
+    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 1.0);
+    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 1.0);
+    const y = Math.sin((t + index) * 3.0) * 0.3 + bass * 1.4 + mids * 0.8;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
@@ -169,12 +169,12 @@ function CircumferenceCap({ index, audioData }: any) {
     <mesh ref={meshRef}>
       <cylinderGeometry args={[0.15, 0.05, 0.1, 8]} />
       <meshStandardMaterial
-        color={texture ? '#ffffff' : accentColor}
+        color={accentColor}
         metalness={extractedColors?.isMetallic ? 1 : 0.7}
         roughness={extractedColors?.isMetallic ? 0.05 : 0.2}
         emissive={extractedColors?.isNeon ? accentColor : primaryColor}
         emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
-        map={texture}
+        map={texture || undefined}
         transparent
         opacity={0.8 + mids * 0.2}
       />
@@ -262,12 +262,12 @@ function GlassSphereVisualizer({ audioData }: any) {
       <mesh ref={centerSphereRef}>
         <sphereGeometry args={[0.15, 32, 32]} />
         <meshStandardMaterial 
-          color={texture ? '#ffffff' : primaryColor}
+          color={primaryColor}
           emissive={extractedColors?.isNeon ? primaryColor : accentColor}
           emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.6}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
-          map={texture}
+          map={texture || undefined}
         />
       </mesh>
       <Sparkles

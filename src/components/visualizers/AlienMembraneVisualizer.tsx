@@ -141,12 +141,12 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
         void main() {
           float intensity = 0.7 + 0.3 * sin(uTime * 6.0 + vPosition.y * 15.0);
           
-          vec3 glow = mix(uPrimaryColor, uSecondaryColor, intensity);
-          vec3 chroma = glow + 0.1 * uAccentColor * vec3(sin(vPosition.x * 10.0), sin(vPosition.y * 10.0), sin(vPosition.z * 10.0));
+          vec3 baseColor = mix(uPrimaryColor, uSecondaryColor, intensity);
+          vec3 chroma = baseColor + 0.1 * uAccentColor * vec3(sin(vPosition.x * 10.0), sin(vPosition.y * 10.0), sin(vPosition.z * 10.0));
           
           if (uHasTexture > 0.5) {
             vec4 texColor = texture2D(uTexture, vUv);
-            chroma = mix(chroma, texColor.rgb, 0.8);
+            chroma = texColor.rgb * baseColor;
           }
           
           if (uIsNeon > 0.5) {
@@ -198,21 +198,21 @@ function AlienMembrane({ audioData }: any) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Enhanced organic movement
-      groupRef.current.position.y = Math.sin(t * 6.0) * 1.8 + bass * 4.0 + mids * 2.0;
-      groupRef.current.rotation.y = t * 1.2 + mids * 5.0 + bass * 3.0;
+      // Balanced organic movement - strong bass response, subtle mids/highs
+      groupRef.current.position.y = Math.sin(t * 3.0) * 0.8 + bass * 3.0 + mids * 0.5;
+      groupRef.current.rotation.y = t * 1.2 + bass * 4.0 + mids * 0.8;
       
-      groupRef.current.rotation.x = Math.sin(t * 4.0) * 0.9 + mids * 2.5 + bass * 3.5;
-      groupRef.current.rotation.z = Math.cos(t * 3.0) * 0.7 + highs * 2.0 + bass * 1.5;
+      groupRef.current.rotation.x = Math.sin(t * 2.0) * 0.4 + bass * 2.5 + mids * 0.3;
+      groupRef.current.rotation.z = Math.cos(t * 1.5) * 0.3 + bass * 1.8 + highs * 0.2;
       
-      // Enhanced breathing/pulsing effect
-      const beatScale = bass > 0.3 ? 1 + bass * 1.5 : 1 + Math.sin(t * 8.0) * 0.2;
-      const midsScale = mids > 0.2 ? 1 + mids * 0.8 : 1;
+      // Strong bass response with subtle baseline movement
+      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 4.0) * 0.1;
+      const midsScale = mids > 0.2 ? 1 + mids * 0.5 : 1;
       groupRef.current.scale.setScalar(0.6 * beatScale * midsScale);
       
-      // Add subtle position shifts for organic feel
-      groupRef.current.position.x = Math.sin(t * 3.0) * 0.3 + mids * 0.8;
-      groupRef.current.position.z = Math.cos(t * 2.5) * 0.4 + highs * 0.6;
+      // Subtle position shifts for organic feel
+      groupRef.current.position.x = Math.sin(t * 1.5) * 0.2 + bass * 0.6;
+      groupRef.current.position.z = Math.cos(t * 1.2) * 0.2 + highs * 0.3;
     }
   });
 

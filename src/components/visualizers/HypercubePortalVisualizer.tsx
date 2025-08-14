@@ -39,33 +39,33 @@ function Tesseract({ audioData, textureData }) {
     const t = clock.getElapsedTime();
     
     if (innerRef.current && outerRef.current) {
-      // Enhanced 4D rotation with stronger audio response
-      innerRef.current.rotation.x = t * 1.2 + bass * 4.0;
-      innerRef.current.rotation.y = t * 0.8 + mids * 3.0;
-      innerRef.current.rotation.z = t * 0.6 + highs * 2.5;
+      // Balanced 4D rotation with strong bass response
+      innerRef.current.rotation.x = t * 0.8 + bass * 3.0;
+      innerRef.current.rotation.y = t * 0.6 + bass * 2.0 + mids * 0.8;
+      innerRef.current.rotation.z = t * 0.4 + bass * 1.5 + highs * 0.5;
       
-      outerRef.current.rotation.x = -t * 0.7 + bass * 2.0;
-      outerRef.current.rotation.y = -t * 1.0 + mids * 4.0;
-      outerRef.current.rotation.z = -t * 0.4 + highs * 3.0;
+      outerRef.current.rotation.x = -t * 0.5 + bass * 1.8;
+      outerRef.current.rotation.y = -t * 0.7 + bass * 2.5 + mids * 0.6;
+      outerRef.current.rotation.z = -t * 0.3 + bass * 1.2 + highs * 0.4;
       
-      // Enhanced dimensional shifting with stronger audio response
-      const shift = 0.6 + Math.sin(t * 4) * 0.5 + bass * 1.2 + mids * 0.8;
+      // Strong bass dimensional shifting with subtle baseline
+      const shift = 0.6 + Math.sin(t * 3) * 0.3 + bass * 1.5 + mids * 0.3;
       innerRef.current.scale.setScalar(shift);
       
-      // Enhanced portal pulsing effect
-      const portal = 1 + Math.sin(t * 15) * (highs * 0.6 + bass * 0.4) + mids * 0.3;
+      // Strong bass portal pulsing 
+      const portal = 1 + Math.sin(t * 8) * 0.3 + bass * 1.2 + highs * 0.2;
       outerRef.current.scale.setScalar(portal);
       
-      // Add position movement for more dynamic effect
-      innerRef.current.position.x = Math.sin(t * 3) * bass * 0.3;
-      innerRef.current.position.y = Math.cos(t * 2.5) * mids * 0.2;
+      // Minimal position movement
+      innerRef.current.position.x = Math.sin(t * 2) * bass * 0.2;
+      innerRef.current.position.y = Math.cos(t * 1.8) * bass * 0.15;
     }
     
     if (connectionsRef.current) {
-      // Enhanced connecting lines with stronger audio response
+      // Balanced connecting lines with strong bass response
       connectionsRef.current.children.forEach((child, i) => {
         if (child instanceof THREE.Mesh && child.material) {
-          const opacity = 0.5 + Math.sin(t * 6 + i) * 0.4 + mids * 0.8 + bass * 0.5;
+          const opacity = 0.5 + Math.sin(t * 4 + i) * 0.3 + bass * 1.0 + mids * 0.2;
           (child.material as THREE.Material & { opacity: number }).opacity = Math.min(opacity, 1.0);
         }
       });
@@ -205,16 +205,16 @@ export default function HypercubePortalVisualizer({
   useFrame(({ clock }) => {
     if (portalRef.current) {
       const t = clock.getElapsedTime();
-      // Enhanced portal rotation with stronger audio response
-      portalRef.current.rotation.y = t * (0.5 + bass * 2.0 + mids * 1.5);
-      portalRef.current.rotation.x = Math.sin(t * 2) * bass * 0.4;
+      // Balanced portal rotation with strong bass response
+      portalRef.current.rotation.y = t * (0.4 + bass * 1.5 + mids * 0.3);
+      portalRef.current.rotation.x = Math.sin(t * 1.5) * bass * 0.3;
       
-      // Add scaling for more dynamic effect
-      const scale = 1 + Math.sin(t * 4) * 0.1 + bass * 0.3;
+      // Strong bass scaling with subtle baseline
+      const scale = 1 + Math.sin(t * 3) * 0.08 + bass * 0.5;
       portalRef.current.scale.setScalar(scale);
       
-      // Add position movement
-      portalRef.current.position.y = Math.sin(t * 3) * mids * 0.5;
+      // Minimal position movement
+      portalRef.current.position.y = Math.sin(t * 2) * bass * 0.3;
     }
   });
   

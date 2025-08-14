@@ -18,21 +18,21 @@ function FlowerOfLife({ audioData, textureData }) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Enhanced sacred rotation with stronger audio response
-      groupRef.current.rotation.z = t * 0.8 + bass * 2.0 + mids * 1.5;
+      // Balanced sacred rotation with strong bass response
+      groupRef.current.rotation.z = t * 0.6 + bass * 1.8 + mids * 0.4;
       
-      // Enhanced breathing pattern with stronger audio entrainment
-      const breathe = 1 + Math.sin(t * 1.2) * (0.4 + mids * 0.8) + bass * 1.2;
+      // Strong bass breathing with subtle baseline
+      const breathe = 1 + Math.sin(t * 1.0) * (0.3 + bass * 1.0 + mids * 0.2);
       groupRef.current.scale.setScalar(breathe);
       
-      // Add position movement for more dynamic effect
-      groupRef.current.position.y = Math.sin(t * 2) * bass * 0.6;
-      groupRef.current.position.x = Math.cos(t * 1.5) * mids * 0.4;
+      // Minimal position movement for subtle organic feel
+      groupRef.current.position.y = Math.sin(t * 1.5) * bass * 0.4;
+      groupRef.current.position.x = Math.cos(t * 1.2) * bass * 0.2;
     }
     
-    // Enhanced emissive intensity based on audio
+    // Strong bass emissive intensity
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = 1.2 + bass * 3.0 + mids * 2.0;
+      materialRef.current.emissiveIntensity = 1.0 + bass * 2.5 + mids * 0.5;
     }
   });
 

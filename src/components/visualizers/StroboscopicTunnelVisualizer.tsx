@@ -18,27 +18,27 @@ function StrobeRing({ distance, index, audioData, textureData }) {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Enhanced bass-responsive strobing effect with stronger response
+      // Strong bass-responsive strobing effect
       const bassMultiplier = bass > 0.05 ? bass : 0.05;
-      const strobeFreq = 40 + bassMultiplier * 60; // Faster strobing with bass
-      const strobe = Math.sin(t * strobeFreq + index * 3) > 0.3 ? 1 : 0;
-      materialRef.current.emissiveIntensity = strobe * (1.0 + bass * bassMultiplier * 5);
+      const strobeFreq = 30 + bassMultiplier * 40; // Moderate strobing with bass
+      const strobe = Math.sin(t * strobeFreq + index * 2) > 0.2 ? 1 : 0;
+      materialRef.current.emissiveIntensity = strobe * (1.0 + bass * 3.0);
       
-      // Enhanced Z-position movement for faster tunnel effect
-      const speed = 8 + bassMultiplier * 8;
-      const z = ((t * speed + index * 3) % 25) - 12;
+      // Balanced Z-position movement for tunnel effect
+      const speed = 6 + bassMultiplier * 6;
+      const z = ((t * speed + index * 2) % 20) - 10;
       meshRef.current.position.z = z;
       
-      // Enhanced scale with stronger bass response
-      const scale = 1 + Math.abs(z) * 0.15 + bass * bassMultiplier * 1.5;
+      // Strong bass scale response
+      const scale = 1 + Math.abs(z) * 0.1 + bass * 1.2;
       meshRef.current.scale.setScalar(scale);
       
-      // Enhanced hypnotic spiral rotation with stronger audio response
-      meshRef.current.rotation.z = t * 4 + index * 0.8 + highs * bassMultiplier * 10;
+      // Balanced hypnotic spiral rotation
+      meshRef.current.rotation.z = t * 3 + index * 0.6 + bass * 6.0;
       
-      // Add X-Y oscillation for more disorienting effect
-      meshRef.current.position.x = Math.sin(t * 6 + index) * bass * 0.3;
-      meshRef.current.position.y = Math.cos(t * 5 + index) * bass * 0.2;
+      // Minimal X-Y oscillation
+      meshRef.current.position.x = Math.sin(t * 4 + index) * bass * 0.2;
+      meshRef.current.position.y = Math.cos(t * 3.5 + index) * bass * 0.15;
     }
   });
   

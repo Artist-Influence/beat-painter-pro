@@ -32,19 +32,19 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
-      // Enhanced hypnotic rotation with stronger audio response
-      meshRef.current.rotation.z = t * (1.0 + depth * 0.5) + bass * 4.0 + mids * 2.0;
+      // Balanced hypnotic rotation with strong bass response
+      meshRef.current.rotation.z = t * (1.0 + depth * 0.3) + bass * 3.0 + mids * 0.5;
       
-      // Enhanced pulsing scale with stronger audio entrainment
-      const pulse = 1 + Math.sin(t * 12) * 0.3 * mids + bass * 1.2 + highs * 0.8;
+      // Strong bass pulsing with subtle baseline
+      const pulse = 1 + Math.sin(t * 8) * 0.2 + bass * 1.8 + mids * 0.3;
       meshRef.current.scale.setScalar(pulse);
       
-      // Enhanced Z-axis movement for stronger depth perception
-      meshRef.current.position.z = Math.sin(t * 4 + depth) * (highs * 1.2 + bass * 0.8);
+      // Subtle depth movement - strong bass, minimal highs
+      meshRef.current.position.z = Math.sin(t * 2 + depth) * (bass * 0.8 + highs * 0.2);
       
-      // Add X-Y movement for more dynamic effect
-      meshRef.current.position.x = Math.cos(t * 2 + depth) * bass * 0.6;
-      meshRef.current.position.y = Math.sin(t * 3 + depth) * mids * 0.5;
+      // Minimal X-Y movement for subtle organic feel
+      meshRef.current.position.x = Math.cos(t * 1.5 + depth) * bass * 0.3;
+      meshRef.current.position.y = Math.sin(t * 1.2 + depth) * bass * 0.2;
     }
   });
   
@@ -108,16 +108,16 @@ export default function PsychedelicMandalaVisualizer({
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
-      // Enhanced hypnotic rotation with stronger audio response
-      groupRef.current.rotation.z = t * (0.3 + bass * 1.5);
+      // Balanced hypnotic rotation with strong bass response
+      groupRef.current.rotation.z = t * (0.2 + bass * 1.2);
       
-      // Enhanced breathing effect with stronger audio entrainment
-      const breathe = 1 + Math.sin(t * 1.0) * (0.2 + bass * 0.8 + mids * 0.6);
+      // Strong bass breathing with subtle baseline
+      const breathe = 1 + Math.sin(t * 1.0) * (0.15 + bass * 1.0 + mids * 0.2);
       groupRef.current.scale.setScalar(breathe);
       
-      // Add subtle movement for more dynamic effect
-      groupRef.current.position.y = Math.sin(t * 2) * bass * 0.5;
-      groupRef.current.rotation.x = Math.sin(t * 1.5) * mids * 0.3;
+      // Minimal movement for subtle organic feel
+      groupRef.current.position.y = Math.sin(t * 1.5) * bass * 0.3;
+      groupRef.current.rotation.x = Math.sin(t * 1.0) * bass * 0.2;
     }
   });
   

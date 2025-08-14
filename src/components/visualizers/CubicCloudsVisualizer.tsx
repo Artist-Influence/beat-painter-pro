@@ -46,24 +46,24 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     
-    // Enhanced audio-reactive movement
-    const speed = 1.0 + bass * 6.0 + mids * 4.0;
-    const spread = 0.6 + mids * 3.0 + bass * 2.0;
+    // Balanced audio-reactive movement - strong bass, subtle mids/highs
+    const speed = 1.0 + bass * 4.0 + mids * 1.0;
+    const spread = 0.6 + bass * 1.5 + mids * 0.5;
     const x = Math.cos(angle + t * speed) * radius * spread;
     const z = Math.sin(angle + t * speed) * radius * spread;
-    const y = Math.sin((t + index) * 6.0) * 1.0 + bass * 2.5 + highs * 1.8;
+    const y = Math.sin((t + index) * 3.0) * 0.6 + bass * 2.0 + highs * 0.4;
     
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
       
-      // Enhanced rotation with stronger audio response
-      meshRef.current.rotation.x = t * 4.0 + bass * 8.0;
-      meshRef.current.rotation.y = t * 3.5 + mids * 6.0;
-      meshRef.current.rotation.z = t * 5.0 + highs * 10.0;
+      // Balanced rotation with strong bass response
+      meshRef.current.rotation.x = t * 2.0 + bass * 6.0;
+      meshRef.current.rotation.y = t * 1.8 + bass * 4.0 + mids * 1.5;
+      meshRef.current.rotation.z = t * 2.5 + bass * 5.0 + highs * 2.0;
       
-      // Stronger beat scaling with continuous pulsing
-      const beatScale = bass > 0.3 ? 1 + bass * 3.0 : 1 + Math.sin(t * 8) * 0.4;
-      const midsScale = mids > 0.2 ? 1 + mids * 1.5 : 1;
+      // Strong beat scaling with subtle baseline
+      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1 + Math.sin(t * 4) * 0.2;
+      const midsScale = mids > 0.2 ? 1 + mids * 0.8 : 1;
       meshRef.current.scale.setScalar(beatScale * midsScale);
     }
   });
@@ -124,20 +124,20 @@ function OrbitingCubesVisualizer({ audioData }: any) {
     const t = clock.getElapsedTime();
     
     if (groupRef.current) {
-      groupRef.current.rotation.y = t * 1.5 + bass * 2.5;
-      groupRef.current.rotation.x = Math.sin(t * 1.5) * 0.4 + bass * 0.8;
-      groupRef.current.position.y = Math.sin(t * 2.0) * 0.5 + bass * 1.2;
+      groupRef.current.rotation.y = t * 1.0 + bass * 2.0;
+      groupRef.current.rotation.x = Math.sin(t * 1.0) * 0.3 + bass * 0.6;
+      groupRef.current.position.y = Math.sin(t * 1.5) * 0.3 + bass * 1.0;
       
-      const beatScale = bass > 0.6 ? 1 + bass * 1.5 : 1;
+      const beatScale = bass > 0.4 ? 1 + bass * 1.8 : 1;
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
-      const spherePulse = 1 + bass * 1.5 + highs * 1.0 + Math.sin(t * 4.0) * 0.3;
+      const spherePulse = 1 + bass * 2.0 + highs * 0.5 + Math.sin(t * 6.0) * 0.2;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
-      centerSphereRef.current.rotation.x = t * 3.0 + bass * 4.0;
-      centerSphereRef.current.rotation.y = t * 2.0 + highs * 5.0;
+      centerSphereRef.current.rotation.x = t * 2.0 + bass * 3.0;
+      centerSphereRef.current.rotation.y = t * 1.5 + bass * 2.5 + highs * 1.0;
     }
   });
 
