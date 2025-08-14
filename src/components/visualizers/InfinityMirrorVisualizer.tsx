@@ -1,11 +1,13 @@
 import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, Reflector } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture } from "@/hooks/useVisualizerTexture";
 
 function MirrorPanel({ position, rotation, audioData, textureData }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
@@ -14,73 +16,90 @@ function MirrorPanel({ position, rotation, audioData, textureData }) {
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
+
+  // Create material with white base for texture support
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      metalness: 0.9,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData.texture, textureData.textureVersion]);
+  
+  useFrame(() => {
+    if (meshRef.current && material) {
+      material.opacity = 0.7 + bass * 0.3;
+    }
+  });
   
   return (
-    <Reflector
-      position={position}
-      rotation={rotation}
-      args={[4, 4]}
-      mirror={0.9}
-      mixBlur={0.5}
-      mixStrength={1 + bass * 2}
-    >
-      {(Material, props) => (
-        <Material
-          metalness={0.9}
-          roughness={0.1}
-          color={textureData.colors?.primary || '#ffffff'}
-          {...props}
-        />
-      )}
-    </Reflector>
+    <mesh ref={meshRef} position={position} rotation={rotation} material={material}>
+      <planeGeometry args={[4, 4]} />
+    </mesh>
   );
 }
 
 function FloatingSymbol({ position, index, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
-  // More responsive frequency mapping
   const freqIndex = Math.floor((index * 20) % 256);
   const amplitude = Math.min(frequency[freqIndex] / 255, 1.0);
   
-  // Bass reactivity for movement
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
 
-  // Create material with texture support
+  // Create material with white base for texture support
   const material = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color: '#ffffff',
       metalness: 0.8,
       roughness: 0.2,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.8
     });
-  }, [textureData.textureVersion]);
-
-  // Apply texture if available
-  useMemo(() => {
-    if (material && textureData.texture) {
-      material.map = textureData.texture;
-      material.emissiveMap = textureData.texture;
-      material.emissiveIntensity = 0.3;
-      material.needsUpdate = true;
+    
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.emissiveIntensity = 0.3;
+      mat.needsUpdate = true;
     }
-  }, [material, textureData.texture, textureData.textureVersion]);
+    
+    return mat;
+  }, [textureData.texture, textureData.textureVersion]);
+
+  // Create geometry
+  const geometry = useMemo(() => {
+    const geometries = [
+      new THREE.TetrahedronGeometry(1, 0),
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.IcosahedronGeometry(1, 0)
+    ];
+    return geometries[index % 4];
+  }, [index]);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
       // Enhanced floating motion with bass response
-      const bassMultiplier = bass > 0.1 ? bass : 0.1; // Less movement when no bass
+      const bassMultiplier = bass > 0.1 ? bass : 0.1;
       meshRef.current.position.y = position[1] + Math.sin(t * 2 + index) * 0.3 * amplitude * bassMultiplier;
       meshRef.current.position.x = position[0] + Math.cos(t * 1.5 + index) * 0.2 * bassMultiplier;
       
@@ -103,17 +122,6 @@ function FloatingSymbol({ position, index, audioData, textureData }) {
     }
   });
   
-  // Sacred geometry shapes
-  const geometry = useMemo(() => {
-    const geometries = [
-      new THREE.TetrahedronGeometry(1, 0),
-      new THREE.OctahedronGeometry(1, 0),
-      new THREE.DodecahedronGeometry(1, 0),
-      new THREE.IcosahedronGeometry(1, 0)
-    ];
-    return geometries[index % 4];
-  }, [index]);
-  
   return (
     <mesh ref={meshRef} position={position} material={material} geometry={geometry} />
   );
@@ -125,7 +133,7 @@ export default function InfinityMirrorVisualizer({
   width = 1080,
   height = 1080,
   zoomLevel = 1,
-  backgroundColor = '#00FF00',
+  backgroundColor = '#000000',
 }: VisualizerProps) {
   const sceneRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
@@ -145,20 +153,14 @@ export default function InfinityMirrorVisualizer({
     return Math.min(sum / 85 / 255, 1.0);
   }, [frequency]);
 
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  // Center light material with texture support
+  // Center light material
   const centerMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
-      color: textureData.colors?.primary || '#ffffff',
+      color: '#ffffff',
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.8
     });
-  }, [textureData.colors?.primary, textureData.textureVersion]);
+  }, []);
   
   useFrame(({ clock }) => {
     if (sceneRef.current) {
@@ -200,7 +202,7 @@ export default function InfinityMirrorVisualizer({
       <Environment preset="city" />
       
       <group ref={sceneRef}>
-        {/* Mirror box - creates infinite reflections */}
+        {/* Mirror panels - simplified */}
         <MirrorPanel position={[0, 0, -2]} rotation={[0, 0, 0]} audioData={audioData} textureData={textureData} />
         <MirrorPanel position={[0, 0, 2]} rotation={[0, Math.PI, 0]} audioData={audioData} textureData={textureData} />
         <MirrorPanel position={[-2, 0, 0]} rotation={[0, Math.PI / 2, 0]} audioData={audioData} textureData={textureData} />
@@ -219,12 +221,12 @@ export default function InfinityMirrorVisualizer({
           />
         ))}
         
-        {/* Center light source - focus point */}
+        {/* Center light source */}
         <mesh material={centerMaterial}>
           <sphereGeometry args={[0.1, 32, 32]} />
         </mesh>
         
-        {/* Energy particles - simplified */}
+        {/* Simplified energy particles */}
         {Array.from({ length: 20 }).map((_, i) => {
           const angle = (i / 20) * Math.PI * 2;
           const radius = 3 + Math.sin(i) * 0.5;
@@ -239,7 +241,7 @@ export default function InfinityMirrorVisualizer({
             >
               <sphereGeometry args={[0.05, 8, 8]} />
               <meshBasicMaterial 
-                color={textureData.colors?.primary || '#ffffff'}
+                color="#ffffff"
                 transparent
                 opacity={0.6 + bass * 0.4}
               />
