@@ -9,6 +9,7 @@ import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import ChakraActivatorVisualizer from "./ChakraActivatorVisualizer";
+import InfinityMirrorVisualizer from "./InfinityMirrorVisualizer";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -24,6 +25,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   SacredGeometryPulseVisualizer: 0.35,
   StroboscopicTunnelVisualizer: 0.3,
   ChakraActivatorVisualizer: 0.25,
+  InfinityMirrorVisualizer: 0.4,
 };
 
 export const visualizerRegistry = {
@@ -38,6 +40,7 @@ export const visualizerRegistry = {
   SacredGeometryPulseVisualizer,
   StroboscopicTunnelVisualizer,
   ChakraActivatorVisualizer,
+  InfinityMirrorVisualizer,
 };
 
 export type VisualizerKey = keyof typeof visualizerRegistry;

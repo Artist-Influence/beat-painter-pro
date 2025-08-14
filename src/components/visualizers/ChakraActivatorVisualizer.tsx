@@ -22,6 +22,13 @@ function ChakraVortex({ position, color, frequency, index, audioData, textureDat
     return Math.min(sum / 32 / 255, 1.0);
   }, [freqData, index]);
 
+  // Bass responsiveness for overall movement
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
+    return Math.min(sum / 86 / 255, 1.0);
+  }, [freqData]);
+
   // Create material that updates with texture changes
   const material = useMemo(() => {
     const mat = createVisualizerMaterial(color, textureData, {
@@ -39,19 +46,23 @@ function ChakraVortex({ position, color, frequency, index, audioData, textureDat
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Spinning at chakra-specific frequency
-      meshRef.current.rotation.z = t * (frequency / 100) + chakraFreq * 5;
+      // Enhanced bass-responsive movement
+      const bassMultiplier = bass > 0.1 ? bass : 0.1; // Less movement when no bass
+      const reactivity = chakraFreq * bassMultiplier;
       
-      // Pulsing with audio energy
-      const pulse = 1 + chakraFreq * 0.5 + Math.sin(t * frequency / 50) * 0.1;
+      // Spinning at chakra-specific frequency with bass enhancement
+      meshRef.current.rotation.z = t * (frequency / 100) + reactivity * 8;
+      
+      // Enhanced pulsing with audio energy
+      const pulse = 1 + reactivity * 0.8 + Math.sin(t * frequency / 50) * 0.2 * bassMultiplier;
       meshRef.current.scale.setScalar(pulse);
 
       // Update emissive intensity based on audio
-      materialRef.current.emissiveIntensity = 0.5 + chakraFreq * 2;
+      materialRef.current.emissiveIntensity = 0.5 + reactivity * 3;
     }
     
     if (particlesRef.current) {
-      particlesRef.current.rotation.z = -clock.getElapsedTime() * 0.5;
+      particlesRef.current.rotation.z = -clock.getElapsedTime() * (0.5 + bass * 2);
     }
   });
   
@@ -68,16 +79,17 @@ function ChakraVortex({ position, color, frequency, index, audioData, textureDat
     return positions;
   }, []);
 
-  // Particle material with texture colors
+  // Particle material with enhanced reactivity
   const particleMaterial = useMemo(() => {
+    const opacity = 0.6 + chakraFreq * bass * 0.4;
     return new THREE.PointsMaterial({
-      size: 0.02,
+      size: 0.02 + bass * 0.02,
       color: new THREE.Color(color),
       transparent: true,
-      opacity: 0.6,
+      opacity: Math.max(opacity, 0.2),
       blending: THREE.AdditiveBlending,
     });
-  }, [color, chakraFreq, textureData.textureVersion]);
+  }, [color, chakraFreq, bass, textureData.textureVersion]);
   
   return (
     <group position={position}>
@@ -128,26 +140,36 @@ export default function ChakraActivatorVisualizer({
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 86 / 255, 1.0);
+  }, [frequency]);
+  
   const amplitude = safeAudioData.amplitude || 0;
 
-  // Create connecting beam material
+  // Create connecting beam material with bass reactivity
   const beamMaterial = useMemo(() => {
+    const opacity = 0.3 + bass * 0.4;
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#ffffff'),
       transparent: true,
-      opacity: 0.3,
+      opacity: Math.max(opacity, 0.1),
     });
-  }, [textureData.colors?.primary, textureData.textureVersion]);
+  }, [textureData.colors?.primary, textureData.textureVersion, bass]);
   
   useFrame(({ clock }) => {
     if (spineRef.current) {
       const t = clock.getElapsedTime();
       
-      // Kundalini serpent movement
-      spineRef.current.rotation.y = Math.sin(t * 0.5) * 0.2 + amplitude * 0.5;
+      // Enhanced bass-responsive movement
+      const bassMultiplier = bass > 0.1 ? bass : 0.1;
       
-      // Rising energy effect
-      const rise = Math.sin(t * 0.3) * 0.1;
+      // Kundalini serpent movement with bass enhancement
+      spineRef.current.rotation.y = Math.sin(t * 0.5) * 0.3 * bassMultiplier + amplitude * bass * 0.8;
+      
+      // Enhanced rising energy effect
+      const rise = Math.sin(t * 0.3) * 0.2 * bassMultiplier;
       spineRef.current.position.y = rise;
     }
   });
@@ -177,13 +199,13 @@ export default function ChakraActivatorVisualizer({
           <cylinderGeometry args={[0.02, 0.02, 3]} />
         </mesh>
         
-        {/* Aura field */}
+        {/* Aura field with bass enhancement */}
         <Sparkles
           count={200}
           scale={[3, 4, 3]}
-          size={2}
-          speed={1}
-          opacity={0.4}
+          size={2 + bass * 3}
+          speed={1 + bass * 2}
+          opacity={0.4 + bass * 0.3}
           color={textureData.colors?.primary || "#ffffff"}
         />
       </group>

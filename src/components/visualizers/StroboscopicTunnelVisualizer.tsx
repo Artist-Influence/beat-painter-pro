@@ -18,20 +18,21 @@ function StrobeRing({ distance, index, audioData, textureData }) {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Stroboscopic effect - triggers alpha brainwaves
+      // Enhanced bass-responsive strobing effect
+      const bassMultiplier = bass > 0.1 ? bass : 0.1; // Less effect when no bass
       const strobe = Math.sin(t * 30 + index * 2) > 0.5 ? 1 : 0;
-      materialRef.current.emissiveIntensity = strobe * (0.5 + bass * 2);
+      materialRef.current.emissiveIntensity = strobe * (0.5 + bass * bassMultiplier * 3);
       
-      // Z-position creates infinite tunnel illusion
-      const z = ((t * 5 + index * 2) % 20) - 10;
+      // Enhanced Z-position movement for tunnel effect
+      const z = ((t * (5 + bassMultiplier * 3) + index * 2) % 20) - 10;
       meshRef.current.position.z = z;
       
-      // Scale based on position for perspective
-      const scale = 1 + Math.abs(z) * 0.1 + bass * 0.5;
+      // Enhanced scale with bass response
+      const scale = 1 + Math.abs(z) * 0.1 + bass * bassMultiplier * 0.8;
       meshRef.current.scale.setScalar(scale);
       
-      // Rotation creates hypnotic spiral
-      meshRef.current.rotation.z = t * 2 + index * 0.5 + highs * 3;
+      // Enhanced hypnotic spiral rotation
+      meshRef.current.rotation.z = t * 2 + index * 0.5 + highs * bassMultiplier * 5;
     }
   });
   
@@ -81,22 +82,24 @@ export default function StroboscopicTunnelVisualizer({
     const t = clock.getElapsedTime();
     
     if (tunnelRef.current) {
-      // Tunnel rotation for disorientation effect
-      tunnelRef.current.rotation.z = t * 0.5 + mids * 2;
+      // Enhanced tunnel rotation for disorientation effect
+      const bassMultiplier = bass > 0.1 ? bass : 0.1;
+      tunnelRef.current.rotation.z = t * 0.5 + mids * bassMultiplier * 4;
     }
     
     if (cameraRef.current) {
-      // Camera shake on bass hits - physical impact simulation
+      // Enhanced camera shake on bass hits - physical impact simulation
+      const bassMultiplier = bass > 0.1 ? bass : 0.1;
       if (bass > 0.7) {
-        camera.position.x = (Math.random() - 0.5) * bass * 0.2;
-        camera.position.y = (Math.random() - 0.5) * bass * 0.2;
+        camera.position.x = (Math.random() - 0.5) * bass * bassMultiplier * 0.3;
+        camera.position.y = (Math.random() - 0.5) * bass * bassMultiplier * 0.3;
       } else {
         camera.position.x *= 0.9;
         camera.position.y *= 0.9;
       }
       
-      // Forward movement illusion
-      camera.position.z = 5 + Math.sin(t) * 2;
+      // Enhanced forward movement illusion
+      camera.position.z = 5 + Math.sin(t) * 2 + bassMultiplier * Math.sin(t * 2);
     }
     
     // Update beam opacity
@@ -104,9 +107,9 @@ export default function StroboscopicTunnelVisualizer({
       beamMaterialRef.current.opacity = 0.3 + bass * 0.5;
     }
     
-    // Update flash opacity
+    // Update flash opacity for enhanced responsiveness
     if (flashMaterialRef.current) {
-      flashMaterialRef.current.opacity = Math.max(0, bass - 0.8);
+      flashMaterialRef.current.opacity = Math.max(0, (bass - 0.6) * 2);
     }
   });
 
@@ -159,8 +162,8 @@ export default function StroboscopicTunnelVisualizer({
         </group>
       </group>
       
-      {/* Strobe flashes */}
-      {bass > 0.8 && (
+      {/* Enhanced strobe flashes with bass responsiveness */}
+      {bass > 0.6 && (
         <mesh position={[0, 0, -5]} material={flashMaterial}>
           <planeGeometry args={[20, 20]} />
         </mesh>
