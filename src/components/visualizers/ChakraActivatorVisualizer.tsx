@@ -114,17 +114,16 @@ export default function ChakraActivatorVisualizer({
   
   // 7 Chakras with frequencies and colors  
   const chakras = useMemo(() => {
-    const colors = textureData.colors;
     return [
-      { position: [0, -1.5, 0], color: colors?.primary || '#FF0000', frequency: 396 }, // Root - Liberation
-      { position: [0, -1, 0], color: colors?.secondary || '#FF7F00', frequency: 417 },   // Sacral - Change
-      { position: [0, -0.5, 0], color: colors?.accent || '#FFFF00', frequency: 528 }, // Solar - Transformation
-      { position: [0, 0, 0], color: colors?.primary || '#00FF00', frequency: 639 },    // Heart - Connection
-      { position: [0, 0.5, 0], color: colors?.secondary || '#0000FF', frequency: 741 },  // Throat - Expression
-      { position: [0, 1, 0], color: colors?.accent || '#4B0082', frequency: 852 },    // Third Eye - Intuition
-      { position: [0, 1.5, 0], color: colors?.primary || '#9400D3', frequency: 963 }   // Crown - Enlightenment
+      { position: [0, -1.5, 0], color: '#ffffff', frequency: 396 }, // Root - Liberation
+      { position: [0, -1, 0], color: '#ffffff', frequency: 417 },   // Sacral - Change
+      { position: [0, -0.5, 0], color: '#ffffff', frequency: 528 }, // Solar - Transformation
+      { position: [0, 0, 0], color: '#ffffff', frequency: 639 },    // Heart - Connection
+      { position: [0, 0.5, 0], color: '#ffffff', frequency: 741 },  // Throat - Expression
+      { position: [0, 1, 0], color: '#ffffff', frequency: 852 },    // Third Eye - Intuition
+      { position: [0, 1.5, 0], color: '#ffffff', frequency: 963 }   // Crown - Enlightenment
     ];
-  }, [textureData.colors]);
+  }, []);
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
