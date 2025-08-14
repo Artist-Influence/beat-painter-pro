@@ -3,7 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
-import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 
 function NeonBuilding({ position, baseHeight, width, index, audioData, textureData }) {
   const buildingRef = useRef<THREE.Mesh>(null);
@@ -21,29 +20,49 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
     return Math.min(sum / 8 / 255, 1.0);
   }, [freqData, index]);
 
+  // Get applied texture and colors directly like other visualizers
+  const extractedColors = (window as any).extractedColors;
+  const appliedTexture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+
+  const primaryColor = extractedColors?.primary || '#ffffff';
+  const secondaryColor = extractedColors?.secondary || '#ffff00';
+
   const buildingMaterial = useMemo(() => {
-    return createVisualizerMaterial(textureData.colors?.primary || '#ffffff', textureData, {
-      emissiveIntensity: 0.5, // Increased from 0.2 for better style visibility
-      transparent: false,
-      opacity: 1.0,
+    return new THREE.MeshStandardMaterial({
+      color: new THREE.Color(primaryColor),
+      emissive: new THREE.Color(extractedColors?.isNeon ? primaryColor : '#000000'),
+      emissiveIntensity: extractedColors?.isNeon ? 0.8 : 0.3,
+      metalness: extractedColors?.isMetallic ? 0.9 : 0.7,
+      roughness: extractedColors?.isMetallic ? 0.1 : 0.3,
+      map: appliedTexture,
+      emissiveMap: appliedTexture,
     });
-  }, [textureData.textureVersion, textureData.colors?.primary]);
+  }, [primaryColor, appliedTexture, extractedColors]);
 
   const glowMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
-      color: new THREE.Color(textureData.colors?.primary || '#ffffff'),
+      color: new THREE.Color(primaryColor),
       transparent: true,
-      opacity: 0.6, // Increased from 0.4 for better visibility
+      opacity: 0.6,
     });
-  }, [textureData.colors?.primary, textureData.textureVersion]);
+  }, [primaryColor]);
 
   const windowMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(textureData.colors?.secondary || '#ffff00'),
-      emissive: new THREE.Color(textureData.colors?.secondary || '#ffff00'),
+      color: new THREE.Color(secondaryColor),
+      emissive: new THREE.Color(secondaryColor),
       emissiveIntensity: 0.5,
     });
-  }, [textureData.colors?.secondary, textureData.textureVersion]);
+  }, [secondaryColor]);
 
   useFrame(({ clock }) => {
     if (buildingRef.current && buildingMaterial) {
@@ -113,7 +132,6 @@ export default function NeonSkylineVisualizer({
   backgroundColor = '#000000',
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const textureData = useVisualizerTexture();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
@@ -156,7 +174,7 @@ export default function NeonSkylineVisualizer({
             width={building.width}
             index={building.index}
             audioData={audioData}
-            textureData={textureData}
+            textureData={null}
           />
         ))}
         
@@ -166,7 +184,7 @@ export default function NeonSkylineVisualizer({
           size={1 + bassIntensity * 2}
           speed={0.3 + bassIntensity}
           opacity={0.2 + bassIntensity * 0.3}
-          color={textureData.colors?.primary || "#ffffff"}
+          color={(window as any).extractedColors?.primary || "#ffffff"}
         />
       </group>
     </>

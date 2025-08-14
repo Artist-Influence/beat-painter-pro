@@ -3,7 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, MeshDistortMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
-import { useVisualizerTexture } from "@/hooks/useVisualizerTexture";
 
 function LiquidBlob({ position, index, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -79,7 +78,6 @@ export default function LiquidMetalVisualizer({
   backgroundColor = '#000000',
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const textureData = useVisualizerTexture();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
@@ -122,7 +120,7 @@ export default function LiquidMetalVisualizer({
             position={blob.position}
             index={blob.index}
             audioData={audioData}
-            textureData={textureData}
+            textureData={null}
           />
         ))}
       </group>
