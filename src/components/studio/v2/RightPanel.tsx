@@ -16,7 +16,7 @@ export function RightPanel({ activePanel, setActivePanel }: RightPanelProps) {
   return (
     <>
       {/* Tab Buttons */}
-      <div className="fixed right-4 top-24 z-50 flex flex-col gap-2 pointer-events-auto">
+      <div className="fixed right-4 top-24 z-[100] flex flex-col gap-2 pointer-events-auto">
         <TabButton
           icon={<Sliders />}
           label="Controls"
