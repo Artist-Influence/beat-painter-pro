@@ -46,21 +46,25 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     
-    const speed = 0.5 + bass * 3.0 + mids * 2.0;
-    const spread = 0.4 + mids * 1.8 + bass * 1.0;
+    // Enhanced audio-reactive movement
+    const speed = 1.0 + bass * 6.0 + mids * 4.0;
+    const spread = 0.6 + mids * 3.0 + bass * 2.0;
     const x = Math.cos(angle + t * speed) * radius * spread;
     const z = Math.sin(angle + t * speed) * radius * spread;
-    const y = Math.sin((t + index) * 4.0) * 0.6 + bass * 1.5 + highs * 1.0;
+    const y = Math.sin((t + index) * 6.0) * 1.0 + bass * 2.5 + highs * 1.8;
     
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
       
-      meshRef.current.rotation.x = t * 2.5 + bass * 4.0;
-      meshRef.current.rotation.y = t * 2.0 + mids * 3.0;
-      meshRef.current.rotation.z = t * 3.0 + highs * 5.0;
+      // Enhanced rotation with stronger audio response
+      meshRef.current.rotation.x = t * 4.0 + bass * 8.0;
+      meshRef.current.rotation.y = t * 3.5 + mids * 6.0;
+      meshRef.current.rotation.z = t * 5.0 + highs * 10.0;
       
-      const beatScale = bass > 0.5 ? 1 + bass * 2.0 : 1;
-      meshRef.current.scale.setScalar(beatScale);
+      // Stronger beat scaling with continuous pulsing
+      const beatScale = bass > 0.3 ? 1 + bass * 3.0 : 1 + Math.sin(t * 8) * 0.4;
+      const midsScale = mids > 0.2 ? 1 + mids * 1.5 : 1;
+      meshRef.current.scale.setScalar(beatScale * midsScale);
     }
   });
 

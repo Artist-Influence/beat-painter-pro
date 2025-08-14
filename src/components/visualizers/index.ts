@@ -18,7 +18,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   AlienMembraneVisualizer: 0.08,
   NeuralLatticeVisualizer: 0.033,
   AngelWingsVisualizer: 0.6,
-  CubicCloudsVisualizer: 0.2,
+  CubicCloudsVisualizer: 0.1,
   DancingGnomeCapsVisualizer: 0.25,
   PsychedelicMandalaVisualizer: 0.3,
   HypercubePortalVisualizer: 0.4,

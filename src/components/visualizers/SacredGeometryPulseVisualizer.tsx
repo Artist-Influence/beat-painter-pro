@@ -18,17 +18,21 @@ function FlowerOfLife({ audioData, textureData }) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Sacred rotation pattern - 3, 6, 9 frequencies
-      groupRef.current.rotation.z = t * 0.3 + bass * 0.9;
+      // Enhanced sacred rotation with stronger audio response
+      groupRef.current.rotation.z = t * 0.8 + bass * 2.0 + mids * 1.5;
       
-      // Breathing pattern matches meditation rhythm
-      const breathe = 1 + Math.sin(t * 0.6) * 0.2 + mids * 0.3;
+      // Enhanced breathing pattern with stronger audio entrainment
+      const breathe = 1 + Math.sin(t * 1.2) * (0.4 + mids * 0.8) + bass * 1.2;
       groupRef.current.scale.setScalar(breathe);
+      
+      // Add position movement for more dynamic effect
+      groupRef.current.position.y = Math.sin(t * 2) * bass * 0.6;
+      groupRef.current.position.x = Math.cos(t * 1.5) * mids * 0.4;
     }
     
-    // Update emissive intensity based on audio
+    // Enhanced emissive intensity based on audio
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = 0.8 + bass * 1.5;
+      materialRef.current.emissiveIntensity = 1.2 + bass * 3.0 + mids * 2.0;
     }
   });
 
@@ -95,19 +99,23 @@ function Metatron({ audioData, textureData }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Metatron's cube rotation - activates pineal gland
-      meshRef.current.rotation.x = t * 0.5;
-      meshRef.current.rotation.y = t * 0.7;
-      meshRef.current.rotation.z = t * 0.3;
+      // Enhanced Metatron's cube rotation with stronger audio response
+      meshRef.current.rotation.x = t * 1.0 + highs * 3.0;
+      meshRef.current.rotation.y = t * 1.4 + highs * 4.0;
+      meshRef.current.rotation.z = t * 0.6 + highs * 2.0;
       
-      // High frequency expansion
-      const expand = 1 + highs * 0.5;
+      // Enhanced frequency expansion with bass interaction
+      const expand = 1 + highs * 1.2 + Math.sin(t * 8) * 0.3;
       meshRef.current.scale.setScalar(expand);
+      
+      // Add position movement for dynamic effect
+      meshRef.current.position.x = Math.sin(t * 4) * highs * 0.3;
+      meshRef.current.position.y = Math.cos(t * 3.5) * highs * 0.2;
     }
     
-    // Update emissive intensity based on audio
+    // Enhanced emissive intensity based on audio
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = 0.8 + highs * 2;
+      materialRef.current.emissiveIntensity = 1.2 + highs * 4.0;
     }
   });
 
@@ -145,8 +153,16 @@ export default function SacredGeometryPulseVisualizer({
   
   useFrame(({ clock }) => {
     if (containerRef.current) {
-      // 432Hz inspired rotation speed
-      containerRef.current.rotation.z = clock.getElapsedTime() * 0.432;
+      const t = clock.getElapsedTime();
+      // Enhanced 432Hz inspired rotation with audio response
+      containerRef.current.rotation.z = t * (0.8 + bass * 1.5);
+      
+      // Add breathing effect to the whole container
+      const breathe = 1 + Math.sin(t * 1.0) * (0.1 + bass * 0.5);
+      containerRef.current.scale.setScalar(breathe);
+      
+      // Add subtle movement
+      containerRef.current.position.y = Math.sin(t * 1.5) * bass * 0.3;
     }
   });
 

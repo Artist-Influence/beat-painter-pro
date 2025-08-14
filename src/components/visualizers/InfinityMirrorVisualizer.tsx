@@ -166,18 +166,22 @@ export default function InfinityMirrorVisualizer({
     if (sceneRef.current) {
       const t = clock.getElapsedTime();
       
-      // Enhanced rotation with audio reactivity
-      const bassMultiplier = bass > 0.1 ? bass : 0.1;
-      sceneRef.current.rotation.y = t * 0.1 * (1 + mids) + bassMultiplier * 0.5;
+      // Enhanced rotation with stronger audio reactivity
+      const bassMultiplier = bass > 0.05 ? bass : 0.05;
+      sceneRef.current.rotation.y = t * 0.3 * (1 + mids * 3) + bassMultiplier * 2.0;
       
-      // More dynamic breathing effect
-      const breathe = 1 + Math.sin(t * 0.3) * 0.05 + bass * bassMultiplier * 0.2;
+      // Enhanced breathing effect with stronger pulsing
+      const breathe = 1 + Math.sin(t * 0.8) * (0.15 + bass * bassMultiplier * 0.8) + mids * 0.4;
       sceneRef.current.scale.setScalar(breathe);
+      
+      // Add position movement for more dynamic effect
+      sceneRef.current.position.y = Math.sin(t * 2) * bass * 1.0;
+      sceneRef.current.rotation.x = Math.sin(t * 1.5) * mids * 0.3;
     }
 
-    // Update center light opacity
+    // Enhanced center light with stronger response
     if (centerMaterial) {
-      centerMaterial.opacity = 0.8 + bass * 0.2;
+      centerMaterial.opacity = 0.9 + bass * 0.8 + Math.sin(clock.getElapsedTime() * 10) * mids * 0.3;
     }
   });
   

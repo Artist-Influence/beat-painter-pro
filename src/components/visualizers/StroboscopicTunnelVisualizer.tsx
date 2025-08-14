@@ -18,21 +18,27 @@ function StrobeRing({ distance, index, audioData, textureData }) {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Enhanced bass-responsive strobing effect
-      const bassMultiplier = bass > 0.1 ? bass : 0.1; // Less effect when no bass
-      const strobe = Math.sin(t * 30 + index * 2) > 0.5 ? 1 : 0;
-      materialRef.current.emissiveIntensity = strobe * (0.5 + bass * bassMultiplier * 3);
+      // Enhanced bass-responsive strobing effect with stronger response
+      const bassMultiplier = bass > 0.05 ? bass : 0.05;
+      const strobeFreq = 40 + bassMultiplier * 60; // Faster strobing with bass
+      const strobe = Math.sin(t * strobeFreq + index * 3) > 0.3 ? 1 : 0;
+      materialRef.current.emissiveIntensity = strobe * (1.0 + bass * bassMultiplier * 5);
       
-      // Enhanced Z-position movement for tunnel effect
-      const z = ((t * (5 + bassMultiplier * 3) + index * 2) % 20) - 10;
+      // Enhanced Z-position movement for faster tunnel effect
+      const speed = 8 + bassMultiplier * 8;
+      const z = ((t * speed + index * 3) % 25) - 12;
       meshRef.current.position.z = z;
       
-      // Enhanced scale with bass response
-      const scale = 1 + Math.abs(z) * 0.1 + bass * bassMultiplier * 0.8;
+      // Enhanced scale with stronger bass response
+      const scale = 1 + Math.abs(z) * 0.15 + bass * bassMultiplier * 1.5;
       meshRef.current.scale.setScalar(scale);
       
-      // Enhanced hypnotic spiral rotation
-      meshRef.current.rotation.z = t * 2 + index * 0.5 + highs * bassMultiplier * 5;
+      // Enhanced hypnotic spiral rotation with stronger audio response
+      meshRef.current.rotation.z = t * 4 + index * 0.8 + highs * bassMultiplier * 10;
+      
+      // Add X-Y oscillation for more disorienting effect
+      meshRef.current.position.x = Math.sin(t * 6 + index) * bass * 0.3;
+      meshRef.current.position.y = Math.cos(t * 5 + index) * bass * 0.2;
     }
   });
   
@@ -82,34 +88,41 @@ export default function StroboscopicTunnelVisualizer({
     const t = clock.getElapsedTime();
     
     if (tunnelRef.current) {
-      // Enhanced tunnel rotation for disorientation effect
-      const bassMultiplier = bass > 0.1 ? bass : 0.1;
-      tunnelRef.current.rotation.z = t * 0.5 + mids * bassMultiplier * 4;
+      // Enhanced tunnel rotation with stronger audio response
+      const bassMultiplier = bass > 0.05 ? bass : 0.05;
+      tunnelRef.current.rotation.z = t * 1.0 + mids * bassMultiplier * 8;
+      
+      // Add tunnel scaling for breathing effect
+      const tunnelScale = 1 + Math.sin(t * 8) * 0.1 + bass * 0.4;
+      tunnelRef.current.scale.setScalar(tunnelScale);
     }
     
     if (cameraRef.current) {
-      // Enhanced camera shake on bass hits - physical impact simulation
-      const bassMultiplier = bass > 0.1 ? bass : 0.1;
-      if (bass > 0.7) {
-        camera.position.x = (Math.random() - 0.5) * bass * bassMultiplier * 0.3;
-        camera.position.y = (Math.random() - 0.5) * bass * bassMultiplier * 0.3;
+      // Enhanced camera shake with stronger response
+      const bassMultiplier = bass > 0.05 ? bass : 0.05;
+      if (bass > 0.5) {
+        camera.position.x = (Math.random() - 0.5) * bass * bassMultiplier * 0.6;
+        camera.position.y = (Math.random() - 0.5) * bass * bassMultiplier * 0.6;
       } else {
-        camera.position.x *= 0.9;
-        camera.position.y *= 0.9;
+        camera.position.x *= 0.8;
+        camera.position.y *= 0.8;
       }
       
-      // Enhanced forward movement illusion
-      camera.position.z = 5 + Math.sin(t) * 2 + bassMultiplier * Math.sin(t * 2);
+      // Enhanced forward movement with stronger illusion
+      camera.position.z = 6 + Math.sin(t * 2) * 3 + bassMultiplier * Math.sin(t * 4) * 2;
+      
+      // Add camera rotation for more disorienting effect
+      camera.rotation.z = Math.sin(t * 3) * bass * 0.1;
     }
     
-    // Update beam opacity
+    // Enhanced beam opacity with stronger response
     if (beamMaterialRef.current) {
-      beamMaterialRef.current.opacity = 0.3 + bass * 0.5;
+      beamMaterialRef.current.opacity = 0.5 + bass * 1.0;
     }
     
-    // Update flash opacity for enhanced responsiveness
+    // Enhanced flash opacity with lower threshold
     if (flashMaterialRef.current) {
-      flashMaterialRef.current.opacity = Math.max(0, (bass - 0.6) * 2);
+      flashMaterialRef.current.opacity = Math.max(0, (bass - 0.4) * 3);
     }
   });
 

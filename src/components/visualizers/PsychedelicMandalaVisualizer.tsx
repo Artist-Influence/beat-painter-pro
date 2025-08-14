@@ -32,15 +32,19 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
-      // Hypnotic rotation at different speeds for trance effect
-      meshRef.current.rotation.z = t * (0.5 + depth * 0.2) + bass * 2;
+      // Enhanced hypnotic rotation with stronger audio response
+      meshRef.current.rotation.z = t * (1.0 + depth * 0.5) + bass * 4.0 + mids * 2.0;
       
-      // Pulsing scale creates subliminal rhythm entrainment
-      const pulse = 1 + Math.sin(t * 8) * 0.1 * mids + bass * 0.5;
+      // Enhanced pulsing scale with stronger audio entrainment
+      const pulse = 1 + Math.sin(t * 12) * 0.3 * mids + bass * 1.2 + highs * 0.8;
       meshRef.current.scale.setScalar(pulse);
       
-      // Z-axis movement for depth perception manipulation
-      meshRef.current.position.z = Math.sin(t * 2 + depth) * highs * 0.5;
+      // Enhanced Z-axis movement for stronger depth perception
+      meshRef.current.position.z = Math.sin(t * 4 + depth) * (highs * 1.2 + bass * 0.8);
+      
+      // Add X-Y movement for more dynamic effect
+      meshRef.current.position.x = Math.cos(t * 2 + depth) * bass * 0.6;
+      meshRef.current.position.y = Math.sin(t * 3 + depth) * mids * 0.5;
     }
   });
   
@@ -95,14 +99,25 @@ export default function PsychedelicMandalaVisualizer({
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
 
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 85 / 255, 1.0);
+  }, [frequency]);
+
   useFrame(({ clock }) => {
     if (groupRef.current) {
-      // Slow hypnotic rotation for trance induction
-      groupRef.current.rotation.z = clock.getElapsedTime() * 0.1;
+      const t = clock.getElapsedTime();
+      // Enhanced hypnotic rotation with stronger audio response
+      groupRef.current.rotation.z = t * (0.3 + bass * 1.5);
       
-      // Breathing effect - subliminal relaxation cue
-      const breathe = 1 + Math.sin(clock.getElapsedTime() * 0.5) * 0.1;
+      // Enhanced breathing effect with stronger audio entrainment
+      const breathe = 1 + Math.sin(t * 1.0) * (0.2 + bass * 0.8 + mids * 0.6);
       groupRef.current.scale.setScalar(breathe);
+      
+      // Add subtle movement for more dynamic effect
+      groupRef.current.position.y = Math.sin(t * 2) * bass * 0.5;
+      groupRef.current.rotation.x = Math.sin(t * 1.5) * mids * 0.3;
     }
   });
   

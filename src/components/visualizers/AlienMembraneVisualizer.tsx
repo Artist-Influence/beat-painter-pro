@@ -88,6 +88,8 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
       vertexShader={`
         uniform float uTime;
         uniform float uBass;
+        uniform float uMids;
+        uniform float uHighs;
         varying vec3 vNormal;
         varying vec3 vPosition;
         varying vec2 vUv;
@@ -96,13 +98,28 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           vPosition = position;
           vUv = uv;
           
-          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 0.3 * sin(uTime * 4.0 + uBass * 2.0);
-          float violentSidePulse = 0.2 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 1.5);
-          float chaoticDetailPulse = 0.1 * sin(uTime * 12.0 + position.x * 8.0 + position.z * 8.0);
+          // Ant-like movement patterns under the skin
+          float antTrails1 = 0.4 * sin(uTime * 8.0 + position.x * 25.0 + position.y * 15.0 + uBass * 4.0);
+          float antTrails2 = 0.3 * sin(uTime * 12.0 + position.z * 20.0 + position.y * 18.0 + uMids * 3.0);
+          float antTrails3 = 0.2 * sin(uTime * 16.0 + position.x * 18.0 + position.z * 22.0 + uHighs * 5.0);
           
-          float beatExplosion = uBass > 0.6 ? (1.0 + uBass * 0.5) : 1.0;
+          // Crawling surface movements
+          float surfaceCrawl = 0.15 * sin(uTime * 20.0 + position.x * 30.0 + position.z * 35.0);
+          float deepMovement = 0.25 * sin(uTime * 6.0 + position.y * 12.0 + uBass * 6.0);
           
-          vec3 displacement = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * (0.5 + uBass * 0.5) * beatExplosion;
+          // Enhanced audio-reactive pulsing
+          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 0.6 * sin(uTime * 8.0 + uBass * 4.0);
+          float violentSidePulse = 0.4 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
+          float chaoticDetailPulse = 0.3 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
+          
+          // Enhanced beat explosion
+          float beatExplosion = uBass > 0.4 ? (1.0 + uBass * 1.2) : 1.0;
+          float midsExpansion = uMids > 0.3 ? (1.0 + uMids * 0.8) : 1.0;
+          
+          vec3 antMovement = normal * (antTrails1 + antTrails2 + antTrails3 + surfaceCrawl + deepMovement);
+          vec3 audioPulse = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * beatExplosion * midsExpansion;
+          vec3 displacement = (antMovement + audioPulse) * (0.8 + uBass * 0.8 + uMids * 0.6);
+          
           vec3 pos = position + displacement;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -181,14 +198,21 @@ function AlienMembrane({ audioData }: any) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      groupRef.current.position.y = Math.sin(t * 4.0) * 1.2 + bass * 2.5;
-      groupRef.current.rotation.y = t * 0.8 + mids * 3.0;
+      // Enhanced organic movement
+      groupRef.current.position.y = Math.sin(t * 6.0) * 1.8 + bass * 4.0 + mids * 2.0;
+      groupRef.current.rotation.y = t * 1.2 + mids * 5.0 + bass * 3.0;
       
-      groupRef.current.rotation.x = Math.sin(t * 2.5) * 0.6 + mids * 1.5 + bass * 2.0;
-      groupRef.current.rotation.z = Math.cos(t * 1.8) * 0.4 + highs * 1.2;
+      groupRef.current.rotation.x = Math.sin(t * 4.0) * 0.9 + mids * 2.5 + bass * 3.5;
+      groupRef.current.rotation.z = Math.cos(t * 3.0) * 0.7 + highs * 2.0 + bass * 1.5;
       
-      const beatScale = bass > 0.5 ? 1 + bass * 0.8 : 1;
-      groupRef.current.scale.setScalar(0.6 * beatScale);
+      // Enhanced breathing/pulsing effect
+      const beatScale = bass > 0.3 ? 1 + bass * 1.5 : 1 + Math.sin(t * 8.0) * 0.2;
+      const midsScale = mids > 0.2 ? 1 + mids * 0.8 : 1;
+      groupRef.current.scale.setScalar(0.6 * beatScale * midsScale);
+      
+      // Add subtle position shifts for organic feel
+      groupRef.current.position.x = Math.sin(t * 3.0) * 0.3 + mids * 0.8;
+      groupRef.current.position.z = Math.cos(t * 2.5) * 0.4 + highs * 0.6;
     }
   });
 

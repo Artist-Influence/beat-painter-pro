@@ -39,29 +39,34 @@ function Tesseract({ audioData, textureData }) {
     const t = clock.getElapsedTime();
     
     if (innerRef.current && outerRef.current) {
-      // 4D rotation projection - mind-bending effect
-      innerRef.current.rotation.x = t * 0.7 + bass * 2;
-      innerRef.current.rotation.y = t * 0.5 + mids * 1.5;
-      innerRef.current.rotation.z = t * 0.3 + highs;
+      // Enhanced 4D rotation with stronger audio response
+      innerRef.current.rotation.x = t * 1.2 + bass * 4.0;
+      innerRef.current.rotation.y = t * 0.8 + mids * 3.0;
+      innerRef.current.rotation.z = t * 0.6 + highs * 2.5;
       
-      outerRef.current.rotation.x = -t * 0.4 + bass;
-      outerRef.current.rotation.y = -t * 0.6 + mids * 2;
-      outerRef.current.rotation.z = -t * 0.2 + highs * 1.5;
+      outerRef.current.rotation.x = -t * 0.7 + bass * 2.0;
+      outerRef.current.rotation.y = -t * 1.0 + mids * 4.0;
+      outerRef.current.rotation.z = -t * 0.4 + highs * 3.0;
       
-      // Dimensional shifting - creates "impossible space" illusion
-      const shift = 0.5 + Math.sin(t * 2) * 0.3 + bass * 0.5;
+      // Enhanced dimensional shifting with stronger audio response
+      const shift = 0.6 + Math.sin(t * 4) * 0.5 + bass * 1.2 + mids * 0.8;
       innerRef.current.scale.setScalar(shift);
       
-      // Portal pulsing effect
-      const portal = 1 + Math.sin(t * 10) * highs * 0.3;
+      // Enhanced portal pulsing effect
+      const portal = 1 + Math.sin(t * 15) * (highs * 0.6 + bass * 0.4) + mids * 0.3;
       outerRef.current.scale.setScalar(portal);
+      
+      // Add position movement for more dynamic effect
+      innerRef.current.position.x = Math.sin(t * 3) * bass * 0.3;
+      innerRef.current.position.y = Math.cos(t * 2.5) * mids * 0.2;
     }
     
     if (connectionsRef.current) {
-      // Connecting lines phase in and out - subliminal connectivity message
+      // Enhanced connecting lines with stronger audio response
       connectionsRef.current.children.forEach((child, i) => {
         if (child instanceof THREE.Mesh && child.material) {
-          (child.material as THREE.Material & { opacity: number }).opacity = 0.3 + Math.sin(t * 3 + i) * 0.3 + mids * 0.4;
+          const opacity = 0.5 + Math.sin(t * 6 + i) * 0.4 + mids * 0.8 + bass * 0.5;
+          (child.material as THREE.Material & { opacity: number }).opacity = Math.min(opacity, 1.0);
         }
       });
     }
@@ -182,10 +187,34 @@ export default function HypercubePortalVisualizer({
     setRingMaterials(materials);
   }, [textureData.textureVersion, textureData.colors.accent]);
   
+  const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const frequency = safeAudioData.frequency || Array(256).fill(0);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 86 / 255, 1.0);
+  }, [frequency]);
+  
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return Math.min(sum / 85 / 255, 1.0);
+  }, [frequency]);
+
   useFrame(({ clock }) => {
     if (portalRef.current) {
-      // Slow portal rotation for hypnotic effect
-      portalRef.current.rotation.y = clock.getElapsedTime() * 0.2;
+      const t = clock.getElapsedTime();
+      // Enhanced portal rotation with stronger audio response
+      portalRef.current.rotation.y = t * (0.5 + bass * 2.0 + mids * 1.5);
+      portalRef.current.rotation.x = Math.sin(t * 2) * bass * 0.4;
+      
+      // Add scaling for more dynamic effect
+      const scale = 1 + Math.sin(t * 4) * 0.1 + bass * 0.3;
+      portalRef.current.scale.setScalar(scale);
+      
+      // Add position movement
+      portalRef.current.position.y = Math.sin(t * 3) * mids * 0.5;
     }
   });
   

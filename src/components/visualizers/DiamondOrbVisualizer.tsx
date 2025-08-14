@@ -50,57 +50,73 @@ function CrackedCrystalOrb({ audioData }: any) {
     return sum / 85 / 255;
   }, [frequency]);
 
+  // Smooth audio values with interpolation
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
+  const smoothedBeat = useRef(0);
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     const amp = amplitude;
     const beat = Math.max(beatStrength, bass);
     
-    const scalePulse = 1 + 0.3 * beat + 0.1 * Math.sin(time * 4);
-    const baseScale = 0.6 + 0.3 * amp;
+    // Smooth audio interpolation for fluid movement
+    const lerp = 0.15;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
+    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
     
-    const beatExplosion = beat > 0.7 ? 1 + beat * 0.4 : 1;
+    const scalePulse = 1 + 0.5 * smoothedBeat.current + 0.15 * Math.sin(time * 6);
+    const baseScale = 0.7 + 0.4 * amp;
+    
+    const beatExplosion = smoothedBeat.current > 0.5 ? 1 + smoothedBeat.current * 0.8 : 1;
 
     if (group.current) {
-      group.current.rotation.y = time * 0.8 + mids * 1.5;
-      group.current.rotation.x = Math.sin(time * 1.5) * 0.4 + beat * 0.8;
-      group.current.position.y = 0.5 * Math.sin(time * 2) + beat * 1.0;
+      group.current.rotation.y = time * 1.2 + smoothedMids.current * 3.0;
+      group.current.rotation.x = Math.sin(time * 2.0) * 0.6 + smoothedBeat.current * 1.5;
+      group.current.position.y = 0.8 * Math.sin(time * 3) + smoothedBeat.current * 2.0;
       group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
     }
 
     if (orb.current) {
-      const orbPulse = 1 + beat * 0.8 + highs * 0.6;
+      const orbPulse = 1 + smoothedBeat.current * 1.2 + smoothedHighs.current * 0.9;
       orb.current.scale.setScalar(orbPulse);
       
-      if (beat > 0.6) {
-        orb.current.position.x = (Math.random() - 0.5) * beat * 0.3;
-        orb.current.position.z = (Math.random() - 0.5) * beat * 0.3;
-      } else {
-        orb.current.position.x = 0;
-        orb.current.position.z = 0;
-      }
+      // Smoother shake effect
+      const shakeIntensity = smoothedBeat.current * 0.4;
+      orb.current.position.x = Math.sin(time * 20) * shakeIntensity;
+      orb.current.position.z = Math.cos(time * 18) * shakeIntensity;
     }
 
     if (innerCore.current) {
-      innerCore.current.rotation.y = time * 3.0 + mids * 4.0;
-      innerCore.current.rotation.x = time * 2.5 + highs * 3.0;
-      const coreScale = 0.3 + 0.4 * Math.sin(time * 4) + beat * 0.8;
+      innerCore.current.rotation.y = time * 4.0 + smoothedMids.current * 6.0;
+      innerCore.current.rotation.x = time * 3.5 + smoothedHighs.current * 5.0;
+      const coreScale = 0.4 + 0.5 * Math.sin(time * 6) + smoothedBeat.current * 1.2;
       innerCore.current.scale.setScalar(coreScale);
     }
 
     shards.current.forEach((shard, i) => {
       if (shard) {
-        const angle = (i / shards.current.length) * Math.PI * 2 + time * 2;
-        const radius = 1.0 + 0.8 * Math.sin(time * 3 + i) + beat * 1.2;
+        const angle = (i / shards.current.length) * Math.PI * 2 + time * 3;
+        const radius = 1.2 + 1.0 * Math.sin(time * 4 + i) + smoothedBeat.current * 2.0;
         
-        shard.position.x = Math.cos(angle) * radius + (Math.random() - 0.5) * beat * 0.4;
-        shard.position.z = Math.sin(angle) * radius + (Math.random() - 0.5) * beat * 0.4;
-        shard.position.y = Math.sin(time * 2.5 + i) * 0.6 + beat * 0.8;
+        // Smoother orbital motion
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const y = Math.sin(time * 4.0 + i * 0.5) * 0.8 + smoothedBeat.current * 1.5;
         
-        shard.rotation.y = time * 4.0 + i * 0.5;
-        shard.rotation.x = time * 3.0 + beat * 6.0;
-        shard.rotation.z = time * 2.0 + highs * 8.0;
+        // Smooth position interpolation
+        shard.position.x = THREE.MathUtils.lerp(shard.position.x, x, 0.1);
+        shard.position.z = THREE.MathUtils.lerp(shard.position.z, z, 0.1);
+        shard.position.y = THREE.MathUtils.lerp(shard.position.y, y, 0.1);
         
-        const shardScale = 0.8 + beat * 0.6 + highs * 0.4;
+        shard.rotation.y = time * 5.0 + i * 0.8;
+        shard.rotation.x = time * 4.0 + smoothedBeat.current * 8.0;
+        shard.rotation.z = time * 3.0 + smoothedHighs.current * 10.0;
+        
+        const shardScale = 1.0 + smoothedBeat.current * 1.0 + smoothedHighs.current * 0.7;
         shard.scale.setScalar(shardScale);
       }
     });
