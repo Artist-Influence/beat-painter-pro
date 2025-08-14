@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Sparkles, X } from "lucide-react";
+import { ChevronDown, Sparkles, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
 
@@ -35,6 +35,38 @@ export function StyleSelector() {
 
   const canAddMore = selectedStyles.length < 3;
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
+
+  // Load persisted previews and styles on mount
+  useEffect(() => {
+    const savedPreviews = localStorage.getItem('style-previews');
+    const savedStyles = localStorage.getItem('selected-styles');
+    if (savedPreviews) {
+      try {
+        setPreviews(JSON.parse(savedPreviews));
+      } catch (e) {
+        console.warn('Failed to load saved previews:', e);
+      }
+    }
+    if (savedStyles) {
+      try {
+        setSelectedStyles(JSON.parse(savedStyles));
+      } catch (e) {
+        console.warn('Failed to load saved styles:', e);
+      }
+    }
+  }, []);
+
+  // Persist previews when they change
+  useEffect(() => {
+    if (previews.length > 0) {
+      localStorage.setItem('style-previews', JSON.stringify(previews));
+    }
+  }, [previews]);
+
+  // Persist selected styles when they change
+  useEffect(() => {
+    localStorage.setItem('selected-styles', JSON.stringify(selectedStyles));
+  }, [selectedStyles]);
 
   useEffect(() => {
     if (!isDropdownOpen) return;
@@ -129,6 +161,19 @@ export function StyleSelector() {
             {isGenerating ? `Generating ${progress}/3…` : "Generate Previews"}
           </Button>
         </div>
+
+        {/* Regenerate button when previews exist */}
+        {previews.length > 0 && !isGenerating && (
+          <Button
+            onClick={generatePreviews}
+            variant="outline"
+            className="w-full mt-2"
+            disabled={selectedStyles.length === 0}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Regenerate New Styles
+          </Button>
+        )}
 
 {isDropdownOpen &&
           createPortal(

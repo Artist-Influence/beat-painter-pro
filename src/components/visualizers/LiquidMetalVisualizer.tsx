@@ -25,10 +25,10 @@ function LiquidBlob({ position, index, audioData, textureData }) {
       
       // Move outward when audio is playing to prevent overlap
       const audioIntensity = blobFreq;
-      const spreadDistance = audioIntensity * 5.0 + 1.0; // Even larger spread distance
+      const spreadDistance = audioIntensity * 15.0 + 2.0; // Massive spread distance
       const direction = position[0] > 0 ? 1 : -1;
       const x = position[0] + (direction * spreadDistance);
-      const z = position[2] + (Math.sin(t * 0.5 + index) * 0.3 * audioIntensity);
+      const z = position[2] + (Math.sin(t * 0.5 + index) * 0.5 * audioIntensity);
       
       meshRef.current.position.set(x, position[1], z);
       
