@@ -16,7 +16,7 @@ export function RightPanel({ activePanel, setActivePanel }: RightPanelProps) {
   return (
     <>
       {/* Tab Buttons */}
-      <div className="absolute right-4 top-24 z-30 flex flex-col gap-2">
+      <div className="absolute right-4 top-24 z-40 flex flex-col gap-2">
         <TabButton
           icon={<Sliders />}
           label="Controls"
@@ -41,7 +41,7 @@ export function RightPanel({ activePanel, setActivePanel }: RightPanelProps) {
             animate={{ x: 0 }}
             exit={{ x: 400 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="absolute right-16 top-24 bottom-24 w-80 z-20"
+            className="absolute right-16 top-24 bottom-24 w-80 z-30"
           >
             <div className="h-full bg-black/60 backdrop-blur-2xl rounded-l-2xl border border-white/10 border-r-0 p-4 overflow-y-auto">
               

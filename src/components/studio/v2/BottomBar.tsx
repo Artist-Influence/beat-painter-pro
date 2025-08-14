@@ -38,7 +38,7 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40">
         <button
           onClick={() => onToggle(!isVisible)}
-          className="p-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 hover:bg-white/10 transition-colors"
+          className="p-2 backdrop-blur-xl rounded-full border border-white/10 hover:bg-white/10 transition-colors shadow-lg shadow-black/20"
         >
           {isVisible ? (
             <ChevronDown className="w-4 h-4 text-white/80" />

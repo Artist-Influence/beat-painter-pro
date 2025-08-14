@@ -13,7 +13,7 @@ export function TabButton({ icon, label, isActive, onClick, side = 'left' }: Tab
   return (
     <button
       onClick={onClick}
-      className={`relative p-3 backdrop-blur-xl rounded-full border transition-all transform hover:scale-110 ${
+      className={`relative p-3 backdrop-blur-xl rounded-full border transition-all transform hover:scale-110 shadow-lg shadow-black/20 ${
         isActive 
           ? 'bg-purple-600/90 border-purple-500/50 shadow-lg shadow-purple-600/30' 
           : 'bg-black/40 border-white/10 hover:bg-white/10'

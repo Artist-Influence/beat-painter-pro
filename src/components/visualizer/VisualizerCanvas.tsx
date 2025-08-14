@@ -103,36 +103,41 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   } as React.CSSProperties;
 
   return (
-    <div className="w-full h-full rounded-lg" style={{ backgroundColor }}>
-      <AspectRatio ratio={1}>
+    <div className="absolute inset-0 flex items-center justify-center z-0">
+      <div 
+        className="w-full h-full" 
+        style={{ 
+          paddingBottom: '100px', // Account for audio bar height
+          paddingTop: '80px',    // Account for top bar
+          backgroundColor 
+        }}
+      >
         <Canvas
-            onCreated={handleCreated}
-            gl={{
-              preserveDrawingBuffer: true,
-              antialias: true,
-              alpha: true,
-              powerPreference: "high-performance",
-              stencil: false,
-              depth: true,
-            }}
-            dpr={[1, 2]}
-            camera={{ position: [0, 0, 3], fov: 50 }}
-            style={filterStyle}
-          >
-            
-            
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} intensity={0.5} />
-            <group scale={zoomLevel * scale}>
-              <Suspense fallback={null}>
-                {Visualizer && (
-                  <Visualizer key={styleVersion} audioData={audioData} backgroundColor={backgroundColor} />
-                )}
-              </Suspense>
-            </group>
-            <OrbitControls enablePan={false} enableZoom={false} />
-          </Canvas>
-      </AspectRatio>
+          onCreated={handleCreated}
+          gl={{
+            preserveDrawingBuffer: true,
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance",
+            stencil: false,
+            depth: true,
+          }}
+          dpr={[1, 2]}
+          camera={{ position: [0, 0, 5], fov: 50 }}
+          style={{ width: '100%', height: '100%', ...filterStyle }}
+        >
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} intensity={0.5} />
+          <group position={[0, 0, 0]} scale={zoomLevel * scale}>
+            <Suspense fallback={null}>
+              {Visualizer && (
+                <Visualizer key={styleVersion} audioData={audioData} backgroundColor={backgroundColor} />
+              )}
+            </Suspense>
+          </group>
+          <OrbitControls enablePan={false} enableZoom={false} />
+        </Canvas>
+      </div>
     </div>
   );
 };
