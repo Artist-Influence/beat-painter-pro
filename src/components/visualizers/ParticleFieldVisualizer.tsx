@@ -38,9 +38,9 @@ export default function ParticleFieldVisualizer({
       const i3 = i * 3;
       
       // Random positions in a large space
-      posArray[i3] = (Math.random() - 0.5) * 20;
-      posArray[i3 + 1] = (Math.random() - 0.5) * 20;
-      posArray[i3 + 2] = (Math.random() - 0.5) * 20;
+      posArray[i3] = (Math.random() - 0.5) * 10;
+      posArray[i3 + 1] = (Math.random() - 0.5) * 10;
+      posArray[i3 + 2] = (Math.random() - 0.5) * 10 - 5;
       
       // Color variations
       const intensity = Math.random();
@@ -57,12 +57,12 @@ export default function ParticleFieldVisualizer({
 
   const particleMaterial = useMemo(() => {
     return new THREE.PointsMaterial({
-      size: 0.05,
+      size: 0.3,
       transparent: true,
-      opacity: 0.8,
+      opacity: 1.0,
       vertexColors: true,
       blending: THREE.AdditiveBlending,
-      sizeAttenuation: true,
+      sizeAttenuation: false,
     });
   }, []);
 
@@ -86,10 +86,10 @@ export default function ParticleFieldVisualizer({
         posArray[i + 2] += speed;
         
         // Reset particles that have moved too far
-        if (posArray[i + 2] > 10) {
-          posArray[i + 2] = -10;
-          posArray[i] = (Math.random() - 0.5) * 20;
-          posArray[i + 1] = (Math.random() - 0.5) * 20;
+        if (posArray[i + 2] > 5) {
+          posArray[i + 2] = -5;
+          posArray[i] = (Math.random() - 0.5) * 10;
+          posArray[i + 1] = (Math.random() - 0.5) * 10;
         }
         
         // Update colors based on audio and distance
@@ -109,7 +109,7 @@ export default function ParticleFieldVisualizer({
       pointsRef.current.rotation.y = t * 0.1;
       
       // Update material size based on audio
-      (pointsRef.current.material as THREE.PointsMaterial).size = 0.05 + audioIntensity * 0.1;
+      (pointsRef.current.material as THREE.PointsMaterial).size = 0.3 + audioIntensity * 0.5;
     }
   });
 

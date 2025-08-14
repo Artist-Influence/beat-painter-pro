@@ -112,17 +112,6 @@ export default function LiquidMetalVisualizer({
         ))}
       </group>
       
-      {/* Reflection plane */}
-      <mesh position={[0, -1.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[10, 10]} />
-        <meshStandardMaterial
-          color={textureData.colors?.primary || '#ffffff'}
-          transparent
-          opacity={0.1}
-          metalness={0.9}
-          roughness={0.1}
-        />
-      </mesh>
     </>
   );
 }

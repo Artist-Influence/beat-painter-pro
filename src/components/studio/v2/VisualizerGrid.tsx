@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useStudioStore } from '@/stores/studioStore';
 import { visualizerRegistry, type VisualizerKey } from '@/components/visualizers';
+import { HorizontalVisualizerGrid } from './HorizontalVisualizerGrid';
 
 export function VisualizerGrid() {
   const { selected, setSelected } = useStudioStore();
@@ -18,19 +19,18 @@ export function VisualizerGrid() {
     { id: 'SacredGeometryPulseVisualizer', name: 'Sacred Geometry', preview: '⚡', description: 'Ancient geometric forms' },
     { id: 'StroboscopicTunnelVisualizer', name: 'Stroboscopic Tunnel', preview: '🌪️', description: 'Hypnotic tunnel vision' },
     { id: 'ChakraActivatorVisualizer', name: 'Chakra Activator', preview: '🧘', description: 'Energy center alignment' },
-    { id: 'WaveRibbonsVisualizer', name: 'Wave Ribbons', preview: '🌊', description: 'Flowing silk ribbons' },
-    { id: 'DNAHelixVisualizer', name: 'DNA Helix', preview: '🧬', description: 'Double helix structures' },
-    { id: 'ParticleFieldVisualizer', name: 'Particle Field', preview: '✨', description: 'Starfield particles' },
-    { id: 'LiquidMetalVisualizer', name: 'Liquid Metal', preview: '🌐', description: 'Ferrofluid morphing' },
-    { id: 'CircuitPulseVisualizer', name: 'Circuit Pulse', preview: '⚡', description: 'Electronic pathways' },
-    { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },
   ];
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-white/80 text-sm font-medium mb-3">Choose Visualizer</h3>
+    <div className="space-y-6">
+      {/* Horizontal Visualizers Section */}
+      <HorizontalVisualizerGrid />
       
-      <div className="grid grid-cols-3 gap-2">
+      {/* Standard Visualizers Section */}
+      <div className="space-y-4">
+        <h3 className="text-white/80 text-sm font-medium mb-3">Standard Visualizers</h3>
+        
+        <div className="grid grid-cols-3 gap-2">
         {visualizers.map((viz, index) => (
           <motion.button
             key={viz.id}
@@ -53,12 +53,12 @@ export function VisualizerGrid() {
             </div>
             
             {/* Hover overlay with description */}
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="text-lg mb-2">{viz.preview}</div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-sm flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105">
+              <div className="text-2xl mb-2 transform group-hover:scale-110 transition-transform duration-300">{viz.preview}</div>
               <div className="text-xs text-white font-medium text-center mb-1">
                 {viz.name}
               </div>
-              <div className="text-xs text-white/60 text-center leading-tight">
+              <div className="text-xs text-white/70 text-center leading-tight">
                 {viz.description}
               </div>
             </div>
@@ -69,6 +69,7 @@ export function VisualizerGrid() {
             )}
           </motion.button>
         ))}
+        </div>
       </div>
     </div>
   );
