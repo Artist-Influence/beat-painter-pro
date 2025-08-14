@@ -6,6 +6,36 @@ import { useStudioStore } from "@/stores/studioStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+// Custom slider component with double-click reset
+const ResettableSlider = ({ 
+  value, 
+  onValueChange, 
+  defaultValue, 
+  ...props 
+}: {
+  value: number[];
+  onValueChange: (value: number[]) => void;
+  defaultValue: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  className?: string;
+}) => {
+  return (
+    <div 
+      onDoubleClick={() => onValueChange([defaultValue])}
+      className="cursor-pointer"
+      title="Double-click to reset to default"
+    >
+      <Slider
+        value={value}
+        onValueChange={onValueChange}
+        {...props}
+      />
+    </div>
+  );
+};
+
 export const AudioResponseControls: React.FC = () => {
   const { 
     audioSensitivity, 
@@ -32,17 +62,19 @@ export const AudioResponseControls: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Preset Buttons */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           {presets.map((preset) => (
             <Button
               key={preset.key}
               variant={audioSensitivity.preset === preset.key ? "default" : "outline"}
               size="sm"
               onClick={() => setAudioPreset(preset.key)}
-              className="flex flex-col h-auto py-2"
+              className="h-auto py-3 px-3 text-left"
             >
-              <span className="font-medium">{preset.label}</span>
-              <span className="text-xs opacity-75">{preset.description}</span>
+              <div className="flex flex-col items-start w-full">
+                <span className="font-medium text-sm">{preset.label}</span>
+                <span className="text-xs opacity-75 mt-0.5">{preset.description}</span>
+              </div>
             </Button>
           ))}
         </div>
@@ -56,11 +88,12 @@ export const AudioResponseControls: React.FC = () => {
                 {audioSensitivity.bassMultiplier.toFixed(1)}x
               </span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[audioSensitivity.bassMultiplier]}
               min={0.1}
               max={3.0}
               step={0.1}
+              defaultValue={1.0}
               onValueChange={([v]) => setAudioSensitivity({ bassMultiplier: v })}
               className="w-full"
             />
@@ -73,11 +106,12 @@ export const AudioResponseControls: React.FC = () => {
                 {audioSensitivity.midsMultiplier.toFixed(1)}x
               </span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[audioSensitivity.midsMultiplier]}
               min={0.1}
               max={3.0}
               step={0.1}
+              defaultValue={0.7}
               onValueChange={([v]) => setAudioSensitivity({ midsMultiplier: v })}
               className="w-full"
             />
@@ -90,11 +124,12 @@ export const AudioResponseControls: React.FC = () => {
                 {audioSensitivity.highsMultiplier.toFixed(1)}x
               </span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[audioSensitivity.highsMultiplier]}
               min={0.1}
               max={3.0}
               step={0.1}
+              defaultValue={0.4}
               onValueChange={([v]) => setAudioSensitivity({ highsMultiplier: v })}
               className="w-full"
             />
@@ -107,11 +142,12 @@ export const AudioResponseControls: React.FC = () => {
                 {audioSensitivity.animationSpeed.toFixed(1)}x
               </span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[audioSensitivity.animationSpeed]}
               min={0.5}
               max={2.0}
               step={0.1}
+              defaultValue={1.0}
               onValueChange={([v]) => setAudioSensitivity({ animationSpeed: v })}
               className="w-full"
             />
@@ -171,11 +207,12 @@ export const AudioResponseControls: React.FC = () => {
               <span>Brightness</span>
               <span className="text-xs text-muted-foreground">{filters.brightness}%</span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[filters.brightness]}
               min={0}
               max={200}
               step={5}
+              defaultValue={100}
               onValueChange={([v]) => setFilters({ brightness: v })}
             />
           </div>
@@ -185,11 +222,12 @@ export const AudioResponseControls: React.FC = () => {
               <span>Saturation</span>
               <span className="text-xs text-muted-foreground">{filters.saturation}%</span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[filters.saturation]}
               min={0}
               max={200}
               step={5}
+              defaultValue={100}
               onValueChange={([v]) => setFilters({ saturation: v })}
             />
           </div>
@@ -199,11 +237,12 @@ export const AudioResponseControls: React.FC = () => {
               <span>Contrast</span>
               <span className="text-xs text-muted-foreground">{filters.contrast}%</span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[filters.contrast]}
               min={0}
               max={200}
               step={5}
+              defaultValue={100}
               onValueChange={([v]) => setFilters({ contrast: v })}
             />
           </div>
@@ -213,11 +252,12 @@ export const AudioResponseControls: React.FC = () => {
               <span>Zoom</span>
               <span className="text-xs text-muted-foreground">{(zoomLevel * 100).toFixed(0)}%</span>
             </Label>
-            <Slider
+            <ResettableSlider
               value={[zoomLevel]}
               min={0.5}
               max={3}
               step={0.1}
+              defaultValue={1.0}
               onValueChange={([v]) => setZoom(v)}
             />
           </div>
