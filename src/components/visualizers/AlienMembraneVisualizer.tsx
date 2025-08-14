@@ -20,9 +20,9 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     return at as THREE.Texture;
   }, []);
   
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const secondaryColor = extractedColors?.secondary || '#ffffff';
-  const accentColor = extractedColors?.accent || '#ffffff';
+  const primaryColor = '#ffffff';
+  const secondaryColor = '#ffffff';
+  const accentColor = '#ffffff';
   
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
