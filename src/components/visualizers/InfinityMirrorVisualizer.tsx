@@ -23,11 +23,6 @@ function MirrorPanel({ position, rotation, audioData, textureData }) {
       mirror={0.9}
       mixBlur={0.5}
       mixStrength={1 + bass * 2}
-      minDepthThreshold={0.4}
-      maxDepthThreshold={1.4}
-      depthScale={1 + bass * 0.5}
-      depthToBlurRatioBias={0.25}
-      debug={0}
     >
       {(Material, props) => (
         <Material
