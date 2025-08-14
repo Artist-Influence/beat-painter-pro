@@ -202,8 +202,8 @@ export function StyleSelector() {
             <>
               <div className="mb-2 text-xs text-muted-foreground">Generating previews...</div>
                <div className="grid grid-cols-1 gap-3">
-                 {[0, 1, 2].map((i) => (
-                   <div key={i} className="h-52 w-full rounded-lg bg-muted animate-pulse" />
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-44 w-full rounded-lg bg-muted animate-pulse" />
                  ))}
               </div>
             </>
@@ -218,7 +218,7 @@ export function StyleSelector() {
                     onDoubleClick={() => setSelectedPreview(i)}
                     title="Click to apply • Double-click to view"
                   >
-                    <img src={src} alt={`Style preview ${i + 1}`} className="h-52 w-full object-cover" loading="lazy" />
+                    <img src={src} alt={`Style preview ${i + 1}`} className="h-44 w-full object-cover" loading="lazy" />
                     <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-foreground/10 group-hover:flex">
                       <span className="text-sm font-medium">Double‑click to view</span>
                     </div>

@@ -19,6 +19,21 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     return Math.min(sum / 20 / 255, 1.0);
   }, [freqData, index]);
 
+  // Get applied texture and colors like other visualizers
+  const extractedColors = (window as any).extractedColors;
+  const appliedTexture = useMemo(() => {
+    const at = (window as any).appliedTexture;
+    if (!at) return null;
+    if (typeof at === "string") {
+      const tex = new THREE.TextureLoader().load(at);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    return at as THREE.Texture;
+  }, []);
+
+  const primaryColor = extractedColors?.primary || '#ffffff';
+
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
@@ -34,11 +49,6 @@ function LiquidBlob({ position, index, audioData, textureData }) {
       
       const scale = 0.3 + blobFreq * 0.5;
       meshRef.current.scale.setScalar(scale);
-      
-      // Distortion based on audio
-      if (meshRef.current.material instanceof THREE.MeshStandardMaterial) {
-        meshRef.current.material.emissiveIntensity = 0.5 + blobFreq * 1.5;
-      }
     }
   });
 
@@ -46,15 +56,15 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     <mesh ref={meshRef} position={position}>
       <sphereGeometry args={[1, 32, 32]} />
       <MeshDistortMaterial
-        color={textureData.colors?.primary || '#ffffff'}
+        color={primaryColor}
         attach="material"
         distort={0.1 + blobFreq * 0.4}
         speed={2 + blobFreq * 3}
-        roughness={0.1}
-        metalness={0.9}
-        emissive={textureData.colors?.primary || '#ffffff'}
-        emissiveIntensity={0.5 + blobFreq * 1.5}
-        map={textureData.texture}
+        roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
+        metalness={extractedColors?.isMetallic ? 0.9 : 0.7}
+        emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
+        emissiveIntensity={extractedColors?.isNeon ? 0.5 + blobFreq * 1.5 : 0.2 + blobFreq * 0.8}
+        map={appliedTexture}
       />
     </mesh>
   );
