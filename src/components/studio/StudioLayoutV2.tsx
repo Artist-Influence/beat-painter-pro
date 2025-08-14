@@ -14,7 +14,7 @@ export function StudioLayoutV2() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [activePanels, setActivePanels] = useState({
     left: 'visualizers' as LeftPanelType,
-    right: null as RightPanelType,
+    right: 'controls' as RightPanelType,
     bottom: true
   });
 
