@@ -18,13 +18,19 @@ export function VisualizerGrid() {
     { id: 'SacredGeometryPulseVisualizer', name: 'Sacred Geometry', preview: '⚡', description: 'Ancient geometric forms' },
     { id: 'StroboscopicTunnelVisualizer', name: 'Stroboscopic Tunnel', preview: '🌪️', description: 'Hypnotic tunnel vision' },
     { id: 'ChakraActivatorVisualizer', name: 'Chakra Activator', preview: '🧘', description: 'Energy center alignment' },
+    { id: 'WaveRibbonsVisualizer', name: 'Wave Ribbons', preview: '🌊', description: 'Flowing silk ribbons' },
+    { id: 'DNAHelixVisualizer', name: 'DNA Helix', preview: '🧬', description: 'Double helix structures' },
+    { id: 'ParticleFieldVisualizer', name: 'Particle Field', preview: '✨', description: 'Starfield particles' },
+    { id: 'LiquidMetalVisualizer', name: 'Liquid Metal', preview: '🌐', description: 'Ferrofluid morphing' },
+    { id: 'CircuitPulseVisualizer', name: 'Circuit Pulse', preview: '⚡', description: 'Electronic pathways' },
+    { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },
   ];
 
   return (
     <div className="space-y-4">
       <h3 className="text-white/80 text-sm font-medium mb-3">Choose Visualizer</h3>
       
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {visualizers.map((viz, index) => (
           <motion.button
             key={viz.id}
@@ -39,9 +45,9 @@ export function VisualizerGrid() {
             }`}
           >
             {/* Preview */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
-              <div className="text-2xl mb-1">{viz.preview}</div>
-              <div className="text-xs text-white/60 text-center leading-tight">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+              <div className="text-lg mb-1">{viz.preview}</div>
+              <div className="text-[10px] text-white/60 text-center leading-tight">
                 {viz.name}
               </div>
             </div>

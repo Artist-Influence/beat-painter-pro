@@ -9,6 +9,12 @@ import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import ChakraActivatorVisualizer from "./ChakraActivatorVisualizer";
+import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
+import DNAHelixVisualizer from "./DNAHelixVisualizer";
+import ParticleFieldVisualizer from "./ParticleFieldVisualizer";
+import LiquidMetalVisualizer from "./LiquidMetalVisualizer";
+import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
+import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -24,6 +30,12 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   SacredGeometryPulseVisualizer: 0.35,
   StroboscopicTunnelVisualizer: 0.3,
   ChakraActivatorVisualizer: 0.25,
+  WaveRibbonsVisualizer: 0.4,
+  DNAHelixVisualizer: 0.3,
+  ParticleFieldVisualizer: 0.2,
+  LiquidMetalVisualizer: 0.35,
+  CircuitPulseVisualizer: 0.4,
+  NeonSkylineVisualizer: 0.3,
 };
 
 export const visualizerRegistry = {
@@ -38,6 +50,12 @@ export const visualizerRegistry = {
   SacredGeometryPulseVisualizer,
   StroboscopicTunnelVisualizer,
   ChakraActivatorVisualizer,
+  WaveRibbonsVisualizer,
+  DNAHelixVisualizer,
+  ParticleFieldVisualizer,
+  LiquidMetalVisualizer,
+  CircuitPulseVisualizer,
+  NeonSkylineVisualizer,
 };
 
 export type VisualizerKey = keyof typeof visualizerRegistry;
