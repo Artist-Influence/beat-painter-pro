@@ -1,86 +1,85 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStudioStore } from '@/stores/studioStore';
+import { useWaveformAnalysis } from '@/hooks/useWaveformAnalysis';
 
 export function WaveformVisualizer() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { audioElement } = useStudioStore();
-  const animationRef = useRef<number>();
+  const { waveformData, isAnalyzing } = useWaveformAnalysis(audioElement);
+  const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!audioElement) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = rect.height * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    const draw = () => {
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0, 0, rect.width, rect.height);
-
-      // Generate sample waveform data (in real app, this would come from audio analysis)
-      const barCount = 50;
-      const barWidth = rect.width / barCount;
-      
-      for (let i = 0; i < barCount; i++) {
-        // Simulate audio levels (replace with real audio data)
-        const height = Math.random() * rect.height * 0.8;
-        const x = i * barWidth;
-        const y = (rect.height - height) / 2;
-        
-        // Create gradient
-        const gradient = ctx.createLinearGradient(0, y, 0, y + height);
-        gradient.addColorStop(0, '#8b5cf6');
-        gradient.addColorStop(1, '#ec4899');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, barWidth - 1, height);
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
-    };
-
-    if (audioElement && !audioElement.paused) {
-      draw();
-    } else {
-      // Draw static waveform when paused
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const rect = canvas.getBoundingClientRect();
-      const barCount = 50;
-      const barWidth = rect.width / barCount;
-      
-      for (let i = 0; i < barCount; i++) {
-        const height = Math.sin(i * 0.2) * 20 + 10;
-        const x = i * barWidth;
-        const y = (rect.height - height) / 2;
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.fillRect(x, y, barWidth - 1, height);
-      }
-    }
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
+    const updateTime = () => setCurrentTime(audioElement.currentTime || 0);
+    audioElement.addEventListener('timeupdate', updateTime);
+    return () => audioElement.removeEventListener('timeupdate', updateTime);
   }, [audioElement]);
 
+  const handleWaveformClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioElement || !waveformData) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * waveformData.duration;
+
+    audioElement.currentTime = Math.max(0, Math.min(waveformData.duration, newTime));
+  };
+
+  if (isAnalyzing) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-white/60 text-sm">Analyzing audio...</div>
+      </div>
+    );
+  }
+
+  if (!waveformData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-white/40 text-sm">No audio loaded</div>
+      </div>
+    );
+  }
+
+  const progressPercentage = waveformData.duration > 0 
+    ? (currentTime / waveformData.duration) * 100 
+    : 0;
+
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full"
-      style={{ width: '100%', height: '100%' }}
-    />
+    <div 
+      className="w-full h-full cursor-pointer relative overflow-hidden"
+      onClick={handleWaveformClick}
+    >
+      {/* Progress overlay */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-pink-500/30 transition-all duration-100"
+        style={{ width: `${progressPercentage}%` }}
+      />
+      
+      {/* Waveform bars */}
+      <div className="flex items-center justify-center h-full gap-[1px]">
+        {waveformData.peaks.map((peak, index) => {
+          const height = Math.max(2, peak * 100); // Minimum 2px height, max based on peak
+          const isPassed = index < (progressPercentage / 100) * waveformData.peaks.length;
+          
+          return (
+            <div
+              key={index}
+              className={`transition-colors duration-100 rounded-sm ${
+                isPassed 
+                  ? 'bg-white' 
+                  : 'bg-white/30'
+              }`}
+              style={{
+                height: `${height}%`,
+                width: '2px',
+                minHeight: '2px',
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
   );
 }
