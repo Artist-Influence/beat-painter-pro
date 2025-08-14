@@ -23,15 +23,20 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Keep strictly horizontal - no Y movement
-      const scale = 0.3 + blobFreq * 0.5;
+      // Move outward when audio is playing to prevent overlap
+      const audioIntensity = blobFreq;
+      const spreadDistance = audioIntensity * 1.5; // Blobs spread out more with audio
+      const x = position[0] + (position[0] > 0 ? spreadDistance : -spreadDistance);
+      const z = position[2] + (Math.sin(t * 0.5 + index) * 0.3 * audioIntensity);
       
+      meshRef.current.position.set(x, position[1], z);
+      
+      const scale = 0.3 + blobFreq * 0.5;
       meshRef.current.scale.setScalar(scale);
-      meshRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2])); // Fixed position
       
       // Distortion based on audio
       if (meshRef.current.material instanceof THREE.MeshStandardMaterial) {
-        meshRef.current.material.emissiveIntensity = blobFreq * 2;
+        meshRef.current.material.emissiveIntensity = 0.5 + blobFreq * 1.5;
       }
     }
   });
@@ -47,7 +52,8 @@ function LiquidBlob({ position, index, audioData, textureData }) {
         roughness={0.1}
         metalness={0.9}
         emissive={textureData.colors?.primary || '#ffffff'}
-        emissiveIntensity={0.2}
+        emissiveIntensity={0.5 + blobFreq * 1.5}
+        map={textureData.texture}
       />
     </mesh>
   );

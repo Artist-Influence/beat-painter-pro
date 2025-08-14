@@ -89,18 +89,6 @@ export function UploadSection() {
         </ul>
       </div>
 
-      {/* Preset Audio */}
-      <div className="space-y-2">
-        <h4 className="text-white/60 text-xs font-medium">Try Sample Audio</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <button className="p-2 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors text-xs text-white/60">
-            🎵 Electronic
-          </button>
-          <button className="p-2 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors text-xs text-white/60">
-            🎸 Rock
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

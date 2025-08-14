@@ -55,7 +55,8 @@ function LiquidBlob({ position, index, audioData, textureData }) {
         roughness={0.1}
         metalness={0.9}
         emissive={textureData.colors?.primary || '#ffffff'}
-        emissiveIntensity={0.2}
+        emissiveIntensity={0.5 + blobFreq * 1.5}
+        map={textureData.texture}
       />
     </mesh>
   );
