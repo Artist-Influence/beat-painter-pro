@@ -23,12 +23,11 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Keep horizontal movement - minimal Y variation
+      // Keep strictly horizontal - no Y movement
       const scale = 0.3 + blobFreq * 0.5;
-      const y = position[1] + Math.sin(t * 2 + index) * 0.05; // Much smaller Y movement
       
       meshRef.current.scale.setScalar(scale);
-      meshRef.current.position.y = y;
+      meshRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2])); // Fixed position
       
       // Distortion based on audio
       if (meshRef.current.material instanceof THREE.MeshStandardMaterial) {
@@ -75,14 +74,14 @@ export default function LiquidMetalVisualizer({
   }, [freqData]);
 
   const blobs = useMemo(() => [
-    { position: [-2, 0, 0], index: 0 },
-    { position: [-1, 0.2, 0.5], index: 1 },
-    { position: [0, -0.1, -0.3], index: 2 },
-    { position: [1, 0.3, 0.2], index: 3 },
-    { position: [2, 0, 0], index: 4 },
-    { position: [-0.5, 0.5, -0.8], index: 5 },
-    { position: [0.5, -0.4, 0.8], index: 6 },
-    { position: [0, 0.8, 0], index: 7 },
+    { position: [-2.5, 0, 0], index: 0 },
+    { position: [-1.5, 0, 0], index: 1 },
+    { position: [-0.5, 0, 0], index: 2 },
+    { position: [0.5, 0, 0], index: 3 },
+    { position: [1.5, 0, 0], index: 4 },
+    { position: [2.5, 0, 0], index: 5 },
+    { position: [-1, 0, 0], index: 6 },
+    { position: [1, 0, 0], index: 7 },
   ], []);
 
   useFrame(({ clock }) => {

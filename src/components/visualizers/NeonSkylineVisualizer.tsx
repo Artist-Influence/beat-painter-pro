@@ -51,7 +51,9 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
       const height = baseHeight + buildingFreq * 0.8;
       const pulse = Math.sin(t * 4 + index * 0.5) * 0.5 + 0.5;
       
+      // Keep buildings on ground level - no Y movement
       buildingRef.current.scale.set(width, height, width);
+      buildingRef.current.position.set(0, height / 2, 0); // Fixed position at ground level
       buildingMaterial.emissiveIntensity = 0.2 + buildingFreq * 1.5 + pulse * 0.3;
     }
     
@@ -76,13 +78,13 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
 
   return (
     <group position={position}>
-      {/* Building core */}
-      <mesh ref={buildingRef} material={buildingMaterial} position={[0, baseHeight / 2, 0]}>
+      {/* Building core - fixed at ground level */}
+      <mesh ref={buildingRef} material={buildingMaterial}>
         <boxGeometry args={[1, 1, 1]} />
       </mesh>
       
       {/* Glow effect */}
-      <mesh ref={glowRef} material={glowMaterial} position={[0, baseHeight / 2, 0]}>
+      <mesh ref={glowRef} material={glowMaterial}>
         <boxGeometry args={[width * 1.1, baseHeight * 1.1, width * 1.1]} />
       </mesh>
       
@@ -120,7 +122,7 @@ export default function NeonSkylineVisualizer({
 
   const buildings = useMemo(() => {
     return Array(30).fill(null).map((_, i) => ({
-      position: [(i / 29) * 12 - 6, 0, (Math.random() - 0.5) * 2],
+      position: [(i / 29) * 12 - 6, 0, 0], // Keep Z at 0 for horizontal line
       baseHeight: 0.5 + Math.random() * 1.5,
       width: 0.15 + Math.random() * 0.2,
       index: i,
@@ -140,7 +142,8 @@ export default function NeonSkylineVisualizer({
       <directionalLight position={[5, 10, 5]} intensity={0.3} />
       <Environment preset="night" />
       
-      <group ref={groupRef}>
+      {/* Fixed horizontal skyline group */}
+      <group ref={groupRef} position={[0, -1, 0]}>
         {buildings.map((building, i) => (
           <NeonBuilding
             key={i}
@@ -155,7 +158,7 @@ export default function NeonSkylineVisualizer({
         
         <Sparkles
           count={200}
-          scale={[12, 4, 4]}
+          scale={[12, 2, 2]} // Flatter sparkle area for horizontal layout
           size={1 + bassIntensity * 2}
           speed={0.3 + bassIntensity}
           opacity={0.2 + bassIntensity * 0.3}
