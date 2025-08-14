@@ -8,7 +8,6 @@ import PsychedelicMandalaVisualizer from "./PsychedelicMandalaVisualizer";
 import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
-import ChakraActivatorVisualizer from "./ChakraActivatorVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
 import LiquidMetalVisualizer from "./LiquidMetalVisualizer";
@@ -29,7 +28,6 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   HypercubePortalVisualizer: 0.4,
   SacredGeometryPulseVisualizer: 0.35,
   StroboscopicTunnelVisualizer: 0.3,
-  ChakraActivatorVisualizer: 0.25,
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
   LiquidMetalVisualizer: 0.35,
@@ -49,7 +47,6 @@ export const visualizerRegistry = {
   HypercubePortalVisualizer,
   SacredGeometryPulseVisualizer,
   StroboscopicTunnelVisualizer,
-  ChakraActivatorVisualizer,
   WaveRibbonsVisualizer,
   DNAHelixVisualizer,
   LiquidMetalVisualizer,

@@ -104,7 +104,11 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
       mediaRecorder.start();
       setIsRecording(true);
-      await audioElement.play();
+      
+      // Don't pause/play audio - let it continue as is
+      if (audioElement.paused) {
+        await audioElement.play();
+      }
 
       const render = () => {
         if (!keepRenderingRef.current || !ctxRef.current || !exportCanvasRef.current) return;
@@ -131,7 +135,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     keepRenderingRef.current = false;
     try {
       mediaRecorderRef.current?.stop();
-      audioElement?.pause();
+      // Don't pause audio when stopping recording - let it continue playing
     } catch (e) {
       console.error("Stop recording error:", e);
     }

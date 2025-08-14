@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Volume2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
@@ -11,6 +11,7 @@ interface BottomBarProps {
 
 export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
   const { audioElement } = useStudioStore();
+  const [volume, setVolume] = useState(0.75);
 
   const handlePlayPause = () => {
     if (!audioElement) return;
@@ -30,6 +31,19 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    if (audioElement) {
+      setVolume(audioElement.volume);
+    }
+  }, [audioElement]);
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioElement) {
+      audioElement.volume = newVolume;
+    }
   };
 
   return (
@@ -130,25 +144,23 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                   {/* Volume */}
                   <div className="flex items-center gap-2">
                     <Volume2 className="w-4 h-4 text-white/60" />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={audioElement?.volume || 0.75}
-                      onChange={(e) => {
-                        if (audioElement) {
-                          audioElement.volume = parseFloat(e.target.value);
-                        }
-                      }}
-                      className="w-20 h-1 bg-white/20 rounded-full appearance-none cursor-pointer
-                               [&::-webkit-slider-thumb]:appearance-none 
-                               [&::-webkit-slider-thumb]:w-3 
-                               [&::-webkit-slider-thumb]:h-3 
-                               [&::-webkit-slider-thumb]:bg-white 
-                               [&::-webkit-slider-thumb]:rounded-full 
-                               [&::-webkit-slider-thumb]:cursor-pointer"
-                    />
+                     <div className="relative w-20">
+                       <div className="h-1 bg-white/20 rounded-full">
+                         <div 
+                           className="h-full bg-white/60 rounded-full transition-all duration-100"
+                           style={{ width: `${volume * 100}%` }}
+                         />
+                       </div>
+                       <input
+                         type="range"
+                         min="0"
+                         max="1"
+                         step="0.01"
+                         value={volume}
+                         onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                       />
+                     </div>
                   </div>
                 </div>
               </div>
