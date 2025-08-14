@@ -20,9 +20,9 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     return at as THREE.Texture;
   }, []);
   
-  const primaryColor = '#ffffff';
-  const secondaryColor = '#ffffff';
-  const accentColor = '#ffffff';
+  const primaryColor = extractedColors?.primary || '#ffffff';
+  const secondaryColor = extractedColors?.secondary || '#ffffff';  
+  const accentColor = extractedColors?.accent || '#ffffff';
   
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -96,13 +96,13 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           vPosition = position;
           vUv = uv;
           
-          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 1.2 * sin(uTime * 4.0 + uBass * 6.0);
-          float violentSidePulse = 0.6 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 5.0);
-          float chaoticDetailPulse = 0.4 * sin(uTime * 12.0 + position.x * 8.0 + position.z * 8.0);
+          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 0.3 * sin(uTime * 4.0 + uBass * 2.0);
+          float violentSidePulse = 0.2 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 1.5);
+          float chaoticDetailPulse = 0.1 * sin(uTime * 12.0 + position.x * 8.0 + position.z * 8.0);
           
-          float beatExplosion = uBass > 0.6 ? (1.0 + uBass * 1.5) : 1.0;
+          float beatExplosion = uBass > 0.6 ? (1.0 + uBass * 0.5) : 1.0;
           
-          vec3 displacement = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * (1.0 + uBass * 1.2) * beatExplosion;
+          vec3 displacement = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * (0.5 + uBass * 0.5) * beatExplosion;
           vec3 pos = position + displacement;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -129,7 +129,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           
           if (uHasTexture > 0.5) {
             vec4 texColor = texture2D(uTexture, vUv);
-            chroma = mix(chroma, texColor.rgb, 0.4);
+            chroma = mix(chroma, texColor.rgb, 0.8);
           }
           
           if (uIsNeon > 0.5) {
