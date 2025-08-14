@@ -3,12 +3,14 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function CrackedCrystalOrb({ audioData }: any) {
   const group = useRef<THREE.Group>(null);
   const orb = useRef<THREE.Mesh>(null);
   const innerCore = useRef<THREE.Mesh>(null);
   const shards = useRef<THREE.Mesh[]>([]);
+  const { audioSensitivity } = useStudioStore();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -35,20 +37,20 @@ function CrackedCrystalOrb({ audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return sum / 86 / 255;
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   // Smooth audio values with interpolation
   const smoothedBass = useRef(0);
@@ -58,6 +60,7 @@ function CrackedCrystalOrb({ audioData }: any) {
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
     const amp = amplitude;
     const beat = Math.max(beatStrength, bass);
     
@@ -68,15 +71,15 @@ function CrackedCrystalOrb({ audioData }: any) {
     smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
     smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
     
-    const scalePulse = 1 + 0.5 * smoothedBeat.current + 0.15 * Math.sin(time * 6);
+    const scalePulse = 1 + 0.5 * smoothedBeat.current + 0.15 * Math.sin(time * 6 * animSpeed);
     const baseScale = 0.7 + 0.4 * amp;
     
     const beatExplosion = smoothedBeat.current > 0.5 ? 1 + smoothedBeat.current * 0.8 : 1;
 
     if (group.current) {
-      group.current.rotation.y = time * 1.2 + smoothedMids.current * 3.0;
-      group.current.rotation.x = Math.sin(time * 2.0) * 0.6 + smoothedBeat.current * 1.5;
-      group.current.position.y = 0.8 * Math.sin(time * 3) + smoothedBeat.current * 2.0;
+      group.current.rotation.y = time * 1.2 * animSpeed + smoothedMids.current * 3.0;
+      group.current.rotation.x = Math.sin(time * 2.0 * animSpeed) * 0.6 + smoothedBeat.current * 1.5;
+      group.current.position.y = 0.8 * Math.sin(time * 3 * animSpeed) + smoothedBeat.current * 2.0;
       group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
     }
 
@@ -86,35 +89,35 @@ function CrackedCrystalOrb({ audioData }: any) {
       
       // Smoother shake effect
       const shakeIntensity = smoothedBeat.current * 0.4;
-      orb.current.position.x = Math.sin(time * 20) * shakeIntensity;
-      orb.current.position.z = Math.cos(time * 18) * shakeIntensity;
+      orb.current.position.x = Math.sin(time * 20 * animSpeed) * shakeIntensity;
+      orb.current.position.z = Math.cos(time * 18 * animSpeed) * shakeIntensity;
     }
 
     if (innerCore.current) {
-      innerCore.current.rotation.y = time * 4.0 + smoothedMids.current * 6.0;
-      innerCore.current.rotation.x = time * 3.5 + smoothedHighs.current * 5.0;
-      const coreScale = 0.4 + 0.5 * Math.sin(time * 6) + smoothedBeat.current * 1.2;
+      innerCore.current.rotation.y = time * 4.0 * animSpeed + smoothedMids.current * 6.0;
+      innerCore.current.rotation.x = time * 3.5 * animSpeed + smoothedHighs.current * 5.0;
+      const coreScale = 0.4 + 0.5 * Math.sin(time * 6 * animSpeed) + smoothedBeat.current * 1.2;
       innerCore.current.scale.setScalar(coreScale);
     }
 
     shards.current.forEach((shard, i) => {
       if (shard) {
-        const angle = (i / shards.current.length) * Math.PI * 2 + time * 3;
-        const radius = 1.2 + 1.0 * Math.sin(time * 4 + i) + smoothedBeat.current * 2.0;
+        const angle = (i / shards.current.length) * Math.PI * 2 + time * 3 * animSpeed;
+        const radius = 1.2 + 1.0 * Math.sin(time * 4 * animSpeed + i) + smoothedBeat.current * 2.0;
         
         // Smoother orbital motion
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const y = Math.sin(time * 4.0 + i * 0.5) * 0.8 + smoothedBeat.current * 1.5;
+        const y = Math.sin(time * 4.0 * animSpeed + i * 0.5) * 0.8 + smoothedBeat.current * 1.5;
         
         // Smooth position interpolation
         shard.position.x = THREE.MathUtils.lerp(shard.position.x, x, 0.1);
         shard.position.z = THREE.MathUtils.lerp(shard.position.z, z, 0.1);
         shard.position.y = THREE.MathUtils.lerp(shard.position.y, y, 0.1);
         
-        shard.rotation.y = time * 5.0 + i * 0.8;
-        shard.rotation.x = time * 4.0 + smoothedBeat.current * 8.0;
-        shard.rotation.z = time * 3.0 + smoothedHighs.current * 10.0;
+        shard.rotation.y = time * 5.0 * animSpeed + i * 0.8;
+        shard.rotation.x = time * 4.0 * animSpeed + smoothedBeat.current * 8.0;
+        shard.rotation.z = time * 3.0 * animSpeed + smoothedHighs.current * 10.0;
         
         const shardScale = 1.0 + smoothedBeat.current * 1.0 + smoothedHighs.current * 0.7;
         shard.scale.setScalar(shardScale);

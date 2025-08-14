@@ -4,28 +4,41 @@ import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from "../visualizer";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
-import { analyzeAudio } from "@/lib/visualizerUtils";
+import { useStudioStore } from "@/stores/studioStore";
 
 function StrobeRing({ distance, index, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const { bass, highs } = analyzeAudio(frequency);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
+
+  const highs = useMemo(() => {
+    let sum = 0;
+    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
   
   useFrame(({ clock }) => {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
+      const animSpeed = audioSensitivity.animationSpeed;
       
       // Strong bass-responsive strobing effect
       const bassMultiplier = bass > 0.05 ? bass : 0.05;
       const strobeFreq = 30 + bassMultiplier * 40; // Moderate strobing with bass
-      const strobe = Math.sin(t * strobeFreq + index * 2) > 0.2 ? 1 : 0;
+      const strobe = Math.sin(t * strobeFreq * animSpeed + index * 2) > 0.2 ? 1 : 0;
       materialRef.current.emissiveIntensity = strobe * (1.0 + bass * 3.0);
       
       // Balanced Z-position movement for tunnel effect
-      const speed = 6 + bassMultiplier * 6;
+      const speed = (6 + bassMultiplier * 6) * animSpeed;
       const z = ((t * speed + index * 2) % 20) - 10;
       meshRef.current.position.z = z;
       
@@ -34,11 +47,11 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       meshRef.current.scale.setScalar(scale);
       
       // Balanced hypnotic spiral rotation
-      meshRef.current.rotation.z = t * 3 + index * 0.6 + bass * 6.0;
+      meshRef.current.rotation.z = t * 3 * animSpeed + index * 0.6 + bass * 6.0;
       
       // Minimal X-Y oscillation
-      meshRef.current.position.x = Math.sin(t * 4 + index) * bass * 0.2;
-      meshRef.current.position.y = Math.cos(t * 3.5 + index) * bass * 0.15;
+      meshRef.current.position.x = Math.sin(t * 4 * animSpeed + index) * bass * 0.2;
+      meshRef.current.position.y = Math.cos(t * 3.5 * animSpeed + index) * bass * 0.15;
     }
   });
   
@@ -79,21 +92,34 @@ export default function StroboscopicTunnelVisualizer({
   const beamMaterialRef = useRef<THREE.MeshBasicMaterial>();
   const flashMaterialRef = useRef<THREE.MeshBasicMaterial>();
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const { bass, mids } = analyzeAudio(frequency);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
+
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
   
   useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
     
     if (tunnelRef.current) {
       // Enhanced tunnel rotation with stronger audio response
       const bassMultiplier = bass > 0.05 ? bass : 0.05;
-      tunnelRef.current.rotation.z = t * 1.0 + mids * bassMultiplier * 8;
+      tunnelRef.current.rotation.z = t * 1.0 * animSpeed + mids * bassMultiplier * 8;
       
       // Add tunnel scaling for breathing effect
-      const tunnelScale = 1 + Math.sin(t * 8) * 0.1 + bass * 0.4;
+      const tunnelScale = 1 + Math.sin(t * 8 * animSpeed) * 0.1 + bass * 0.4;
       tunnelRef.current.scale.setScalar(tunnelScale);
     }
     
@@ -109,10 +135,10 @@ export default function StroboscopicTunnelVisualizer({
       }
       
       // Enhanced forward movement with stronger illusion
-      camera.position.z = 6 + Math.sin(t * 2) * 3 + bassMultiplier * Math.sin(t * 4) * 2;
+      camera.position.z = 6 + Math.sin(t * 2 * animSpeed) * 3 + bassMultiplier * Math.sin(t * 4 * animSpeed) * 2;
       
       // Add camera rotation for more disorienting effect
-      camera.rotation.z = Math.sin(t * 3) * bass * 0.1;
+      camera.rotation.z = Math.sin(t * 3 * animSpeed) * bass * 0.1;
     }
     
     // Enhanced beam opacity with stronger response

@@ -4,11 +4,13 @@ import { Environment, Trail } from "@react-three/drei";
 import * as THREE from "three";
 import type { VisualizerProps } from "../visualizer";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function Tesseract({ audioData, textureData }) {
   const innerRef = useRef<THREE.Mesh>(null);
   const outerRef = useRef<THREE.Mesh>(null);
   const connectionsRef = useRef<THREE.Group>(null);
+  const { audioSensitivity } = useStudioStore();
   
   // Store materials to update them when texture changes
   const [innerMaterial, setInnerMaterial] = React.useState<THREE.Material | null>(null);
@@ -20,52 +22,53 @@ function Tesseract({ audioData, textureData }) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
   
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
   
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
   
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
     
     if (innerRef.current && outerRef.current) {
       // Balanced 4D rotation with strong bass response
-      innerRef.current.rotation.x = t * 0.8 + bass * 3.0;
-      innerRef.current.rotation.y = t * 0.6 + bass * 2.0 + mids * 0.8;
-      innerRef.current.rotation.z = t * 0.4 + bass * 1.5 + highs * 0.5;
+      innerRef.current.rotation.x = t * 0.8 * animSpeed + bass * 3.0;
+      innerRef.current.rotation.y = t * 0.6 * animSpeed + bass * 2.0 + mids * 0.8;
+      innerRef.current.rotation.z = t * 0.4 * animSpeed + bass * 1.5 + highs * 0.5;
       
-      outerRef.current.rotation.x = -t * 0.5 + bass * 1.8;
-      outerRef.current.rotation.y = -t * 0.7 + bass * 2.5 + mids * 0.6;
-      outerRef.current.rotation.z = -t * 0.3 + bass * 1.2 + highs * 0.4;
+      outerRef.current.rotation.x = -t * 0.5 * animSpeed + bass * 1.8;
+      outerRef.current.rotation.y = -t * 0.7 * animSpeed + bass * 2.5 + mids * 0.6;
+      outerRef.current.rotation.z = -t * 0.3 * animSpeed + bass * 1.2 + highs * 0.4;
       
       // Strong bass dimensional shifting with subtle baseline
-      const shift = 0.6 + Math.sin(t * 3) * 0.3 + bass * 1.5 + mids * 0.3;
+      const shift = 0.6 + Math.sin(t * 3 * animSpeed) * 0.3 + bass * 1.5 + mids * 0.3;
       innerRef.current.scale.setScalar(shift);
       
       // Strong bass portal pulsing 
-      const portal = 1 + Math.sin(t * 8) * 0.3 + bass * 1.2 + highs * 0.2;
+      const portal = 1 + Math.sin(t * 8 * animSpeed) * 0.3 + bass * 1.2 + highs * 0.2;
       outerRef.current.scale.setScalar(portal);
       
       // Minimal position movement
-      innerRef.current.position.x = Math.sin(t * 2) * bass * 0.2;
-      innerRef.current.position.y = Math.cos(t * 1.8) * bass * 0.15;
+      innerRef.current.position.x = Math.sin(t * 2 * animSpeed) * bass * 0.2;
+      innerRef.current.position.y = Math.cos(t * 1.8 * animSpeed) * bass * 0.15;
     }
     
     if (connectionsRef.current) {
       // Balanced connecting lines with strong bass response
       connectionsRef.current.children.forEach((child, i) => {
         if (child instanceof THREE.Mesh && child.material) {
-          const opacity = 0.5 + Math.sin(t * 4 + i) * 0.3 + bass * 1.0 + mids * 0.2;
+          const opacity = 0.5 + Math.sin(t * 4 * animSpeed + i) * 0.3 + bass * 1.0 + mids * 0.2;
           (child.material as THREE.Material & { opacity: number }).opacity = Math.min(opacity, 1.0);
         }
       });
@@ -165,6 +168,7 @@ export default function HypercubePortalVisualizer({
 }: VisualizerProps) {
   const portalRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   // Create portal ring materials that update with texture
   const [ringMaterials, setRingMaterials] = React.useState<THREE.Material[]>([]);
@@ -193,28 +197,29 @@ export default function HypercubePortalVisualizer({
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
   
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   useFrame(({ clock }) => {
     if (portalRef.current) {
       const t = clock.getElapsedTime();
+      const animSpeed = audioSensitivity.animationSpeed;
       // Balanced portal rotation with strong bass response
-      portalRef.current.rotation.y = t * (0.4 + bass * 1.5 + mids * 0.3);
-      portalRef.current.rotation.x = Math.sin(t * 1.5) * bass * 0.3;
+      portalRef.current.rotation.y = t * (0.4 + bass * 1.5 + mids * 0.3) * animSpeed;
+      portalRef.current.rotation.x = Math.sin(t * 1.5 * animSpeed) * bass * 0.3;
       
       // Strong bass scaling with subtle baseline
-      const scale = 1 + Math.sin(t * 3) * 0.08 + bass * 0.5;
+      const scale = 1 + Math.sin(t * 3 * animSpeed) * 0.08 + bass * 0.5;
       portalRef.current.scale.setScalar(scale);
       
       // Minimal position movement
-      portalRef.current.position.y = Math.sin(t * 2) * bass * 0.3;
+      portalRef.current.position.y = Math.sin(t * 2 * animSpeed) * bass * 0.3;
     }
   });
   

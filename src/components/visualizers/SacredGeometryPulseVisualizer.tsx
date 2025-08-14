@@ -4,30 +4,43 @@ import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from "../visualizer";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
-import { analyzeAudio } from "@/lib/visualizerUtils";
+import { useStudioStore } from "@/stores/studioStore";
 
 function FlowerOfLife({ audioData, textureData }) {
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const { bass, mids } = analyzeAudio(frequency);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
+
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
   
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
+      const animSpeed = audioSensitivity.animationSpeed;
       
       // Balanced sacred rotation with strong bass response
-      groupRef.current.rotation.z = t * 0.6 + bass * 1.8 + mids * 0.4;
+      groupRef.current.rotation.z = t * 0.6 * animSpeed + bass * 1.8 + mids * 0.4;
       
       // Strong bass breathing with subtle baseline
-      const breathe = 1 + Math.sin(t * 1.0) * (0.3 + bass * 1.0 + mids * 0.2);
+      const breathe = 1 + Math.sin(t * 1.0 * animSpeed) * (0.3 + bass * 1.0 + mids * 0.2);
       groupRef.current.scale.setScalar(breathe);
       
       // Minimal position movement for subtle organic feel
-      groupRef.current.position.y = Math.sin(t * 1.5) * bass * 0.4;
-      groupRef.current.position.x = Math.cos(t * 1.2) * bass * 0.2;
+      groupRef.current.position.y = Math.sin(t * 1.5 * animSpeed) * bass * 0.4;
+      groupRef.current.position.x = Math.cos(t * 1.2 * animSpeed) * bass * 0.2;
     }
     
     // Strong bass emissive intensity
@@ -90,27 +103,34 @@ function FlowerOfLife({ audioData, textureData }) {
 function Metatron({ audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const { highs } = analyzeAudio(frequency);
+  
+  const highs = useMemo(() => {
+    let sum = 0;
+    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
+      const animSpeed = audioSensitivity.animationSpeed;
       
       // Enhanced Metatron's cube rotation with stronger audio response
-      meshRef.current.rotation.x = t * 1.0 + highs * 3.0;
-      meshRef.current.rotation.y = t * 1.4 + highs * 4.0;
-      meshRef.current.rotation.z = t * 0.6 + highs * 2.0;
+      meshRef.current.rotation.x = t * 1.0 * animSpeed + highs * 3.0;
+      meshRef.current.rotation.y = t * 1.4 * animSpeed + highs * 4.0;
+      meshRef.current.rotation.z = t * 0.6 * animSpeed + highs * 2.0;
       
       // Enhanced frequency expansion with bass interaction
-      const expand = 1 + highs * 1.2 + Math.sin(t * 8) * 0.3;
+      const expand = 1 + highs * 1.2 + Math.sin(t * 8 * animSpeed) * 0.3;
       meshRef.current.scale.setScalar(expand);
       
       // Add position movement for dynamic effect
-      meshRef.current.position.x = Math.sin(t * 4) * highs * 0.3;
-      meshRef.current.position.y = Math.cos(t * 3.5) * highs * 0.2;
+      meshRef.current.position.x = Math.sin(t * 4 * animSpeed) * highs * 0.3;
+      meshRef.current.position.y = Math.cos(t * 3.5 * animSpeed) * highs * 0.2;
     }
     
     // Enhanced emissive intensity based on audio
@@ -146,23 +166,30 @@ export default function SacredGeometryPulseVisualizer({
 }: VisualizerProps) {
   const containerRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const { bass } = analyzeAudio(frequency);
+  
+  const bass = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
   
   useFrame(({ clock }) => {
     if (containerRef.current) {
       const t = clock.getElapsedTime();
+      const animSpeed = audioSensitivity.animationSpeed;
       // Enhanced 432Hz inspired rotation with audio response
-      containerRef.current.rotation.z = t * (0.8 + bass * 1.5);
+      containerRef.current.rotation.z = t * (0.8 + bass * 1.5) * animSpeed;
       
       // Add breathing effect to the whole container
-      const breathe = 1 + Math.sin(t * 1.0) * (0.1 + bass * 0.5);
+      const breathe = 1 + Math.sin(t * 1.0 * animSpeed) * (0.1 + bass * 0.5);
       containerRef.current.scale.setScalar(breathe);
       
       // Add subtle movement
-      containerRef.current.position.y = Math.sin(t * 1.5) * bass * 0.3;
+      containerRef.current.position.y = Math.sin(t * 1.5 * animSpeed) * bass * 0.3;
     }
   });
 
