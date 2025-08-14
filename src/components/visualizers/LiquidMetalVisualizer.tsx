@@ -25,7 +25,7 @@ function LiquidBlob({ position, index, audioData, textureData }) {
       
       // Move outward when audio is playing to prevent overlap
       const audioIntensity = blobFreq;
-      const spreadDistance = audioIntensity * 3.0 + 0.5; // Much larger spread distance
+      const spreadDistance = audioIntensity * 5.0 + 1.0; // Even larger spread distance
       const direction = position[0] > 0 ? 1 : -1;
       const x = position[0] + (direction * spreadDistance);
       const z = position[2] + (Math.sin(t * 0.5 + index) * 0.3 * audioIntensity);
@@ -81,14 +81,12 @@ export default function LiquidMetalVisualizer({
   }, [freqData]);
 
   const blobs = useMemo(() => [
-    { position: [-2.5, 0, 0], index: 0 },
-    { position: [-1.5, 0, 0], index: 1 },
-    { position: [-0.5, 0, 0], index: 2 },
-    { position: [0.5, 0, 0], index: 3 },
-    { position: [1.5, 0, 0], index: 4 },
-    { position: [2.5, 0, 0], index: 5 },
-    { position: [-1, 0, 0], index: 6 },
-    { position: [1, 0, 0], index: 7 },
+    { position: [-4, 0, 0], index: 0 },
+    { position: [-2.5, 0, 0], index: 1 },
+    { position: [-1, 0, 0], index: 2 },
+    { position: [1, 0, 0], index: 3 },
+    { position: [2.5, 0, 0], index: 4 },
+    { position: [4, 0, 0], index: 5 },
   ], []);
 
   useFrame(({ clock }) => {
