@@ -28,13 +28,12 @@ const ResettableSlider = ({
         e.stopPropagation();
         onValueChange([defaultValue]);
       }}
-      className="cursor-pointer relative"
+      className="w-full"
       title="Double-click to reset to default"
     >
       <Slider
         value={value}
         onValueChange={onValueChange}
-        className="relative z-10 pointer-events-auto"
         {...props}
       />
     </div>
