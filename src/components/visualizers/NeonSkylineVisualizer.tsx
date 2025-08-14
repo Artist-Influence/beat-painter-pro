@@ -24,8 +24,8 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   const buildingMaterial = useMemo(() => {
     return createVisualizerMaterial(textureData.colors?.primary || '#ffffff', textureData, {
       emissiveIntensity: 0.2,
-      transparent: true,
-      opacity: 0.9,
+      transparent: false,
+      opacity: 1.0,
     });
   }, [textureData.textureVersion, textureData.colors?.primary]);
 
@@ -33,7 +33,7 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#ffffff'),
       transparent: true,
-      opacity: 0.1,
+      opacity: 0.4,
     });
   }, [textureData.colors?.primary, textureData.textureVersion]);
 

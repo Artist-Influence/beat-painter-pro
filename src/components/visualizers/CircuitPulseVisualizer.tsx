@@ -21,8 +21,8 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
   const pathMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#00ffff'),
-      transparent: true,
-      opacity: 0.3,
+      transparent: false,
+      opacity: 1.0,
       emissive: new THREE.Color(textureData.colors?.primary || '#00ffff'),
       emissiveIntensity: 0.1,
     });
@@ -31,8 +31,8 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
   const pulseMaterial = useMemo(() => {
     return createVisualizerMaterial(textureData.colors?.secondary || '#ffffff', textureData, {
       emissiveIntensity: 1,
-      transparent: true,
-      opacity: 0.9,
+      transparent: false,
+      opacity: 1.0,
     });
   }, [textureData.textureVersion, textureData.colors?.secondary]);
 

@@ -29,7 +29,7 @@ export function StudioLayoutV2() {
       </div>
 
       {/* Top Bar - Minimal, Transparent */}
-      <TopBar />
+      <TopBar canvasRef={canvasRef} />
 
       {/* Left Panel - Visualizer Selection */}
       <LeftPanel 

@@ -27,16 +27,16 @@ function DNAStrand({ isTop, audioData, textureData }) {
   const nodeMaterial = useMemo(() => {
     return createVisualizerMaterial(textureData.colors?.primary || '#ffffff', textureData, {
       emissiveIntensity: 0.5,
-      transparent: true,
-      opacity: 0.8,
+      transparent: false,
+      opacity: 1.0,
     });
   }, [textureData.textureVersion, textureData.colors?.primary]);
 
   const connectorMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.secondary || '#ffffff'),
-      transparent: true,
-      opacity: 0.3,
+      transparent: false,
+      opacity: 1.0,
     });
   }, [textureData.colors?.secondary, textureData.textureVersion]);
 

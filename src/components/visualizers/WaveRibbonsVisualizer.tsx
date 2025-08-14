@@ -59,8 +59,8 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
   const material = useMemo(() => {
     const mat = createVisualizerMaterial(textureData.colors?.primary || '#ffffff', textureData, {
       emissiveIntensity: 0.3,
-      transparent: true,
-      opacity: 0.3 + ribbonIndex * 0.15,
+      transparent: false,
+      opacity: 1.0,
     });
     mat.side = THREE.DoubleSide;
     materialRef.current = mat;

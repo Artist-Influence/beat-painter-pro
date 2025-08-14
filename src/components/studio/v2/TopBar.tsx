@@ -4,9 +4,12 @@ import { Link } from 'react-router-dom';
 import { useStudioStore } from '@/stores/studioStore';
 import { useWebMRecorder } from '@/hooks/useWebMRecorder';
 
-export function TopBar() {
+interface TopBarProps {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+}
+
+export function TopBar({ canvasRef }: TopBarProps) {
   const { audioElement, backgroundColor } = useStudioStore();
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const { isRecording, startRecording, stopRecording } = useWebMRecorder({ canvasRef, audioElement });
 
   const handleRecord = () => {
