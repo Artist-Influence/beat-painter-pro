@@ -5,6 +5,7 @@ import { LeftPanel } from './v2/LeftPanel';
 import { RightPanel } from './v2/RightPanel';
 import { BottomBar } from './v2/BottomBar';
 import { FloatingActions } from './v2/FloatingActions';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 type LeftPanelType = 'visualizers' | 'styles' | 'custom' | null;
 type RightPanelType = 'controls' | 'upload' | null;
@@ -16,6 +17,9 @@ export function StudioLayoutV2() {
     right: null as RightPanelType,
     bottom: true
   });
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts();
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">

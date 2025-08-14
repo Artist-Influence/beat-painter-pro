@@ -16,7 +16,7 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
   return (
     <>
       {/* Tab Buttons - Always Visible */}
-      <div className="absolute left-4 top-24 z-40 flex flex-col gap-2">
+      <div className="absolute left-6 top-24 z-40 flex flex-col gap-2">
         <TabButton
           icon={<Grid3X3 />}
           label="Visualizers"
@@ -47,7 +47,7 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="absolute left-0 top-24 bottom-24 z-30"
           >
-            <div className="ml-16 w-80 h-full bg-black/60 backdrop-blur-2xl rounded-r-2xl border border-white/10 border-l-0 p-4 overflow-y-auto">
+            <div className="ml-20 w-80 h-full bg-black/60 backdrop-blur-2xl rounded-r-2xl border border-white/10 border-l-0 p-4 overflow-y-auto">
               
               {/* Visualizer Grid */}
               {activePanel === 'visualizers' && (

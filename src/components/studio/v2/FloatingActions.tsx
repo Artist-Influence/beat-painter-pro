@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Maximize2, Camera, RotateCcw, Keyboard } from 'lucide-react';
+import { useStudioStore } from '@/stores/studioStore';
 
 export function FloatingActions() {
   const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const { setFilters, setZoom, setBackground } = useStudioStore();
+
+  const takeScreenshot = () => {
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      const link = document.createElement('a');
+      link.download = `visualizer-${Date.now()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  };
+
+  const resetView = () => {
+    setFilters({ brightness: 100, saturation: 100, contrast: 100 });
+    setZoom(1);
+    setBackground("#FFFFFF");
+  };
 
   const quickActions = [
-    { icon: <Camera />, label: 'Screenshot', action: () => console.log('Screenshot') },
-    { icon: <RotateCcw />, label: 'Reset View', action: () => console.log('Reset') },
-    { icon: <Keyboard />, label: 'Shortcuts', action: () => console.log('Shortcuts') },
+    { icon: <Camera />, label: 'Screenshot', action: takeScreenshot },
+    { icon: <RotateCcw />, label: 'Reset View', action: resetView },
+    { icon: <Keyboard />, label: 'Shortcuts', action: () => setShowShortcuts(true) },
   ];
 
   return (
@@ -70,6 +89,51 @@ export function FloatingActions() {
           <Maximize2 className="w-5 h-5 text-white/80" />
         </button>
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={() => setShowShortcuts(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 p-6 max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-white text-lg font-semibold mb-4">Keyboard Shortcuts</h3>
+              <div className="space-y-2 text-sm text-white/80">
+                <div className="flex justify-between">
+                  <span>Play/Pause</span>
+                  <kbd className="bg-white/10 px-2 py-1 rounded text-xs">Space</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Seek Backward</span>
+                  <kbd className="bg-white/10 px-2 py-1 rounded text-xs">←</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Seek Forward</span>
+                  <kbd className="bg-white/10 px-2 py-1 rounded text-xs">→</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Zoom In</span>
+                  <kbd className="bg-white/10 px-2 py-1 rounded text-xs">Cmd/Ctrl + =</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Zoom Out</span>
+                  <kbd className="bg-white/10 px-2 py-1 rounded text-xs">Cmd/Ctrl + -</kbd>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
