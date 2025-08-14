@@ -108,8 +108,10 @@ export default function DNAHelixVisualizer({
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
-      const t = clock.getElapsedTime();
-      groupRef.current.rotation.z = t * 0.2 + bassIntensity * 0.5;
+      // Keep horizontal orientation - no rotation on z-axis
+      groupRef.current.rotation.x = 0;
+      groupRef.current.rotation.y = 0;
+      groupRef.current.rotation.z = 0;
     }
   });
 

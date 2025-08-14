@@ -28,7 +28,7 @@ export function VisualizerGrid() {
       
       {/* Standard Visualizers Section */}
       <div className="space-y-4">
-        <h3 className="text-white/80 text-sm font-medium mb-3">Standard Visualizers</h3>
+        <h3 className="text-white/80 text-sm font-medium mb-3">Standalone Visualizers</h3>
         
         <div className="grid grid-cols-3 gap-2">
         {visualizers.map((viz, index) => (
@@ -52,15 +52,9 @@ export function VisualizerGrid() {
               </div>
             </div>
             
-            {/* Hover overlay with description */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-sm flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105">
-              <div className="text-2xl mb-2 transform group-hover:scale-110 transition-transform duration-300">{viz.preview}</div>
-              <div className="text-xs text-white font-medium text-center mb-1">
-                {viz.name}
-              </div>
-              <div className="text-xs text-white/70 text-center leading-tight">
-                {viz.description}
-              </div>
+            {/* Simple hover effect - just emoji scale */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="text-2xl transform group-hover:scale-125 transition-transform duration-200">{viz.preview}</div>
             </div>
             
             {/* Active indicator */}

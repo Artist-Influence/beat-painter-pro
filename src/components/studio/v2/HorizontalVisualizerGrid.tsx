@@ -9,7 +9,6 @@ export function HorizontalVisualizerGrid() {
   const horizontalVisualizers = [
     { id: 'WaveRibbonsVisualizer', name: 'Wave Ribbons', preview: '🌊', description: 'Flowing silk ribbons' },
     { id: 'DNAHelixVisualizer', name: 'DNA Helix', preview: '🧬', description: 'Double helix structures' },
-    { id: 'ParticleFieldVisualizer', name: 'Particle Field', preview: '✨', description: 'Starfield particles' },
     { id: 'LiquidMetalVisualizer', name: 'Liquid Metal', preview: '🌐', description: 'Ferrofluid morphing' },
     { id: 'CircuitPulseVisualizer', name: 'Circuit Pulse', preview: '⚡', description: 'Electronic pathways' },
     { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },

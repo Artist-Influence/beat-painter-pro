@@ -60,38 +60,38 @@ export const AudioResponseControls: React.FC = () => {
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Audio Response</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-6">
+      <h3 className="text-white/80 text-sm font-medium">Audio Response</h3>
+      <div className="space-y-4">
         {/* Preset Buttons */}
         <div className="grid grid-cols-1 gap-2">
           {presets.map((preset) => (
-            <Button
+            <button
               key={preset.key}
-              variant={audioSensitivity.preset === preset.key ? "default" : "outline"}
-              size="sm"
               onClick={() => setAudioPreset(preset.key)}
-              className="h-auto py-3 px-3 text-left"
+              className={`h-auto py-3 px-3 text-left rounded-xl border transition-all ${
+                audioSensitivity.preset === preset.key
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
             >
               <div className="flex flex-col items-start w-full">
-                <span className="font-medium text-sm">{preset.label}</span>
-                <span className="text-xs opacity-75 mt-0.5">{preset.description}</span>
+                <span className="font-medium text-sm text-white">{preset.label}</span>
+                <span className="text-xs text-white/60 mt-0.5">{preset.description}</span>
               </div>
-            </Button>
+            </button>
           ))}
         </div>
 
         {/* Individual Controls - Show when custom or allow override */}
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Bass Response</span>
-              <span className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Bass Response</span>
+              <span className="text-xs text-white/60">
                 {audioSensitivity.bassMultiplier.toFixed(1)}x
               </span>
-            </Label>
+            </div>
             <ResettableSlider
               value={[audioSensitivity.bassMultiplier]}
               min={0.1}
@@ -104,12 +104,12 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Mids Response</span>
-              <span className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Mids Response</span>
+              <span className="text-xs text-white/60">
                 {audioSensitivity.midsMultiplier.toFixed(1)}x
               </span>
-            </Label>
+            </div>
             <ResettableSlider
               value={[audioSensitivity.midsMultiplier]}
               min={0.1}
@@ -122,12 +122,12 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Highs Response</span>
-              <span className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Highs Response</span>
+              <span className="text-xs text-white/60">
                 {audioSensitivity.highsMultiplier.toFixed(1)}x
               </span>
-            </Label>
+            </div>
             <ResettableSlider
               value={[audioSensitivity.highsMultiplier]}
               min={0.1}
@@ -140,12 +140,12 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Animation Speed</span>
-              <span className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Animation Speed</span>
+              <span className="text-xs text-white/60">
                 {audioSensitivity.animationSpeed.toFixed(1)}x
               </span>
-            </Label>
+            </div>
             <ResettableSlider
               value={[audioSensitivity.animationSpeed]}
               min={0.5}
@@ -159,58 +159,64 @@ export const AudioResponseControls: React.FC = () => {
         </div>
 
         {audioSensitivity.preset === 'custom' && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-white/60">
             Custom settings active
           </p>
         )}
 
-        <Separator className="my-4" />
+        <div className="border-t border-white/10 my-4"></div>
 
         {/* Background Colors */}
         <div className="space-y-3">
-          <Label>Background</Label>
+          <span className="text-white/80 text-sm">Background</span>
           <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant={backgroundColor === "#00FF00" ? "default" : "outline"}
-              size="sm"
+            <button
               onClick={() => setBackground("#00FF00")}
-              className="h-12 flex flex-col gap-1"
+              className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
+                backgroundColor === "#00FF00"
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
             >
               <div className="w-4 h-4 bg-green-500 rounded border" />
-              <span className="text-xs">Green</span>
-            </Button>
-            <Button
-              variant={backgroundColor === "#FFFFFF" ? "default" : "outline"}
-              size="sm"
+              <span className="text-xs text-white">Green</span>
+            </button>
+            <button
               onClick={() => setBackground("#FFFFFF")}
-              className="h-12 flex flex-col gap-1"
+              className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
+                backgroundColor === "#FFFFFF"
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
             >
               <div className="w-4 h-4 bg-white rounded border" />
-              <span className="text-xs">White</span>
-            </Button>
-            <Button
-              variant={backgroundColor === "#000000" ? "default" : "outline"}
-              size="sm"
+              <span className="text-xs text-white">White</span>
+            </button>
+            <button
               onClick={() => setBackground("#000000")}
-              className="h-12 flex flex-col gap-1"
+              className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
+                backgroundColor === "#000000"
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
             >
               <div className="w-4 h-4 bg-black rounded border" />
-              <span className="text-xs">Black</span>
-            </Button>
+              <span className="text-xs text-white">Black</span>
+            </button>
           </div>
         </div>
 
-        <Separator className="my-4" />
+        <div className="border-t border-white/10 my-4"></div>
 
         {/* Visual Filters */}
         <div className="space-y-3">
-          <Label>Visual Effects</Label>
+          <span className="text-white/80 text-sm">Visual Effects</span>
           
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Brightness</span>
-              <span className="text-xs text-muted-foreground">{filters.brightness}%</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Brightness</span>
+              <span className="text-xs text-white/60">{filters.brightness}%</span>
+            </div>
             <ResettableSlider
               value={[filters.brightness]}
               min={0}
@@ -222,10 +228,10 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Saturation</span>
-              <span className="text-xs text-muted-foreground">{filters.saturation}%</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Saturation</span>
+              <span className="text-xs text-white/60">{filters.saturation}%</span>
+            </div>
             <ResettableSlider
               value={[filters.saturation]}
               min={0}
@@ -237,10 +243,10 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Contrast</span>
-              <span className="text-xs text-muted-foreground">{filters.contrast}%</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Contrast</span>
+              <span className="text-xs text-white/60">{filters.contrast}%</span>
+            </div>
             <ResettableSlider
               value={[filters.contrast]}
               min={0}
@@ -252,10 +258,10 @@ export const AudioResponseControls: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center justify-between">
-              <span>Zoom</span>
-              <span className="text-xs text-muted-foreground">{(zoomLevel * 100).toFixed(0)}%</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-white/80 text-sm">Zoom</span>
+              <span className="text-xs text-white/60">{(zoomLevel * 100).toFixed(0)}%</span>
+            </div>
             <ResettableSlider
               value={[zoomLevel]}
               min={0.5}
@@ -266,8 +272,8 @@ export const AudioResponseControls: React.FC = () => {
             />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
