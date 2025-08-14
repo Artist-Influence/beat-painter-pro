@@ -8,6 +8,7 @@ import PsychedelicMandalaVisualizer from "./PsychedelicMandalaVisualizer";
 import HypercubePortalVisualizer from "./HypercubePortalVisualizer";
 import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
+import ChakraActivatorVisualizer from "./ChakraActivatorVisualizer";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -22,6 +23,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   HypercubePortalVisualizer: 0.4,
   SacredGeometryPulseVisualizer: 0.35,
   StroboscopicTunnelVisualizer: 0.3,
+  ChakraActivatorVisualizer: 0.25,
 };
 
 export const visualizerRegistry = {
@@ -35,6 +37,7 @@ export const visualizerRegistry = {
   HypercubePortalVisualizer,
   SacredGeometryPulseVisualizer,
   StroboscopicTunnelVisualizer,
+  ChakraActivatorVisualizer,
 };
 
 export type VisualizerKey = keyof typeof visualizerRegistry;

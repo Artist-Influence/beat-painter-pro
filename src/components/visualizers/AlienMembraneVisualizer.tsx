@@ -96,13 +96,13 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           vPosition = position;
           vUv = uv;
           
-          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 2.5 * sin(uTime * 4.0 + uBass * 15.0);
-          float violentSidePulse = 1.2 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 12.0);
-          float chaoticDetailPulse = 0.8 * sin(uTime * 12.0 + position.x * 8.0 + position.z * 8.0);
+          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 1.2 * sin(uTime * 4.0 + uBass * 6.0);
+          float violentSidePulse = 0.6 * sin(uTime * 6.0 + position.y * 15.0 + uBass * 5.0);
+          float chaoticDetailPulse = 0.4 * sin(uTime * 12.0 + position.x * 8.0 + position.z * 8.0);
           
-          float beatExplosion = uBass > 0.6 ? (1.0 + uBass * 4.0) : 1.0;
+          float beatExplosion = uBass > 0.6 ? (1.0 + uBass * 1.5) : 1.0;
           
-          vec3 displacement = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * (1.0 + uBass * 3.5) * beatExplosion;
+          vec3 displacement = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * (1.0 + uBass * 1.2) * beatExplosion;
           vec3 pos = position + displacement;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
