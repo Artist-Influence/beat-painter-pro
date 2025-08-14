@@ -15,7 +15,7 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
   const pathIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 50; i < 150; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 100 / 255, 1.0);
+    return Math.min(sum / 100 / 255 * 2.5, 1.0); // Increase sensitivity
   }, [freqData]);
 
   const pathMaterial = useMemo(() => {
@@ -38,7 +38,7 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
 
   useFrame(({ clock }) => {
     if (lineRef.current && pathMaterial) {
-      pathMaterial.emissiveIntensity = 0.1 + pathIntensity * 0.5;
+      pathMaterial.emissiveIntensity = 0.3 + pathIntensity * 2;
     }
     
     if (pulsesRef.current) {
@@ -110,7 +110,7 @@ function CircuitNode({ position, index, audioData, textureData }) {
   useFrame(({ clock }) => {
     if (nodeRef.current) {
       const t = clock.getElapsedTime();
-      const scale = 0.8 + nodeIntensity * 0.4;
+      const scale = 0.8 + nodeIntensity * 1.5;
       nodeRef.current.scale.setScalar(scale);
       
       // Keep node position stable - no Y movement for horizontal layout

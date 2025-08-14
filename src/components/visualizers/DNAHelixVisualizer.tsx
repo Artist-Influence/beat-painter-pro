@@ -50,10 +50,10 @@ function DNAStrand({ isTop, audioData, textureData }) {
           const multiplier = isTop ? 1 : -1;
           const audioBoost = 1 + audioIntensity;
           
-          // Keep helix horizontal - only minor Y animation
-          child.position.y = Math.sin(phase) * 0.3 * multiplier * audioBoost; // Reduced from 0.8 to 0.3
-          child.position.z = 0; // Keep Z at 0 for horizontal layout
-          child.scale.setScalar(0.5 + audioIntensity * 0.5);
+          // Enhanced helix movement with audio reactivity
+          child.position.y = Math.sin(phase) * 0.4 * multiplier * audioBoost;
+          child.position.z = Math.cos(phase) * 0.2 * multiplier * audioBoost; // Add some Z movement
+          child.scale.setScalar(0.5 + audioIntensity * 1.2);
         }
       });
     }

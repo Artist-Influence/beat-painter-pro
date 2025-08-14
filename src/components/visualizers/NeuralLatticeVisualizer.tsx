@@ -82,9 +82,11 @@ function NeuralLattice({ audioData }: any) {
     const t = clock.getElapsedTime();
     
     if (groupRef.current) {
-      const explosiveScale = 1 + bass * 2.5 + 0.3 * Math.sin(t * 6);
-      const beatExplosion = bass > 0.6 ? 1 + bass * 3.0 : 1;
-      groupRef.current.scale.setScalar(explosiveScale * beatExplosion);
+      // Smooth transitions using lerp-like behavior
+      const targetScale = 1 + bass * 1.2 + 0.15 * Math.sin(t * 6);
+      const currentScale = groupRef.current.scale.x;
+      const smoothScale = currentScale + (targetScale - currentScale) * 0.1;
+      groupRef.current.scale.setScalar(smoothScale);
       
       groupRef.current.rotation.y = t * 1.2 + mids * 4.0;
       groupRef.current.rotation.x = Math.sin(t * 1.5) * 1.0 + bass * 2.5;

@@ -12,6 +12,7 @@ import ChakraActivatorVisualizer from "./ChakraActivatorVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
 import LiquidMetalVisualizer from "./LiquidMetalVisualizer";
+import LiquidMetalVisualizerStandalone from "./LiquidMetalVisualizerStandalone";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
 
@@ -32,6 +33,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
   LiquidMetalVisualizer: 0.35,
+  LiquidMetalVisualizerStandalone: 0.3,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
 };
@@ -51,6 +53,7 @@ export const visualizerRegistry = {
   WaveRibbonsVisualizer,
   DNAHelixVisualizer,
   LiquidMetalVisualizer,
+  LiquidMetalVisualizerStandalone,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
 };

@@ -87,8 +87,9 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
       
       positions.needsUpdate = true;
       
-      // Update material properties
-      materialRef.current.emissiveIntensity = 0.3 + ribbonFreq * 2;
+      // Update material properties with stronger reactivity
+      materialRef.current.emissiveIntensity = 0.5 + ribbonFreq * 4;
+      materialRef.current.opacity = (0.3 + ribbonIndex * 0.15) * (1 + ribbonFreq);
     }
   });
 

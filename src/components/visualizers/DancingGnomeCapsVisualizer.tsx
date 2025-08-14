@@ -304,7 +304,7 @@ export default function DancingGnomeCapsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={1.4}>
+      <group scale={0.7}>
         <GlassSphereVisualizer audioData={audioData} />
       </group>
     </>

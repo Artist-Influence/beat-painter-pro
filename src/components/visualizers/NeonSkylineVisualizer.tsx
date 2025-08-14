@@ -48,13 +48,17 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   useFrame(({ clock }) => {
     if (buildingRef.current && buildingMaterial) {
       const t = clock.getElapsedTime();
-      const height = baseHeight + buildingFreq * 0.8;
+      const height = baseHeight + buildingFreq * 2.5; // Enhanced height response
       const pulse = Math.sin(t * 4 + index * 0.5) * 0.5 + 0.5;
       
+      // Enhanced audio response for width and depth
+      const audioWidth = width * (1 + buildingFreq * 1.5);
+      const audioDepth = width * (1 + buildingFreq * 1.2);
+      
       // Keep buildings on ground level - no Y movement
-      buildingRef.current.scale.set(width, height, width);
-      buildingRef.current.position.set(0, height / 2, 0); // Fixed position at ground level
-      buildingMaterial.emissiveIntensity = 0.2 + buildingFreq * 1.5 + pulse * 0.3;
+      buildingRef.current.scale.set(audioWidth, height, audioDepth);
+      buildingRef.current.position.set(0, height / 2, 0);
+      buildingMaterial.emissiveIntensity = 0.3 + buildingFreq * 3 + pulse * 0.5;
     }
     
     if (glowRef.current && glowMaterial) {
@@ -117,7 +121,7 @@ export default function NeonSkylineVisualizer({
   const bassIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
+    return Math.min(sum / 86 / 255 * 3, 1.0); // Increase sensitivity
   }, [freqData]);
 
   const buildings = useMemo(() => {

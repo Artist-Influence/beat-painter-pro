@@ -209,10 +209,10 @@ function AlienMembrane({ audioData }: any) {
       groupRef.current.rotation.x = Math.sin(t * 2.0 * speed) * 0.4 + bass * 2.5 + mids * 0.3;
       groupRef.current.rotation.z = Math.cos(t * 1.5 * speed) * 0.3 + bass * 1.8 + highs * 0.2;
       
-      // Strong bass response with subtle baseline movement
-      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 4.0 * speed) * 0.1;
-      const midsScale = mids > 0.2 ? 1 + mids * 0.5 : 1;
-      groupRef.current.scale.setScalar(0.6 * beatScale * midsScale);
+      // Smoother bass response with controlled scaling
+      const beatScale = 1 + Math.min(bass * 0.8, 0.4) + Math.sin(t * 4.0 * speed) * 0.05;
+      const midsScale = 1 + Math.min(mids * 0.3, 0.2);
+      groupRef.current.scale.setScalar(0.5 * beatScale * midsScale);
       
       // Subtle position shifts for organic feel
       groupRef.current.position.x = Math.sin(t * 1.5 * speed) * 0.2 + bass * 0.6;
@@ -221,9 +221,9 @@ function AlienMembrane({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.7}>
-      <mesh ref={meshRef} scale={1 + bass * 0.6}>
-        <icosahedronGeometry args={[1.4, 8]} />
+    <group ref={groupRef} scale={0.6}>
+      <mesh ref={meshRef} scale={1 + Math.min(bass * 0.3, 0.2)}>
+        <icosahedronGeometry args={[1.2, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />
       </mesh>
       <Sparkles
