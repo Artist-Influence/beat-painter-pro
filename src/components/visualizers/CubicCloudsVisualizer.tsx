@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function OrbitingCube({ angle, radius, audioData, index }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
   
   const extractedColors = (window as any).extractedColors;
   
@@ -28,30 +30,31 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
     
     // Balanced audio-reactive movement - strong bass, subtle mids/highs
     const speed = 1.0 + bass * 4.0 + mids * 1.0;
     const spread = 0.6 + bass * 1.5 + mids * 0.5;
-    const x = Math.cos(angle + t * speed) * radius * spread;
-    const z = Math.sin(angle + t * speed) * radius * spread;
-    const y = Math.sin((t + index) * 3.0) * 0.6 + bass * 2.0 + highs * 0.4;
+    const x = Math.cos(angle + t * speed * animSpeed) * radius * spread;
+    const z = Math.sin(angle + t * speed * animSpeed) * radius * spread;
+    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.6 + bass * 2.0 + highs * 0.4;
     
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);

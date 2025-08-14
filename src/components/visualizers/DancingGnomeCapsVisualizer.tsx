@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function GlassShard({ index, audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
 
   const extractedColors = (window as any).extractedColors;
   
@@ -32,40 +34,41 @@ function GlassShard({ index, audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
 
     // Balanced audio-reactive movement
     const speed = 1.0 + bass * 3.0 + mids * 1.5;
-    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 1.2);
-    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 1.2);
-    const y = Math.sin((t + index) * 3.0) * 0.4 + bass * 1.8 + highs * 0.8;
+    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 1.2);
+    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 1.2);
+    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.4 + bass * 1.8 + highs * 0.8;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
       
       // Enhanced rotation with stronger audio response
-      meshRef.current.rotation.x += (mids * 0.8 + bass * 1.2) * 0.016;
-      meshRef.current.rotation.y += (mids * 0.6 + highs * 1.0) * 0.016;
-      meshRef.current.rotation.z += (bass * 0.4 + highs * 0.8) * 0.016;
+      meshRef.current.rotation.x += (mids * 0.8 + bass * 1.2) * 0.016 * animSpeed;
+      meshRef.current.rotation.y += (mids * 0.6 + highs * 1.0) * 0.016 * animSpeed;
+      meshRef.current.rotation.z += (bass * 0.4 + highs * 0.8) * 0.016 * animSpeed;
       
       // Stronger beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1 + Math.sin(t * 8) * 0.3;
+      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1 + Math.sin(t * 8 * animSpeed) * 0.3;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
@@ -95,6 +98,7 @@ function GlassShard({ index, audioData }: any) {
 // NEW: Cap component for circumference layering
 function CircumferenceCap({ index, audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
 
   const extractedColors = (window as any).extractedColors;
   
@@ -121,29 +125,30 @@ function CircumferenceCap({ index, audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
 
     // Balanced audio-reactive cap movement
     const speed = 0.8 + bass * 2.5 + mids * 1.2;
-    const x = Math.cos(angle + t * speed) * radius * (1 + bass * 1.0);
-    const z = Math.sin(angle + t * speed) * radius * (1 + bass * 1.0);
-    const y = Math.sin((t + index) * 3.0) * 0.3 + bass * 1.4 + mids * 0.8;
+    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 1.0);
+    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 1.0);
+    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.3 + bass * 1.4 + mids * 0.8;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
@@ -152,10 +157,10 @@ function CircumferenceCap({ index, audioData }: any) {
       meshRef.current.lookAt(0, y, 0);
       
       // Enhanced rotation
-      meshRef.current.rotation.z += (bass * 0.6 + highs * 0.4) * 0.016;
+      meshRef.current.rotation.z += (bass * 0.6 + highs * 0.4) * 0.016 * animSpeed;
       
       // Strong beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 6) * 0.2;
+      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.2;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
@@ -187,6 +192,7 @@ function GlassSphereVisualizer({ audioData }: any) {
   const centerSphereRef = useRef<THREE.Mesh>(null);
   const shardCount = 40;
   const capCount = 20;
+  const { audioSensitivity } = useStudioStore();
   
   const extractedColors = (window as any).extractedColors;
   
@@ -210,44 +216,45 @@ function GlassSphereVisualizer({ audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    const animSpeed = audioSensitivity.animationSpeed;
     
     if (groupRef.current) {
       // Enhanced group movement with stronger audio response
-      groupRef.current.rotation.y = t * 2.0 + bass * 5.0 + mids * 3.5;
-      groupRef.current.rotation.x = Math.sin(t * 3.0) * 0.8 + bass * 2.0;
-      groupRef.current.position.y = Math.sin(t * 4.0) * 1.2 + bass * 2.5;
+      groupRef.current.rotation.y = t * 2.0 * animSpeed + bass * 5.0 + mids * 3.5;
+      groupRef.current.rotation.x = Math.sin(t * 3.0 * animSpeed) * 0.8 + bass * 2.0;
+      groupRef.current.position.y = Math.sin(t * 4.0 * animSpeed) * 1.2 + bass * 2.5;
       
       // Stronger beat scaling
-      const beatScale = bass > 0.4 ? 1 + bass * 3.0 : 1 + Math.sin(t * 8) * 0.5;
+      const beatScale = bass > 0.4 ? 1 + bass * 3.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.5;
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
       // Enhanced center sphere with stronger pulsing
-      const spherePulse = 1 + bass * 3.0 + highs * 2.0 + Math.sin(t * 10.0) * 0.6;
+      const spherePulse = 1 + bass * 3.0 + highs * 2.0 + Math.sin(t * 10.0 * animSpeed) * 0.6;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
       // Faster rotation with audio response
-      centerSphereRef.current.rotation.x = t * 6.0 + bass * 10.0;
-      centerSphereRef.current.rotation.y = t * 5.0 + highs * 12.0;
-      centerSphereRef.current.rotation.z = t * 4.0 + mids * 8.0;
+      centerSphereRef.current.rotation.x = t * 6.0 * animSpeed + bass * 10.0;
+      centerSphereRef.current.rotation.y = t * 5.0 * animSpeed + highs * 12.0;
+      centerSphereRef.current.rotation.z = t * 4.0 * animSpeed + mids * 8.0;
     }
   });
 

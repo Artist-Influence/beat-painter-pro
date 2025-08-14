@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function AlienMembraneShaderMaterial({ audioData }: any) {
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
+  const { audioSensitivity } = useStudioStore();
 
   const extractedColors = (window as any).extractedColors;
 
@@ -43,24 +45,24 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return sum / 86 / 255;
-  }, [frequency]);
+    return (sum / 86 / 255) * audioSensitivity.bassMultiplier;
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return (sum / 85 / 255) * audioSensitivity.midsMultiplier;
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return (sum / 85 / 255) * audioSensitivity.highsMultiplier;
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     if (shaderRef.current) {
-      shaderRef.current.uniforms.uTime.value = clock.getElapsedTime();
+      shaderRef.current.uniforms.uTime.value = clock.getElapsedTime() * audioSensitivity.animationSpeed;
       shaderRef.current.uniforms.uBass.value = bass;
       shaderRef.current.uniforms.uMids.value = mids;
       shaderRef.current.uniforms.uHighs.value = highs;
@@ -169,6 +171,7 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
 function AlienMembrane({ audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
+  const { audioSensitivity } = useStudioStore();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -179,40 +182,41 @@ function AlienMembrane({ audioData }: any) {
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return sum / 86 / 255;
-  }, [frequency]);
+    return (sum / 86 / 255) * audioSensitivity.bassMultiplier;
+  }, [frequency, audioSensitivity.bassMultiplier]);
 
   const mids = useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return (sum / 85 / 255) * audioSensitivity.midsMultiplier;
+  }, [frequency, audioSensitivity.midsMultiplier]);
 
   const highs = useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+    return (sum / 85 / 255) * audioSensitivity.highsMultiplier;
+  }, [frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
+      const speed = audioSensitivity.animationSpeed;
       
       // Balanced organic movement - strong bass response, subtle mids/highs
-      groupRef.current.position.y = Math.sin(t * 3.0) * 0.8 + bass * 3.0 + mids * 0.5;
-      groupRef.current.rotation.y = t * 1.2 + bass * 4.0 + mids * 0.8;
+      groupRef.current.position.y = Math.sin(t * 3.0 * speed) * 0.8 + bass * 3.0 + mids * 0.5;
+      groupRef.current.rotation.y = t * 1.2 * speed + bass * 4.0 + mids * 0.8;
       
-      groupRef.current.rotation.x = Math.sin(t * 2.0) * 0.4 + bass * 2.5 + mids * 0.3;
-      groupRef.current.rotation.z = Math.cos(t * 1.5) * 0.3 + bass * 1.8 + highs * 0.2;
+      groupRef.current.rotation.x = Math.sin(t * 2.0 * speed) * 0.4 + bass * 2.5 + mids * 0.3;
+      groupRef.current.rotation.z = Math.cos(t * 1.5 * speed) * 0.3 + bass * 1.8 + highs * 0.2;
       
       // Strong bass response with subtle baseline movement
-      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 4.0) * 0.1;
+      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 4.0 * speed) * 0.1;
       const midsScale = mids > 0.2 ? 1 + mids * 0.5 : 1;
       groupRef.current.scale.setScalar(0.6 * beatScale * midsScale);
       
       // Subtle position shifts for organic feel
-      groupRef.current.position.x = Math.sin(t * 1.5) * 0.2 + bass * 0.6;
-      groupRef.current.position.z = Math.cos(t * 1.2) * 0.2 + highs * 0.3;
+      groupRef.current.position.x = Math.sin(t * 1.5 * speed) * 0.2 + bass * 0.6;
+      groupRef.current.position.z = Math.cos(t * 1.2 * speed) * 0.2 + highs * 0.3;
     }
   });
 

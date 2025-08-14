@@ -8,6 +8,7 @@ import { useWebMRecorder } from "@/hooks/useWebMRecorder";
 import { useStudioStore } from "@/stores/studioStore";
 import { logEvent } from "@/lib/analytics";
 import TextureControls from "./TextureControls";
+import AudioResponseControls from "./AudioResponseControls";
 
 interface RecordingControlsProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -62,6 +63,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
       </div>
 
       <TextureControls />
+
+      <AudioResponseControls />
 
       <div className="flex items-center gap-2">
         <Label className="whitespace-nowrap">Start at (s)</Label>
