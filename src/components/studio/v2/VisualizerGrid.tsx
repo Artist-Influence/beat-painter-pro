@@ -44,16 +44,16 @@ export function VisualizerGrid() {
                 : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
             }`}
           >
-            {/* Preview */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+            {/* Default content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 group-hover:opacity-0 transition-opacity duration-200">
               <div className="text-lg mb-1">{viz.preview}</div>
               <div className="text-[10px] text-white/60 text-center leading-tight">
                 {viz.name}
               </div>
             </div>
             
-            {/* Simple hover effect - just emoji scale */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {/* Hover content - larger emoji only */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="text-2xl transform group-hover:scale-125 transition-transform duration-200">{viz.preview}</div>
             </div>
             

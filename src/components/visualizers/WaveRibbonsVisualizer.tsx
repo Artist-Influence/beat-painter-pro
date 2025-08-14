@@ -71,7 +71,7 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Update ribbon wave positions
+      // Update ribbon wave positions - keep horizontal flow
       const positions = meshRef.current.geometry.attributes.position;
       const array = positions.array as Float32Array;
       
@@ -79,7 +79,9 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
         const x = array[i];
         const baseY = array[i + 1];
         const audioValue = Math.sin(t * 2 + x * 0.5 + ribbonIndex) * 0.5 + 0.5;
-        const offset = (audioValue + ribbonFreq) * 0.8 * (1 + ribbonIndex * 0.2);
+        const offset = (audioValue + ribbonFreq) * 0.4 * (1 + ribbonIndex * 0.1); // Reduced amplitude
+        
+        // Keep ribbons flowing horizontally with minimal vertical movement
         array[i + 2] = Math.sin(t + x * 0.3) * offset;
       }
       
@@ -106,11 +108,11 @@ export default function WaveRibbonsVisualizer({
   const textureData = useVisualizerTexture();
   
   const ribbons = useMemo(() => [
-    { position: [0, 0.8, 0], index: 0 },
-    { position: [0, 0.4, -0.2], index: 1 },
-    { position: [0, 0, -0.4], index: 2 },
-    { position: [0, -0.4, -0.2], index: 3 },
-    { position: [0, -0.8, 0], index: 4 },
+    { position: [0, 0.6, 0], index: 0 },
+    { position: [0, 0.3, 0], index: 1 },
+    { position: [0, 0, 0], index: 2 },
+    { position: [0, -0.3, 0], index: 3 },
+    { position: [0, -0.6, 0], index: 4 },
   ], []);
 
   return (

@@ -23,9 +23,9 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Morph and move based on audio
+      // Keep horizontal movement - minimal Y variation
       const scale = 0.3 + blobFreq * 0.5;
-      const y = Math.sin(t * 2 + index) * 0.2 + position[1];
+      const y = position[1] + Math.sin(t * 2 + index) * 0.05; // Much smaller Y movement
       
       meshRef.current.scale.setScalar(scale);
       meshRef.current.position.y = y;
@@ -87,9 +87,10 @@ export default function LiquidMetalVisualizer({
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
+      // Keep horizontal - minimal rotation and no vertical movement
       const t = clock.getElapsedTime();
-      groupRef.current.rotation.y = t * 0.1 + bassIntensity * 0.3;
-      groupRef.current.position.y = Math.sin(t * 0.5) * 0.1 * bassIntensity;
+      groupRef.current.rotation.y = t * 0.05; // Slower rotation
+      groupRef.current.position.y = 0; // Keep at center level
     }
   });
 

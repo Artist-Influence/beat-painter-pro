@@ -113,13 +113,16 @@ function CircuitNode({ position, index, audioData, textureData }) {
       const scale = 0.8 + nodeIntensity * 0.4;
       nodeRef.current.scale.setScalar(scale);
       
+      // Keep node position stable - no Y movement for horizontal layout
+      nodeRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2]));
+      
       if (coreRef.current && nodeMaterial) {
         nodeMaterial.emissiveIntensity = 0.5 + nodeIntensity * 2;
       }
       
       if (ringRef.current) {
         ringRef.current.rotation.z = t + index;
-        const ringScale = 1 + Math.sin(t * 2 + index) * 0.2;
+        const ringScale = 1 + Math.sin(t * 2 + index) * 0.1; // Reduced scale animation
         ringRef.current.scale.setScalar(ringScale);
       }
     }
