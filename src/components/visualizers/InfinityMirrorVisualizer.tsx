@@ -1,9 +1,9 @@
 import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, Reflector, MeshTransmissionMaterial, Sparkles } from "@react-three/drei";
+import { Environment, Reflector } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
-import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useVisualizerTexture } from "@/hooks/useVisualizerTexture";
 
 function MirrorPanel({ position, rotation, audioData, textureData }) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -104,17 +104,18 @@ function FloatingSymbol({ position, index, audioData, textureData }) {
   });
   
   // Sacred geometry shapes
-  const geometries = [
-    <tetrahedronGeometry args={[1, 0]} />,
-    <octahedronGeometry args={[1, 0]} />,
-    <dodecahedronGeometry args={[1, 0]} />,
-    <icosahedronGeometry args={[1, 0]} />
-  ];
+  const geometry = useMemo(() => {
+    const geometries = [
+      new THREE.TetrahedronGeometry(1, 0),
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.IcosahedronGeometry(1, 0)
+    ];
+    return geometries[index % 4];
+  }, [index]);
   
   return (
-    <mesh ref={meshRef} position={position} material={material}>
-      {geometries[index % 4]}
-    </mesh>
+    <mesh ref={meshRef} position={position} material={material} geometry={geometry} />
   );
 }
 
@@ -223,15 +224,28 @@ export default function InfinityMirrorVisualizer({
           <sphereGeometry args={[0.1, 32, 32]} />
         </mesh>
         
-        {/* Energy particles */}
-        <Sparkles
-          count={100}
-          scale={[4, 4, 4]}
-          size={1 + bass * 3}
-          speed={1 + mids * 2}
-          opacity={0.6}
-          color={textureData.colors?.primary || '#ffffff'}
-        />
+        {/* Energy particles - simplified */}
+        {Array.from({ length: 20 }).map((_, i) => {
+          const angle = (i / 20) * Math.PI * 2;
+          const radius = 3 + Math.sin(i) * 0.5;
+          return (
+            <mesh 
+              key={i} 
+              position={[
+                Math.cos(angle) * radius,
+                Math.sin(i * 0.5) * 2,
+                Math.sin(angle) * radius
+              ]}
+            >
+              <sphereGeometry args={[0.05, 8, 8]} />
+              <meshBasicMaterial 
+                color={textureData.colors?.primary || '#ffffff'}
+                transparent
+                opacity={0.6 + bass * 0.4}
+              />
+            </mesh>
+          );
+        })}
       </group>
     </>
   );
