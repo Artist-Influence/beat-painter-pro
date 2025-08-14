@@ -81,12 +81,12 @@ export default function LiquidMetalVisualizer({
   }, [freqData]);
 
   const blobs = useMemo(() => [
-    { position: [-4, 0, 0], index: 0 },
-    { position: [-2.5, 0, 0], index: 1 },
-    { position: [-1, 0, 0], index: 2 },
-    { position: [1, 0, 0], index: 3 },
-    { position: [2.5, 0, 0], index: 4 },
-    { position: [4, 0, 0], index: 5 },
+    { position: [-12, 0, 0], index: 0 },
+    { position: [-7.2, 0, 0], index: 1 },
+    { position: [-2.4, 0, 0], index: 2 },
+    { position: [2.4, 0, 0], index: 3 },
+    { position: [7.2, 0, 0], index: 4 },
+    { position: [12, 0, 0], index: 5 },
   ], []);
 
   useFrame(({ clock }) => {
