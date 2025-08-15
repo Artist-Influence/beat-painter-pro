@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, MeshDistortMaterial } from "@react-three/drei";
 import * as THREE from "three";
@@ -18,17 +18,33 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     return Math.min(sum / 20 / 255, 1.0);
   }, [freqData, index]);
 
-  // Get applied texture and colors like other visualizers
-  const extractedColors = (window as any).extractedColors;
-  const appliedTexture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
+  // Get applied texture and colors - track changes
+  const [extractedColors, setExtractedColors] = React.useState((window as any).extractedColors);
+  const [appliedTexture, setAppliedTexture] = React.useState(null);
+
+  useEffect(() => {
+    const updateTexture = () => {
+      setExtractedColors((window as any).extractedColors);
+      const at = (window as any).appliedTexture;
+      if (!at) {
+        setAppliedTexture(null);
+      } else if (typeof at === "string") {
+        const tex = new THREE.TextureLoader().load(at);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        setAppliedTexture(tex);
+      } else {
+        setAppliedTexture(at as THREE.Texture);
+      }
+    };
+
+    updateTexture();
+    window.addEventListener('texture:applied', updateTexture);
+    window.addEventListener('style:applied', updateTexture);
+    
+    return () => {
+      window.removeEventListener('texture:applied', updateTexture);
+      window.removeEventListener('style:applied', updateTexture);
+    };
   }, []);
 
   const primaryColor = extractedColors?.primary || '#ffffff';

@@ -79,7 +79,7 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
           metalness={extractedColors?.isMetallic ? 1 : 0.3}
           roughness={extractedColors?.isMetallic ? 0.2 : 0.7}
           emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-          emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0}
+          emissiveIntensity={extractedColors?.isNeon ? 1.2 : 0.6}
           map={texture || undefined}
         />
     </mesh>
@@ -160,7 +160,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         <meshStandardMaterial 
           color={primaryColor}
           emissive={extractedColors?.isNeon ? primaryColor : accentColor}
-          emissiveIntensity={extractedColors?.isNeon ? 1.5 : 1.0}
+          emissiveIntensity={extractedColors?.isNeon ? 4.5 : 3.0}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
           map={texture || undefined}

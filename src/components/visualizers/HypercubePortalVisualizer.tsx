@@ -85,7 +85,7 @@ function Tesseract({ audioData, textureData }) {
       textureData,
       {
         emissive: primaryColor,
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 3.0,
         wireframe: false, // Changed to show texture better
         metalness: 0.2,
         roughness: 0.8,
@@ -97,7 +97,7 @@ function Tesseract({ audioData, textureData }) {
       textureData,
       {
         emissive: accentColor,
-        emissiveIntensity: 0.8,
+        emissiveIntensity: 2.4,
         wireframe: true,
         transparent: true,
         opacity: 0.7,
@@ -147,7 +147,7 @@ function Tesseract({ audioData, textureData }) {
             <meshStandardMaterial
               color={primaryColor}
               emissive={primaryColor}
-              emissiveIntensity={0.8}
+              emissiveIntensity={2.4}
               transparent
               opacity={0.8}
             />
@@ -180,7 +180,7 @@ export default function HypercubePortalVisualizer({
         textureData,
         {
           emissive: textureData.colors.accent,
-          emissiveIntensity: 0.6,
+          emissiveIntensity: 1.8,
           transparent: true,
           opacity: 0.4 - i * 0.05,
           metalness: 0.9,

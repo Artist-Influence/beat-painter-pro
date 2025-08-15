@@ -38,8 +38,8 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       // Much more dramatic rotation response  
       meshRef.current.rotation.z = t * (1.0 + depth * 0.3) * speed + bass * 6.0 + mids * 2.0;
       
-      // Much stronger bass pulsing 
-      const pulse = 1 + Math.sin(t * 8 * speed) * 0.2 + bass * 3.5 + mids * 1.5;
+      // Reduced bass pulsing to prevent overflow
+      const pulse = 1 + Math.sin(t * 8 * speed) * 0.2 + bass * 1.8 + mids * 0.8;
       meshRef.current.scale.setScalar(pulse);
       
       // More dramatic depth movement
@@ -66,7 +66,7 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
           textureData,
           {
             emissive: i % 2 === 0 ? primaryColor : accentColor,
-            emissiveIntensity: 0.5 + bass * 4.0,
+            emissiveIntensity: 1.5 + bass * 6.0,
             metalness: 0.8,
             roughness: 0.2,
           }
@@ -116,8 +116,8 @@ export default function PsychedelicMandalaVisualizer({
       // Much more dramatic rotation response
       groupRef.current.rotation.z = t * (0.2 + bass * 3.0) * speed;
       
-      // Much stronger bass breathing
-      const breathe = 1 + Math.sin(t * 1.0 * speed) * (0.15 + bass * 2.5 + mids * 1.0);
+      // Reduced bass breathing to prevent overflow
+      const breathe = 1 + Math.sin(t * 1.0 * speed) * (0.15 + bass * 1.2 + mids * 0.5);
       groupRef.current.scale.setScalar(breathe);
       
       // Enhanced movement for dramatic organic feel
@@ -146,7 +146,7 @@ export default function PsychedelicMandalaVisualizer({
             textureData,
             {
               emissive: textureData.colors.primary,
-              emissiveIntensity: 1 + bass * 5.0,
+              emissiveIntensity: 3.0 + bass * 8.0,
               wireframe: true,
             }
           )}

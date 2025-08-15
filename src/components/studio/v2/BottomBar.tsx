@@ -95,7 +95,7 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                       className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                       disabled={!audioElement}
                     >
-                      {audioElement?.paused !== false ? (
+                      {audioElement?.paused ? (
                         <Play className="w-5 h-5 text-white" />
                       ) : (
                         <Pause className="w-5 h-5 text-white" />
