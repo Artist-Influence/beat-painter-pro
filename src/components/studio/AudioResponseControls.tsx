@@ -95,8 +95,8 @@ export const AudioResponseControls: React.FC = () => {
             <ResettableSlider
               value={[audioSensitivity.bassMultiplier]}
               min={0.1}
-              max={3.0}
-              step={0.1}
+              max={8.0}
+              step={0.2}
               defaultValue={1.0}
               onValueChange={([v]) => setAudioSensitivity({ bassMultiplier: v })}
               className="w-full"
@@ -113,8 +113,8 @@ export const AudioResponseControls: React.FC = () => {
             <ResettableSlider
               value={[audioSensitivity.midsMultiplier]}
               min={0.1}
-              max={3.0}
-              step={0.1}
+              max={8.0}
+              step={0.2}
               defaultValue={0.7}
               onValueChange={([v]) => setAudioSensitivity({ midsMultiplier: v })}
               className="w-full"
@@ -131,8 +131,8 @@ export const AudioResponseControls: React.FC = () => {
             <ResettableSlider
               value={[audioSensitivity.highsMultiplier]}
               min={0.1}
-              max={3.0}
-              step={0.1}
+              max={8.0}
+              step={0.2}
               defaultValue={0.4}
               onValueChange={([v]) => setAudioSensitivity({ highsMultiplier: v })}
               className="w-full"
@@ -148,9 +148,9 @@ export const AudioResponseControls: React.FC = () => {
             </div>
             <ResettableSlider
               value={[audioSensitivity.animationSpeed]}
-              min={0.5}
-              max={2.0}
-              step={0.1}
+              min={0.1}
+              max={4.0}
+              step={0.2}
               defaultValue={1.0}
               onValueChange={([v]) => setAudioSensitivity({ animationSpeed: v })}
               className="w-full"

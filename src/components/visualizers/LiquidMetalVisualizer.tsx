@@ -37,16 +37,16 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Move outward when audio is playing to prevent overlap
+      // Move outward when audio is playing to prevent overlap - massively enhanced
       const audioIntensity = blobFreq;
-      const spreadDistance = audioIntensity * 15.0 + 2.0; // Massive spread distance
+      const spreadDistance = audioIntensity * 25.0 + 3.0; // Much more dramatic spread
       const direction = position[0] > 0 ? 1 : -1;
       const x = position[0] + (direction * spreadDistance);
-      const z = position[2] + (Math.sin(t * 0.5 + index) * 0.5 * audioIntensity);
+      const z = position[2] + (Math.sin(t * 0.5 + index) * 2.0 * audioIntensity);
       
       meshRef.current.position.set(x, position[1], z);
       
-      const scale = 0.3 + blobFreq * 0.5;
+      const scale = 0.3 + blobFreq * 1.5; // Much more dramatic scaling
       meshRef.current.scale.setScalar(scale);
     }
   });
@@ -62,7 +62,7 @@ function LiquidBlob({ position, index, audioData, textureData }) {
         roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
         metalness={extractedColors?.isMetallic ? 0.9 : 0.7}
         emissive={extractedColors?.isNeon ? primaryColor : primaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 2.0 + blobFreq * 3.0 : 1.5 + blobFreq * 2.0}
+        emissiveIntensity={extractedColors?.isNeon ? 3.0 + blobFreq * 8.0 : 2.5 + blobFreq * 6.0}
         map={appliedTexture}
       />
     </mesh>

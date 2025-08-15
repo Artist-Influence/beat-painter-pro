@@ -53,27 +53,27 @@ function GlassShard({ index, audioData }: any) {
     const t = clock.getElapsedTime();
     const animSpeed = audioSensitivity.animationSpeed;
 
-    // Balanced audio-reactive movement
-    const speed = 1.0 + bass * 3.0 + mids * 1.5;
-    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 1.2);
-    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 1.2);
-    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.4 + bass * 1.8 + highs * 0.8;
+    // Much more dramatic audio-reactive movement
+    const speed = 1.0 + bass * 6.0 + mids * 3.0;
+    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 2.5);
+    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 2.5);
+    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.4 + bass * 4.0 + highs * 2.0;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
       
-      // Enhanced rotation with stronger audio response
-      meshRef.current.rotation.x += (mids * 0.8 + bass * 1.2) * 0.016 * animSpeed;
-      meshRef.current.rotation.y += (mids * 0.6 + highs * 1.0) * 0.016 * animSpeed;
-      meshRef.current.rotation.z += (bass * 0.4 + highs * 0.8) * 0.016 * animSpeed;
+      // Much more dramatic rotation with stronger audio response
+      meshRef.current.rotation.x += (mids * 2.0 + bass * 3.0) * 0.032 * animSpeed;
+      meshRef.current.rotation.y += (mids * 1.5 + highs * 2.5) * 0.032 * animSpeed;
+      meshRef.current.rotation.z += (bass * 1.0 + highs * 2.0) * 0.032 * animSpeed;
       
-      // Stronger beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1 + Math.sin(t * 8 * animSpeed) * 0.3;
+      // Much stronger beat scaling
+      const beatScale = bass > 0.3 ? 1 + bass * 5.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.8;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = 0.8 + highs * 2.0 + bass * 1.5;
+        material.emissiveIntensity = 0.8 + highs * 4.0 + bass * 3.0;
       }
     }
   });
@@ -144,11 +144,11 @@ function CircumferenceCap({ index, audioData }: any) {
     const t = clock.getElapsedTime();
     const animSpeed = audioSensitivity.animationSpeed;
 
-    // Balanced audio-reactive cap movement
-    const speed = 0.8 + bass * 2.5 + mids * 1.2;
-    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 1.0);
-    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 1.0);
-    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.3 + bass * 1.4 + mids * 0.8;
+    // Much more dramatic audio-reactive cap movement
+    const speed = 0.8 + bass * 5.0 + mids * 2.5;
+    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 2.0);
+    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 2.0);
+    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.3 + bass * 3.0 + mids * 1.5;
 
     if (meshRef.current) {
       meshRef.current.position.set(x, y, z);
@@ -156,16 +156,16 @@ function CircumferenceCap({ index, audioData }: any) {
       // Face towards center for cap effect
       meshRef.current.lookAt(0, y, 0);
       
-      // Enhanced rotation
-      meshRef.current.rotation.z += (bass * 0.6 + highs * 0.4) * 0.016 * animSpeed;
+      // Much more dramatic rotation
+      meshRef.current.rotation.z += (bass * 1.5 + highs * 1.0) * 0.032 * animSpeed;
       
-      // Strong beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 2.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.2;
+      // Much stronger beat scaling
+      const beatScale = bass > 0.3 ? 1 + bass * 4.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.5;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = 0.6 + highs * 1.8 + bass * 1.2;
+        material.emissiveIntensity = 0.6 + highs * 3.5 + bass * 2.5;
       }
     }
   });
@@ -236,25 +236,25 @@ function GlassSphereVisualizer({ audioData }: any) {
     const animSpeed = audioSensitivity.animationSpeed;
     
     if (groupRef.current) {
-      // Enhanced group movement with stronger audio response
-      groupRef.current.rotation.y = t * 2.0 * animSpeed + bass * 5.0 + mids * 3.5;
-      groupRef.current.rotation.x = Math.sin(t * 3.0 * animSpeed) * 0.8 + bass * 2.0;
-      groupRef.current.position.y = Math.sin(t * 4.0 * animSpeed) * 1.2 + bass * 2.5;
+      // Much more dramatic group movement with stronger audio response
+      groupRef.current.rotation.y = t * 2.0 * animSpeed + bass * 10.0 + mids * 6.0;
+      groupRef.current.rotation.x = Math.sin(t * 3.0 * animSpeed) * 0.8 + bass * 4.0;
+      groupRef.current.position.y = Math.sin(t * 4.0 * animSpeed) * 1.2 + bass * 5.0;
       
-      // Stronger beat scaling
-      const beatScale = bass > 0.4 ? 1 + bass * 3.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.5;
+      // Much stronger beat scaling
+      const beatScale = bass > 0.4 ? 1 + bass * 6.0 : 1 + Math.sin(t * 8 * animSpeed) * 1.0;
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
-      // Enhanced center sphere with stronger pulsing
-      const spherePulse = 1 + bass * 3.0 + highs * 2.0 + Math.sin(t * 10.0 * animSpeed) * 0.6;
+      // Much more dramatic center sphere with stronger pulsing
+      const spherePulse = 1 + bass * 6.0 + highs * 4.0 + Math.sin(t * 10.0 * animSpeed) * 1.2;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
-      // Faster rotation with audio response
-      centerSphereRef.current.rotation.x = t * 6.0 * animSpeed + bass * 10.0;
-      centerSphereRef.current.rotation.y = t * 5.0 * animSpeed + highs * 12.0;
-      centerSphereRef.current.rotation.z = t * 4.0 * animSpeed + mids * 8.0;
+      // Much faster rotation with dramatic audio response
+      centerSphereRef.current.rotation.x = t * 6.0 * animSpeed + bass * 20.0;
+      centerSphereRef.current.rotation.y = t * 5.0 * animSpeed + highs * 24.0;
+      centerSphereRef.current.rotation.z = t * 4.0 * animSpeed + mids * 16.0;
     }
   });
 

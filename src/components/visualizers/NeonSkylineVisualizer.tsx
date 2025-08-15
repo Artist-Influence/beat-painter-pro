@@ -67,17 +67,17 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   useFrame(({ clock }) => {
     if (buildingRef.current && buildingMaterial) {
       const t = clock.getElapsedTime();
-      const height = baseHeight + buildingFreq * 2.5; // Enhanced height response
+      const height = baseHeight + buildingFreq * 5.0; // Much more dramatic height response
       const pulse = Math.sin(t * 4 + index * 0.5) * 0.5 + 0.5;
       
-      // Enhanced audio response for width and depth
-      const audioWidth = width * (1 + buildingFreq * 1.5);
-      const audioDepth = width * (1 + buildingFreq * 1.2);
+      // Much more dramatic audio response for width and depth
+      const audioWidth = width * (1 + buildingFreq * 3.0);
+      const audioDepth = width * (1 + buildingFreq * 2.5);
       
       // Keep buildings on ground level - no Y movement
       buildingRef.current.scale.set(audioWidth, height, audioDepth);
       buildingRef.current.position.set(0, height / 2, 0);
-      buildingMaterial.emissiveIntensity = 1.2 + buildingFreq * 4 + pulse * 1.0;
+      buildingMaterial.emissiveIntensity = 1.2 + buildingFreq * 8.0 + pulse * 2.0;
     }
     
     if (glowRef.current && glowMaterial) {
