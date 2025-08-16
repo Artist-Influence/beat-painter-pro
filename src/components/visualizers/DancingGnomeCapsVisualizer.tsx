@@ -4,26 +4,14 @@ import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useStudioStore } from "@/stores/studioStore";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 
-function GlassShard({ index, audioData }: any) {
+function GlassShard({ index, audioData, textureData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
-
-  const extractedColors = (window as any).extractedColors;
   
-  const texture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-  
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const secondaryColor = extractedColors?.secondary || '#ffffff';
+  const primaryColor = textureData.colors.primary;
+  const secondaryColor = textureData.colors.secondary;
 
   const angle = useMemo(() => (index / 40) * Math.PI * 2, [index]);
   const radius = 0.8;
@@ -67,8 +55,8 @@ function GlassShard({ index, audioData }: any) {
       meshRef.current.rotation.y += (mids * 1.5 + highs * 2.5) * 0.032 * animSpeed;
       meshRef.current.rotation.z += (bass * 1.0 + highs * 2.0) * 0.032 * animSpeed;
       
-      // Much stronger beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 5.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.8;
+      // Clamped beat scaling to prevent overflow
+      const beatScale = Math.min(Math.max(bass > 0.3 ? 1 + bass * 5.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.8, 0.7), 2.0);
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
@@ -78,43 +66,30 @@ function GlassShard({ index, audioData }: any) {
     }
   });
 
+  const material = useMemo(() => {
+    return createVisualizerMaterial("#ffffff", textureData, {
+      emissive: primaryColor,
+      emissiveIntensity: 1.0 + highs * 4.0 + bass * 3.0,
+      metalness: textureData.colors.isMetallic ? 1 : 0.5,
+      roughness: textureData.colors.isMetallic ? 0.1 : 0.3,
+      transparent: true,
+      opacity: 0.9 + highs * 0.1
+    });
+  }, [textureData, primaryColor, highs, bass]);
+
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} material={material}>
       <coneGeometry args={[0.08, 0.3, 6]} />
-      <meshStandardMaterial
-        color={primaryColor}
-        metalness={extractedColors?.isMetallic ? 1 : 0.5}
-        roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
-        emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 0.8 : 0.3}
-        map={texture || undefined}
-        transparent
-        opacity={0.9 + highs * 0.1}
-      />
     </mesh>
   );
 }
 
-// NEW: Cap component for circumference layering
-function CircumferenceCap({ index, audioData }: any) {
+function CircumferenceCap({ index, audioData, textureData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
-
-  const extractedColors = (window as any).extractedColors;
   
-  const texture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-  
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const accentColor = extractedColors?.accent || '#ffffff';
+  const primaryColor = textureData.colors.primary;
+  const accentColor = textureData.colors.accent;
 
   const angle = useMemo(() => (index / 20) * Math.PI * 2, [index]);
   const radius = 1.2;
@@ -159,8 +134,8 @@ function CircumferenceCap({ index, audioData }: any) {
       // Much more dramatic rotation
       meshRef.current.rotation.z += (bass * 1.5 + highs * 1.0) * 0.032 * animSpeed;
       
-      // Much stronger beat scaling
-      const beatScale = bass > 0.3 ? 1 + bass * 4.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.5;
+      // Clamped beat scaling to prevent overflow
+      const beatScale = Math.min(Math.max(bass > 0.3 ? 1 + bass * 4.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.5, 0.7), 2.0);
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
@@ -170,19 +145,20 @@ function CircumferenceCap({ index, audioData }: any) {
     }
   });
 
+  const material = useMemo(() => {
+    return createVisualizerMaterial("#ffffff", textureData, {
+      emissive: accentColor,
+      emissiveIntensity: 1.5 + highs * 3.5 + bass * 2.5,
+      metalness: textureData.colors.isMetallic ? 1 : 0.7,
+      roughness: textureData.colors.isMetallic ? 0.05 : 0.2,
+      transparent: true,
+      opacity: 0.8 + mids * 0.2
+    });
+  }, [textureData, accentColor, highs, bass, mids]);
+
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} material={material}>
       <cylinderGeometry args={[0.15, 0.05, 0.1, 8]} />
-      <meshStandardMaterial
-        color={accentColor}
-        metalness={extractedColors?.isMetallic ? 1 : 0.7}
-        roughness={extractedColors?.isMetallic ? 0.05 : 0.2}
-        emissive={extractedColors?.isNeon ? accentColor : primaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.5}
-        map={texture || undefined}
-        transparent
-        opacity={0.8 + mids * 0.2}
-      />
     </mesh>
   );
 }
@@ -193,22 +169,10 @@ function GlassSphereVisualizer({ audioData }: any) {
   const shardCount = 40;
   const capCount = 20;
   const { audioSensitivity } = useStudioStore();
+  const textureData = useVisualizerTexture();
   
-  const extractedColors = (window as any).extractedColors;
-  
-  const texture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-  
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const accentColor = extractedColors?.accent || '#ffffff';
+  const primaryColor = textureData.colors.primary;
+  const accentColor = textureData.colors.accent;
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -241,8 +205,8 @@ function GlassSphereVisualizer({ audioData }: any) {
       groupRef.current.rotation.x = Math.sin(t * 3.0 * animSpeed) * 0.8 + bass * 4.0;
       groupRef.current.position.y = Math.sin(t * 4.0 * animSpeed) * 1.2 + bass * 5.0;
       
-      // Much stronger beat scaling
-      const beatScale = bass > 0.4 ? 1 + bass * 6.0 : 1 + Math.sin(t * 8 * animSpeed) * 1.0;
+      // Clamped beat scaling to prevent overflow
+      const beatScale = Math.min(Math.max(bass > 0.4 ? 1 + bass * 6.0 : 1 + Math.sin(t * 8 * animSpeed) * 1.0, 0.7), 2.0);
       groupRef.current.scale.setScalar(beatScale);
     }
     
@@ -261,21 +225,21 @@ function GlassSphereVisualizer({ audioData }: any) {
   return (
     <group ref={groupRef}>
       {Array.from({ length: shardCount }).map((_, i) => (
-        <GlassShard key={i} index={i} audioData={audioData} />
+        <GlassShard key={i} index={i} audioData={audioData} textureData={textureData} />
       ))}
       {Array.from({ length: capCount }).map((_, i) => (
-        <CircumferenceCap key={`cap-${i}`} index={i} audioData={audioData} />
+        <CircumferenceCap key={`cap-${i}`} index={i} audioData={audioData} textureData={textureData} />
       ))}
-      <mesh ref={centerSphereRef}>
+      <mesh 
+        ref={centerSphereRef}
+        material={createVisualizerMaterial("#ffffff", textureData, {
+          emissive: primaryColor,
+          emissiveIntensity: 2.0 + bass * 4.0,
+          metalness: textureData.colors.isMetallic ? 1 : 0,
+          roughness: textureData.colors.isMetallic ? 0.05 : 0.3,
+        })}
+      >
         <sphereGeometry args={[0.15, 32, 32]} />
-        <meshStandardMaterial 
-          color={primaryColor}
-          emissive={extractedColors?.isNeon ? primaryColor : accentColor}
-          emissiveIntensity={extractedColors?.isNeon ? 1.0 : 0.6}
-          metalness={extractedColors?.isMetallic ? 1 : 0}
-          roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
-          map={texture || undefined}
-        />
       </mesh>
       <Sparkles
         count={8 + highs * 25 + bass * 15}
@@ -304,7 +268,7 @@ export default function DancingGnomeCapsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={0.35}>
+      <group scale={0.20}>
         <GlassSphereVisualizer audioData={audioData} />
       </group>
     </>

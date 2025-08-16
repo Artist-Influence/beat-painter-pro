@@ -1,68 +1,53 @@
-import React, { useRef, useMemo, useEffect } from "react";
+import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, MeshDistortMaterial } from "@react-three/drei";
+import { Environment, MeshWobbleMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useVisualizerTexture } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function LiquidBlob({ position, index, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
-  const blobFreq = useMemo(() => {
-    const start = index * 20;
-    const end = Math.min(start + 20, 256);
+  const bass = useMemo(() => {
     let sum = 0;
-    for (let i = start; i < end; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 20 / 255, 1.0);
-  }, [freqData, index]);
+    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [freqData, audioSensitivity.bassMultiplier]);
 
-  // Get applied texture and colors - track changes
-  const [extractedColors, setExtractedColors] = React.useState((window as any).extractedColors);
-  const [appliedTexture, setAppliedTexture] = React.useState(null);
+  const mids = useMemo(() => {
+    let sum = 0;
+    for (let i = 86; i <= 170; i++) sum += freqData[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+  }, [freqData, audioSensitivity.midsMultiplier]);
 
-  useEffect(() => {
-    const updateTexture = () => {
-      setExtractedColors((window as any).extractedColors);
-      const at = (window as any).appliedTexture;
-      if (!at) {
-        setAppliedTexture(null);
-      } else if (typeof at === "string") {
-        const tex = new THREE.TextureLoader().load(at);
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        setAppliedTexture(tex);
-      } else {
-        setAppliedTexture(at as THREE.Texture);
-      }
-    };
+  const highs = useMemo(() => {
+    let sum = 0;
+    for (let i = 171; i <= 255; i++) sum += freqData[i] || 0;
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+  }, [freqData, audioSensitivity.highsMultiplier]);
 
-    updateTexture();
-    window.addEventListener('texture:applied', updateTexture);
-    window.addEventListener('style:applied', updateTexture);
-    
-    return () => {
-      window.removeEventListener('texture:applied', updateTexture);
-      window.removeEventListener('style:applied', updateTexture);
-    };
-  }, []);
-
-  const primaryColor = extractedColors?.primary || '#ffffff';
+  const primaryColor = textureData.colors.primary;
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
+      const speed = audioSensitivity.animationSpeed;
       
-      // Move outward when audio is playing to prevent overlap - massively enhanced
-      const audioIntensity = blobFreq;
-      const spreadDistance = audioIntensity * 25.0 + 3.0; // Much more dramatic spread
+      // Enhanced spread with preset responsiveness
+      const spreadDistance = 6 + bass * 20.0;
       const direction = position[0] > 0 ? 1 : -1;
       const x = position[0] + (direction * spreadDistance);
-      const z = position[2] + (Math.sin(t * 0.5 + index) * 2.0 * audioIntensity);
+      const z = position[2] + (Math.sin(t * 0.5 * speed + index) * 2.0 * bass);
       
       meshRef.current.position.set(x, position[1], z);
       
-      const scale = 0.3 + blobFreq * 1.5; // Much more dramatic scaling
+      // Enhanced scaling with preset responsiveness
+      const scale = 0.35 + bass * 1.3;
       meshRef.current.scale.setScalar(scale);
     }
   });
@@ -70,16 +55,17 @@ function LiquidBlob({ position, index, audioData, textureData }) {
   return (
     <mesh ref={meshRef} position={position}>
       <sphereGeometry args={[1, 32, 32]} />
-      <MeshDistortMaterial
-        color={primaryColor}
+      <MeshWobbleMaterial
+        color="#ffffff"
         attach="material"
-        distort={0.1 + blobFreq * 0.4}
-        speed={2 + blobFreq * 3}
-        roughness={extractedColors?.isMetallic ? 0.1 : 0.3}
-        metalness={extractedColors?.isMetallic ? 0.9 : 0.7}
-        emissive={extractedColors?.isNeon ? primaryColor : primaryColor}
-        emissiveIntensity={extractedColors?.isNeon ? 3.0 + blobFreq * 8.0 : 2.5 + blobFreq * 6.0}
-        map={appliedTexture}
+        factor={0.2 + bass * 0.8}
+        speed={1.5 + highs * 2.0}
+        roughness={textureData.colors.isMetallic ? 0.1 : 0.3}
+        metalness={textureData.colors.isMetallic ? 0.9 : 0.7}
+        emissive={primaryColor}
+        emissiveIntensity={1.2 + bass * 3.0}
+        map={textureData.texture}
+        emissiveMap={textureData.texture}
       />
     </mesh>
   );
@@ -94,31 +80,22 @@ export default function LiquidMetalVisualizer({
   backgroundColor = '#000000',
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const textureData = useVisualizerTexture();
   
-  const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
-  const freqData = safeAudioData.frequency || Array(256).fill(0);
-  
-  const bassIntensity = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [freqData]);
-
   const blobs = useMemo(() => [
-    { position: [-12, 0, 0], index: 0 },
-    { position: [-7.2, 0, 0], index: 1 },
-    { position: [-2.4, 0, 0], index: 2 },
-    { position: [2.4, 0, 0], index: 3 },
-    { position: [7.2, 0, 0], index: 4 },
-    { position: [12, 0, 0], index: 5 },
+    { position: [-16, 0, 0], index: 0 },
+    { position: [-9.6, 0, 0], index: 1 },
+    { position: [-3.2, 0, 0], index: 2 },
+    { position: [3.2, 0, 0], index: 3 },
+    { position: [9.6, 0, 0], index: 4 },
+    { position: [16, 0, 0], index: 5 },
   ], []);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
-      // Keep horizontal - minimal rotation and no vertical movement
       const t = clock.getElapsedTime();
-      groupRef.current.rotation.y = t * 0.05; // Slower rotation
-      groupRef.current.position.y = 0; // Keep at center level
+      groupRef.current.rotation.y = t * 0.02; // Even slower, subtle rotation
+      groupRef.current.position.y = 0;
     }
   });
 
@@ -136,7 +113,7 @@ export default function LiquidMetalVisualizer({
             position={blob.position}
             index={blob.index}
             audioData={audioData}
-            textureData={null}
+            textureData={textureData}
           />
         ))}
       </group>

@@ -198,7 +198,7 @@ export default function SacredGeometryPulseVisualizer({
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#ffd700'),
       transparent: true,
-      opacity: 0.5 + bass * 0.5,
+      opacity: 0.8 + bass * 0.2,
     });
   }, [textureData.textureVersion, textureData.colors?.primary, bass]);
   

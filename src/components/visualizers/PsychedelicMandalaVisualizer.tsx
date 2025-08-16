@@ -62,11 +62,11 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
         const y = Math.sin(angle) * radius;
         
         const material = createVisualizerMaterial(
-          i % 2 === 0 ? primaryColor : accentColor,
+          "#ffffff",
           textureData,
           {
             emissive: i % 2 === 0 ? primaryColor : accentColor,
-            emissiveIntensity: 1.5 + bass * 6.0,
+            emissiveIntensity: 2.0 + bass * 8.0,
             metalness: 0.8,
             roughness: 0.2,
           }
@@ -116,8 +116,8 @@ export default function PsychedelicMandalaVisualizer({
       // Much more dramatic rotation response
       groupRef.current.rotation.z = t * (0.2 + bass * 3.0) * speed;
       
-      // Reduced bass breathing to prevent overflow
-      const breathe = 1 + Math.sin(t * 1.0 * speed) * (0.15 + bass * 1.2 + mids * 0.5);
+      // Clamped breathing to prevent overflow
+      const breathe = Math.min(Math.max(1 + Math.sin(t * 1.0 * speed) * (0.15 + bass * 1.2 + mids * 0.5), 0.85), 1.25);
       groupRef.current.scale.setScalar(breathe);
       
       // Enhanced movement for dramatic organic feel
@@ -142,11 +142,11 @@ export default function PsychedelicMandalaVisualizer({
         {/* Sacred geometry center - attracts focus */}
         <mesh
           material={createVisualizerMaterial(
-            textureData.colors.primary,
+            "#ffffff",
             textureData,
             {
               emissive: textureData.colors.primary,
-              emissiveIntensity: 3.0 + bass * 8.0,
+              emissiveIntensity: 4.0 + bass * 10.0,
               wireframe: true,
             }
           )}

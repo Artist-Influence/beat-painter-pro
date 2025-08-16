@@ -158,12 +158,13 @@ function OrbitingCubesVisualizer({ audioData }: any) {
       <mesh ref={centerSphereRef}>
         <sphereGeometry args={[0.1, 32, 32]} />
         <meshStandardMaterial 
-          color={primaryColor}
-          emissive={extractedColors?.isNeon ? primaryColor : accentColor}
-          emissiveIntensity={extractedColors?.isNeon ? 4.5 : 3.0}
+          color="#ffffff"
+          emissive={primaryColor}
+          emissiveIntensity={6.0 + bass * 8.0}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
           map={texture || undefined}
+          emissiveMap={texture || undefined}
         />
       </mesh>
       <Sparkles

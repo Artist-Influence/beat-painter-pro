@@ -56,6 +56,8 @@ export const useVisualizerTexture = () => {
       texture = new THREE.TextureLoader().load(appliedTextureUrl);
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.needsUpdate = true;
     }
 
     return {
