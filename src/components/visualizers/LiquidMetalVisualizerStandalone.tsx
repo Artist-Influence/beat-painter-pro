@@ -126,11 +126,11 @@ export default function LiquidMetalVisualizerStandalone({
           <meshBasicMaterial 
             map={textureData.texture} 
             transparent 
-            opacity={1}
+            opacity={0.5}
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
-            blending={THREE.MultiplyBlending as any}
+            blending={THREE.AdditiveBlending}
           />
         </mesh>
       )}
