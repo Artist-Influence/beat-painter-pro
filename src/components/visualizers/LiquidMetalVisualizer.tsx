@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -33,6 +33,16 @@ function LiquidBlob({ position, index, audioData, textureData }) {
   }, [freqData, audioSensitivity.highsMultiplier]);
 
   const primaryColor = new THREE.Color(textureData.colors.primary);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      const mat = materialRef.current;
+      // Ensure the latest applied visual style texture is used
+      mat.map = textureData.texture || null;
+      mat.emissiveMap = textureData.texture || null;
+      mat.needsUpdate = true;
+    }
+  }, [textureData.texture, textureData.textureVersion]);
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
@@ -138,7 +148,14 @@ export default function LiquidMetalVisualizer({
           />
         ))}
       </group>
-      
+
+      {/* Full background style overlay */}
+      {textureData.texture && (
+        <mesh position={[0, 0, -50]}>
+          <planeGeometry args={[200, 200]} />
+          <meshBasicMaterial map={textureData.texture} toneMapped={false} />
+        </mesh>
+      )}
     </>
   );
 }
