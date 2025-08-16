@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, MeshDistortMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
@@ -72,7 +72,7 @@ export default function LiquidMetalVisualizerStandalone({
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
-  
+  const { viewport } = useThree();
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
@@ -118,6 +118,22 @@ export default function LiquidMetalVisualizerStandalone({
           />
         ))}
       </group>
+
+      {/* Full-screen style overlay for standalone variant */}
+      {textureData.texture && (
+        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
+          <planeGeometry args={[viewport.width, viewport.height]} />
+          <meshBasicMaterial 
+            map={textureData.texture} 
+            transparent 
+            opacity={1}
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+            blending={THREE.MultiplyBlending as any}
+          />
+        </mesh>
+      )}
     </>
   );
 }

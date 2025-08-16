@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
@@ -112,7 +112,7 @@ export default function LiquidMetalVisualizer({
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
-  
+  const { viewport } = useThree();
   const blobs = useMemo(() => [
     { position: [-20, 0, 0], index: 0 },
     { position: [-12, 0, 0], index: 1 },
@@ -149,11 +149,19 @@ export default function LiquidMetalVisualizer({
         ))}
       </group>
 
-      {/* Full background style overlay */}
+      {/* Full-screen style overlay (covers entire viewport) */}
       {textureData.texture && (
-        <mesh position={[0, 0, -50]}>
-          <planeGeometry args={[200, 200]} />
-          <meshBasicMaterial map={textureData.texture} toneMapped={false} />
+        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
+          <planeGeometry args={[viewport.width, viewport.height]} />
+          <meshBasicMaterial 
+            map={textureData.texture} 
+            transparent 
+            opacity={1}
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+            blending={THREE.MultiplyBlending as any}
+          />
         </mesh>
       )}
     </>
