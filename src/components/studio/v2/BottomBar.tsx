@@ -11,6 +11,9 @@ interface BottomBarProps {
 export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
   const { audioElement } = useStudioStore();
   const [volume, setVolume] = useState(0.75);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const handlePlayPause = () => {
     if (!audioElement) return;
@@ -35,6 +38,25 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
   useEffect(() => {
     if (audioElement) {
       setVolume(audioElement.volume);
+      setCurrentTime(audioElement.currentTime || 0);
+      setDuration(audioElement.duration || 0);
+      setIsPlaying(!audioElement.paused);
+
+      const updateTime = () => setCurrentTime(audioElement.currentTime || 0);
+      const updateDuration = () => setDuration(audioElement.duration || 0);
+      const updatePlayState = () => setIsPlaying(!audioElement.paused);
+
+      audioElement.addEventListener('timeupdate', updateTime);
+      audioElement.addEventListener('loadedmetadata', updateDuration);
+      audioElement.addEventListener('play', updatePlayState);
+      audioElement.addEventListener('pause', updatePlayState);
+
+      return () => {
+        audioElement.removeEventListener('timeupdate', updateTime);
+        audioElement.removeEventListener('loadedmetadata', updateDuration);
+        audioElement.removeEventListener('play', updatePlayState);
+        audioElement.removeEventListener('pause', updatePlayState);
+      };
     }
   }, [audioElement]);
 
@@ -89,7 +111,7 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                       className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                       disabled={!audioElement}
                     >
-                      {audioElement?.paused ? (
+                      {!isPlaying ? (
                         <Play className="w-5 h-5 text-white" />
                       ) : (
                         <Pause className="w-5 h-5 text-white" />
@@ -106,32 +128,32 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                   {/* Timeline */}
                   <div className="flex-1 flex items-center gap-3">
                     <span className="text-xs text-white/60 font-mono">
-                      {audioElement ? formatTime(audioElement.currentTime || 0) : '0:00'}
+                      {formatTime(currentTime)}
                     </span>
                     <div className="flex-1 h-1 bg-white/20 rounded-full relative">
                       <div 
                         className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-100"
                         style={{
-                          width: audioElement && audioElement.duration 
-                            ? `${(audioElement.currentTime / audioElement.duration) * 100}%` 
-                            : '0%'
+                          width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
                         }}
                       />
                       <input
                         type="range"
                         min="0"
-                        max={audioElement?.duration || 100}
-                        value={audioElement?.currentTime || 0}
+                        max={duration}
+                        value={currentTime}
                         onChange={(e) => {
                           if (audioElement) {
-                            audioElement.currentTime = parseFloat(e.target.value);
+                            const newTime = parseFloat(e.target.value);
+                            audioElement.currentTime = newTime;
+                            setCurrentTime(newTime);
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                     </div>
                     <span className="text-xs text-white/60 font-mono">
-                      {audioElement ? formatTime(audioElement.duration || 0) : '0:00'}
+                      {formatTime(duration)}
                     </span>
                   </div>
 

@@ -10,7 +10,7 @@ import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
-import LiquidMetalVisualizer from "./LiquidMetalVisualizer";
+import LiquidMetalVisualizer from "./LiquidMetalVisualizerV2";
 import LiquidMetalVisualizerStandalone from "./LiquidMetalVisualizerStandalone";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";

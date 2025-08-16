@@ -82,17 +82,29 @@ function NeuralLattice({ audioData }: any) {
     const t = clock.getElapsedTime();
     
     if (groupRef.current) {
-      // Smooth transitions using lerp-like behavior
+      // Much smoother transitions using lerp-like behavior
       const targetScale = 1 + bass * 1.2 + 0.15 * Math.sin(t * 6);
       const currentScale = groupRef.current.scale.x;
-      const smoothScale = currentScale + (targetScale - currentScale) * 0.1;
+      const smoothScale = currentScale + (targetScale - currentScale) * 0.05; // Slower smoothing
       groupRef.current.scale.setScalar(smoothScale);
       
-      groupRef.current.rotation.y = t * 1.2 + mids * 4.0;
-      groupRef.current.rotation.x = Math.sin(t * 1.5) * 1.0 + bass * 2.5;
-      groupRef.current.rotation.z = Math.cos(t * 0.8) * 0.8 + highs * 2.0;
+      // Smoother rotation transitions
+      const targetRotY = t * 1.2 + mids * 4.0;
+      const currentRotY = groupRef.current.rotation.y;
+      groupRef.current.rotation.y = currentRotY + (targetRotY - currentRotY) * 0.1;
       
-      groupRef.current.position.y = Math.sin(t * 3.0) * 1.0 + amplitude * 2.0 + (bass > 0.7 ? bass * 3.0 : 0);
+      const targetRotX = Math.sin(t * 1.5) * 1.0 + bass * 2.5;
+      const currentRotX = groupRef.current.rotation.x;
+      groupRef.current.rotation.x = currentRotX + (targetRotX - currentRotX) * 0.1;
+      
+      const targetRotZ = Math.cos(t * 0.8) * 0.8 + highs * 2.0;
+      const currentRotZ = groupRef.current.rotation.z;
+      groupRef.current.rotation.z = currentRotZ + (targetRotZ - currentRotZ) * 0.1;
+      
+      // Smoother position transitions
+      const targetPosY = Math.sin(t * 3.0) * 1.0 + amplitude * 2.0 + (bass > 0.7 ? bass * 3.0 : 0);
+      const currentPosY = groupRef.current.position.y;
+      groupRef.current.position.y = currentPosY + (targetPosY - currentPosY) * 0.08;
     }
     
     if (pointsRef.current && pointsRef.current.material) {

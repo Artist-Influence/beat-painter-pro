@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import type { VisualizerProps } from "../visualizer";
@@ -93,6 +93,7 @@ export default function PsychedelicMandalaVisualizer({
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
   const { audioSensitivity } = useStudioStore();
+  const { viewport } = useThree();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -163,6 +164,22 @@ export default function PsychedelicMandalaVisualizer({
           color={textureData.colors.accent}
         />
       </group>
+
+      {/* Consistent visual style overlay */}
+      {textureData.texture && (
+        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
+          <planeGeometry args={[viewport.width, viewport.height]} />
+          <meshBasicMaterial 
+            map={textureData.texture} 
+            transparent 
+            opacity={0.35}
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      )}
     </>
   );
 }
