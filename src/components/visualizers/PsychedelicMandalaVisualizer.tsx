@@ -165,21 +165,6 @@ export default function PsychedelicMandalaVisualizer({
         />
       </group>
 
-      {/* Consistent visual style overlay */}
-      {textureData.texture && (
-        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
-          <planeGeometry args={[viewport.width, viewport.height]} />
-          <meshBasicMaterial 
-            map={textureData.texture} 
-            transparent 
-            opacity={0.35}
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      )}
     </>
   );
 }
