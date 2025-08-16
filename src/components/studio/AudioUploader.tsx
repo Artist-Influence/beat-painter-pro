@@ -31,17 +31,9 @@ const AudioUploader: React.FC = () => {
       <Button
         variant="default"
         onClick={() => fileInputRef.current?.click()}
+        className="w-full"
       >
         Choose Audio
-      </Button>
-      <Button
-        variant="secondary"
-        onClick={() => {
-          if (!audioElement) return toast.error("Load audio first");
-          if (audioElement.paused) audioElement.play(); else audioElement.pause();
-        }}
-      >
-        {audioElement?.paused ?? true ? "Play" : "Pause"}
       </Button>
     </div>
   );

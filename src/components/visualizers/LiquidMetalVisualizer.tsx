@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, MeshWobbleMaterial } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture } from "@/hooks/useVisualizerTexture";
@@ -8,6 +8,7 @@ import { useStudioStore } from "@/stores/studioStore";
 
 function LiquidBlob({ position, index, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -31,39 +32,59 @@ function LiquidBlob({ position, index, audioData, textureData }) {
     return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
   }, [freqData, audioSensitivity.highsMultiplier]);
 
-  const primaryColor = textureData.colors.primary;
+  const primaryColor = new THREE.Color(textureData.colors.primary);
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
       
-      // Enhanced spread with preset responsiveness
-      const spreadDistance = 6 + bass * 20.0;
+      // Enhanced spread with preset responsiveness - increased spacing
+      const spreadDistance = 8 + bass * 25.0;
       const direction = position[0] > 0 ? 1 : -1;
       const x = position[0] + (direction * spreadDistance);
-      const z = position[2] + (Math.sin(t * 0.5 * speed + index) * 2.0 * bass);
+      const z = position[2] + (Math.sin(t * 0.5 * speed + index) * 3.0 * bass);
       
       meshRef.current.position.set(x, position[1], z);
       
       // Enhanced scaling with preset responsiveness
-      const scale = 0.35 + bass * 1.3;
+      const scale = 0.4 + bass * 1.8;
       meshRef.current.scale.setScalar(scale);
+      
+      // Update material properties for wobble effect
+      if (materialRef.current) {
+        // Simulate wobble by adjusting the mesh vertices slightly
+        const geometry = meshRef.current.geometry as THREE.SphereGeometry;
+        if (geometry.attributes.position) {
+          const positions = geometry.attributes.position.array as Float32Array;
+          const wobbleFactor = 0.1 + bass * 0.4;
+          
+          for (let i = 0; i < positions.length; i += 3) {
+            const vertex = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+            const noise = Math.sin(t * (1.5 + highs * 2.0) + vertex.length() * 10) * wobbleFactor;
+            vertex.normalize().multiplyScalar(1 + noise);
+            positions[i] = vertex.x;
+            positions[i + 1] = vertex.y;
+            positions[i + 2] = vertex.z;
+          }
+          geometry.attributes.position.needsUpdate = true;
+        }
+        
+        materialRef.current.emissiveIntensity = 1.5 + bass * 4.0;
+      }
     }
   });
 
   return (
     <mesh ref={meshRef} position={position}>
       <sphereGeometry args={[1, 32, 32]} />
-      <MeshWobbleMaterial
+      <meshStandardMaterial
+        ref={materialRef}
         color="#ffffff"
-        attach="material"
-        factor={0.2 + bass * 0.8}
-        speed={1.5 + highs * 2.0}
         roughness={textureData.colors.isMetallic ? 0.1 : 0.3}
         metalness={textureData.colors.isMetallic ? 0.9 : 0.7}
         emissive={primaryColor}
-        emissiveIntensity={1.2 + bass * 3.0}
+        emissiveIntensity={1.5 + bass * 4.0}
         map={textureData.texture}
         emissiveMap={textureData.texture}
       />
@@ -83,12 +104,12 @@ export default function LiquidMetalVisualizer({
   const textureData = useVisualizerTexture();
   
   const blobs = useMemo(() => [
-    { position: [-16, 0, 0], index: 0 },
-    { position: [-9.6, 0, 0], index: 1 },
-    { position: [-3.2, 0, 0], index: 2 },
-    { position: [3.2, 0, 0], index: 3 },
-    { position: [9.6, 0, 0], index: 4 },
-    { position: [16, 0, 0], index: 5 },
+    { position: [-20, 0, 0], index: 0 },
+    { position: [-12, 0, 0], index: 1 },
+    { position: [-4, 0, 0], index: 2 },
+    { position: [4, 0, 0], index: 3 },
+    { position: [12, 0, 0], index: 4 },
+    { position: [20, 0, 0], index: 5 },
   ], []);
 
   useFrame(({ clock }) => {
