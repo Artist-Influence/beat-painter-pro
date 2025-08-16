@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Volume2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
-import { WaveformVisualizer } from './WaveformVisualizer';
 
 interface BottomBarProps {
   isVisible: boolean;
@@ -75,11 +74,6 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
             <div className="mx-auto max-w-2xl p-4">
               <div className="bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/10 p-4">
                 
-                {/* Waveform Visualization */}
-                <div className="h-12 mb-3 bg-white/5 rounded-lg overflow-hidden">
-                  <WaveformVisualizer />
-                </div>
-
                 {/* Playback Controls */}
                 <div className="flex items-center gap-4">
                   {/* Play Controls */}
