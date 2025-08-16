@@ -71,10 +71,8 @@ function FluidOrb({ position, index, audioData, textureData }) {
       materialRef.current.metalness = 0.8 + bass * 0.2;
       materialRef.current.emissiveIntensity = 0.8 + bass * 2.0;
       
-      // Color shifting based on audio
-      const colorShift = new THREE.Color().copy(primaryColor);
-      colorShift.offsetHSL(mids * 0.1, bass * 0.2, highs * 0.3);
-      materialRef.current.emissive.copy(colorShift);
+      // Keep emissive neutral white so texture shows full color
+      materialRef.current.emissive.set('#ffffff');
     }
   });
 
@@ -83,10 +81,10 @@ function FluidOrb({ position, index, audioData, textureData }) {
       <sphereGeometry args={[1, 32, 32]} />
       <meshStandardMaterial
         ref={materialRef}
-        color={primaryColor}
+        color="#ffffff"
         roughness={0.1}
         metalness={0.8}
-        emissive={primaryColor}
+        emissive="#ffffff"
         emissiveIntensity={0.8}
         map={textureData.texture}
         emissiveMap={textureData.texture}
@@ -126,6 +124,7 @@ export default function LiquidMetalVisualizerV2({
 
   return (
     <>
+      <color attach="background" args={["#ffffff"]} />
       <ambientLight intensity={0.3} />
       <directionalLight position={[5, 5, 5]} intensity={0.7} />
       <pointLight position={[0, 0, 10]} intensity={1.0} color={textureData.colors.primary} />
@@ -142,22 +141,6 @@ export default function LiquidMetalVisualizerV2({
           />
         ))}
       </group>
-
-      {/* Style overlay with proper blending */}
-      {textureData.texture && (
-        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
-          <planeGeometry args={[viewport.width, viewport.height]} />
-          <meshBasicMaterial 
-            map={textureData.texture} 
-            transparent 
-            opacity={0.3}
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-            blending={THREE.MultiplyBlending}
-          />
-        </mesh>
-      )}
-    </>
-  );
-}
+      </>
+    );
+ }
