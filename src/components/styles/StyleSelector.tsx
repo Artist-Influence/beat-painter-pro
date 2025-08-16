@@ -117,6 +117,10 @@ export function StyleSelector() {
     setProgress(0);
   };
 
+  const unselectAllStyles = () => {
+    setSelectedStyles([]);
+  };
+
   const applyStyle = async (previewIndex: number) => {
     const texture = previews[previewIndex];
     const colors = getStyleColors(selectedStyles);
@@ -179,6 +183,19 @@ export function StyleSelector() {
           createPortal(
             <div ref={menuRef} className="fixed z-[9999] rounded-lg border border-border bg-popover shadow-xl" style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }} role="listbox">
               <div className="max-h-96 overflow-y-auto p-2">
+                {selectedStyles.length > 0 && (
+                  <div className="mb-2 pb-2 border-b border-border">
+                    <Button
+                      onClick={unselectAllStyles}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center text-xs h-8"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Unselect All Styles
+                    </Button>
+                  </div>
+                )}
                 {ALL_STYLES.map((style) => {
                   const checked = selectedStyles.includes(style);
                   const disabled = !checked && !canAddMore;
