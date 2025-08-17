@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Wand2, Palette, Loader2 } from 'lucide-react';
+import { Upload, Wand2, Palette, Loader2, Image, X } from 'lucide-react';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { visualizerRegistry } from '@/components/visualizers';
 
@@ -26,10 +26,36 @@ export function CustomVisualizerGenerator({
   const [activeTab, setActiveTab] = useState('prompt');
   const [prompt, setPrompt] = useState('');
   const [referenceImage, setReferenceImage] = useState<string>('');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableStyles = Object.keys(visualizerRegistry);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setImagePreview(result);
+        setReferenceImage(result); // Use base64 for now, could upload to storage later
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setUploadedImage(null);
+    setImagePreview('');
+    setReferenceImage('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -120,17 +146,48 @@ export function CustomVisualizerGenerator({
             </TabsContent>
 
             <TabsContent value="reference" className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-white/70">Reference Image URL (optional)</label>
-                <Input
-                  placeholder="https://example.com/inspiration-image.jpg"
-                  value={referenceImage}
-                  onChange={(e) => setReferenceImage(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                />
-                <p className="text-xs text-white/50">
-                  Provide a reference image to inspire the visual style of your custom visualizer
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-white/70">Upload Reference Image</label>
+                  <div className="relative">
+                    {!imagePreview ? (
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center cursor-pointer hover:border-white/40 transition-colors bg-white/5"
+                      >
+                        <Upload className="w-8 h-8 mx-auto mb-2 text-white/50" />
+                        <p className="text-white/70">Click to upload an image</p>
+                        <p className="text-xs text-white/50 mt-1">PNG, JPG up to 10MB</p>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <img 
+                          src={imagePreview} 
+                          alt="Reference" 
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={removeImage}
+                          className="absolute top-2 right-2 bg-black/50 border-white/20 text-white hover:bg-black/70"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                  <p className="text-xs text-white/50">
+                    Upload a reference image to inspire the visual style of your custom visualizer
+                  </p>
+                </div>
               </div>
             </TabsContent>
 

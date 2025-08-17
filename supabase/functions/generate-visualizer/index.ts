@@ -105,31 +105,41 @@ serve(async (req) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Add randomness for unique generation
+    const timestamp = Date.now();
+    const randomSeed = Math.random().toString(36).substring(7);
+    
     // Build the generation prompt
-    let generationPrompt = `You are an expert in creating Three.js React audio visualizers. Create a stunning, unique visualizer based on this description: "${prompt}"
+    let generationPrompt = `You are an expert in creating Three.js React audio visualizers. Create a stunning, UNIQUE visualizer based on this description: "${prompt}"
+
+GENERATION ID: ${timestamp}-${randomSeed}
 
 CRITICAL REQUIREMENTS:
 1. The visualizer MUST be audio-reactive using bassIntensity, midsIntensity, and highsIntensity variables
-2. Use ONLY white (#ffffff) materials for seamless texture mapping - NO OTHER COLORS
-3. Create smooth, organic animations that respond to audio frequency data
-4. Use the provided material variable (already configured with createVisualizerMaterial)
-5. Include proper audio sensitivity multipliers in all animations
-6. Create visually striking 3D geometry that matches the description
-7. Use React Three Fiber patterns and hooks properly
-8. Keep animations smooth and performance-optimized
-9. MUST respond to audio - scale, rotate, or modify based on bassIntensity, midsIntensity, highsIntensity
-10. All meshes must use the white material variable provided for proper texture mapping
+2. Use ONLY white (#ffffff) materials - NEVER use any other colors, even with low opacity
+3. MUST include natural resting animations (gentle rotation, breathing, subtle movements) when no audio is present
+4. Create smooth, organic animations that respond to audio frequency data
+5. Use the provided white material variable (already configured with createVisualizerMaterial)
+6. Include proper audio sensitivity multipliers in all animations
+7. Create visually striking 3D geometry that matches the description uniquely
+8. Use React Three Fiber patterns and hooks properly
+9. Keep animations smooth and performance-optimized
+10. MUST respond to audio - scale, rotate, or modify based on bassIntensity, midsIntensity, highsIntensity
+11. ALL meshes must use the white material variable - NO exceptions
+12. Add natural idle animations like gentle rotation or breathing motion using time (t)
 
 Replace {{VISUALIZER_NAME}} with a proper React component name (PascalCase, no spaces).
 Replace {{ANIMATION_LOGIC}} with animation code that uses bassIntensity, midsIntensity, highsIntensity.
 Replace {{RENDER_LOGIC}} with 3D objects that use the white material variable.
 
 EXAMPLE PATTERNS:
-- Scale: groupRef.current.scale.setScalar(1 + bassIntensity * 0.5)
-- Rotation: groupRef.current.rotation.y += (midsIntensity * 0.02 + 0.001) * speedMultiplier
-- Position: mesh.position.y = Math.sin(t + bassIntensity * 10) * highsIntensity
+- Natural rotation: groupRef.current.rotation.z = t * 0.05 + bassIntensity * 0.1
+- Breathing motion: groupRef.current.scale.setScalar(1 + Math.sin(t * 1.5) * 0.02 + bassIntensity * 0.5)
+- Audio-reactive position: mesh.position.y = Math.sin(t + bassIntensity * 10) * highsIntensity
+- Combined effects: mesh.rotation.y = t * 0.1 + midsIntensity * 2
 
-Focus on creating something visually unique and audio-responsive. Make it beautiful and engaging.`;
+MANDATORY: Include both resting animations (using time t) AND audio-reactive animations.
+Focus on creating something visually UNIQUE and engaging. Each generation must be completely different.`;
 
     if (referenceImage) {
       generationPrompt += `\n\nReference image provided - analyze the visual style and incorporate similar aesthetics into the 3D visualizer.`;
