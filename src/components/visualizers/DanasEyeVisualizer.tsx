@@ -38,12 +38,9 @@ function LightRay({ angle, radius, index, audioData, textureData }) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Animate the entire ray
-      groupRef.current.rotation.z = Math.sin(t * 0.5 + index * 0.1) * 0.05;
-      
-      // Scale based on audio - uniform scaling to prevent asymmetry
-      const baseScale = 0.8 + Math.sin(t * 3) * 0.1; // Remove index variation for uniformity
-      const audioScale = 1 + intensity * 1.5;
+      // Smooth uniform scaling - no individual ray rotation for symmetry
+      const baseScale = 1.0; // Fixed base scale for uniformity
+      const audioScale = 1 + intensity * 0.5; // Reduced audio influence
       groupRef.current.scale.setScalar(baseScale * audioScale);
     }
   });
@@ -76,10 +73,10 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Scale based on intensity and distance from center
-      const baseScale = Math.max(0.1, 1 - (pointIndex / totalPoints) * 0.7);
-      const audioScale = 1 + intensity * 2;
-      const timeScale = 1 + Math.sin(t * 4 + pointIndex * 0.5) * 0.3;
+      // More natural scaling - unified across all points in a ray
+      const baseScale = Math.max(0.1, 1 - (pointIndex / totalPoints) * 0.5);
+      const audioScale = 1 + intensity * 0.8; // Reduced audio influence
+      const timeScale = 1 + Math.sin(t * 2) * 0.1; // Gentle, unified pulsing
       
       meshRef.current.scale.setScalar(baseScale * audioScale * timeScale * 0.3);
       
@@ -179,11 +176,11 @@ export default function DanasEyeVisualizer({
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Gentle overall rotation
-      groupRef.current.rotation.z = t * 0.1;
+      // Very gentle overall rotation for natural movement
+      groupRef.current.rotation.z = t * 0.05;
       
-      // Subtle breathing motion
-      const breathe = 1 + Math.sin(t * 0.8) * 0.05;
+      // Subtle unified breathing motion
+      const breathe = 1 + Math.sin(t * 1.5) * 0.02;
       groupRef.current.scale.setScalar(breathe);
     }
   });

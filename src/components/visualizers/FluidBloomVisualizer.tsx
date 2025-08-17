@@ -19,26 +19,27 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
       sum += safeAudioData.frequency[i] || 0;
     }
     const rawIntensity = Math.min(sum / (freqEnd - freqStart) / 255, 1.0);
-    // Apply appropriate multiplier based on frequency range
+    // Apply appropriate multiplier based on frequency range with animation speed control
+    const speedMultiplier = audioSensitivity.animationSpeed;
     return freqStart <= 85 
-      ? rawIntensity * audioSensitivity.bassMultiplier
+      ? rawIntensity * audioSensitivity.bassMultiplier * speedMultiplier * 0.3
       : freqStart <= 170 
-      ? rawIntensity * audioSensitivity.midsMultiplier
-      : rawIntensity * audioSensitivity.highsMultiplier;
+      ? rawIntensity * audioSensitivity.midsMultiplier * speedMultiplier * 0.3
+      : rawIntensity * audioSensitivity.highsMultiplier * speedMultiplier * 0.3;
   }, [safeAudioData.frequency, freqStart, freqEnd, audioSensitivity]);
 
   // Bass frequency for aggressive movement
   const bassIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += safeAudioData.frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier * audioSensitivity.animationSpeed * 0.3, 1.0);
   }, [safeAudioData.frequency, audioSensitivity.bassMultiplier]);
 
   // High frequency for jittery effects
   const highIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 170; i < 255; i++) sum += safeAudioData.frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier * audioSensitivity.animationSpeed * 0.3, 1.0);
   }, [safeAudioData.frequency, audioSensitivity.highsMultiplier]);
 
   useFrame(({ clock }) => {
@@ -50,9 +51,9 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
       const baseMorphY = 1 + Math.cos(t * 1.8 + index * 0.7) * 0.4;
       const baseMorphZ = 1 + Math.sin(t * 2.2 + index * 0.5) * 0.25;
       
-      const audioMorphX = Math.min(baseMorphX + intensity * 2.0 + bassIntensity * 2.4, 3);
-      const audioMorphY = Math.min(baseMorphY + intensity * 2.2 + safeAudioData.beatStrength * 3.2, 3);
-      const audioMorphZ = Math.min(baseMorphZ + intensity * 1.8 + highIntensity * 1.2, 3);
+      const audioMorphX = Math.min(baseMorphX + intensity * 0.8 + bassIntensity * 0.6, 2);
+      const audioMorphY = Math.min(baseMorphY + intensity * 0.9 + safeAudioData.beatStrength * 0.8, 2);
+      const audioMorphZ = Math.min(baseMorphZ + intensity * 0.7 + highIntensity * 0.5, 2);
       
       meshRef.current.scale.set(
         scale[0] * audioMorphX,
@@ -60,22 +61,22 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
         scale[2] * audioMorphZ
       );
       
-      // Rotation based on audio (reduced by 20%)
-      meshRef.current.rotation.x = t * (0.3 + intensity * 1.6) + bassIntensity * Math.PI * 0.8;
-      meshRef.current.rotation.y = t * (0.4 + intensity * 1.2) + safeAudioData.beatStrength * Math.PI * 1.6;
-      meshRef.current.rotation.z = Math.sin(t * 0.5 + index) * (0.4 + highIntensity * 1.6);
+      // Rotation based on audio
+      meshRef.current.rotation.x = t * (0.1 + intensity * 0.3) + bassIntensity * Math.PI * 0.2;
+      meshRef.current.rotation.y = t * (0.15 + intensity * 0.2) + safeAudioData.beatStrength * Math.PI * 0.3;
+      meshRef.current.rotation.z = Math.sin(t * 0.5 + index) * (0.1 + highIntensity * 0.3);
       
-      // Floating motion with audio (reduced by 20%)
-      const baseFloat = Math.sin(t * 1.2 + index) * 1.2;
-      const audioFloat = bassIntensity * 3.2 * Math.sin(t * 8);
-      const beatFloat = safeAudioData.beatStrength * 4.8 * Math.sin(t * 12);
+      // Floating motion with audio
+      const baseFloat = Math.sin(t * 1.2 + index) * 0.3;
+      const audioFloat = bassIntensity * 0.8 * Math.sin(t * 4);
+      const beatFloat = safeAudioData.beatStrength * 1.2 * Math.sin(t * 6);
       const floatOffset = position[1] + baseFloat + audioFloat + beatFloat;
       meshRef.current.position.y = floatOffset;
       
-      // Horizontal movement based on mid frequencies (reduced by 20%)
+      // Horizontal movement based on mid frequencies
       const midIntensity = (intensity + highIntensity) * 0.5;
-      meshRef.current.position.x = position[0] + midIntensity * 2.4 * Math.sin(t * 3 + index);
-      meshRef.current.position.z = position[2] + midIntensity * 1.6 * Math.cos(t * 2.5 + index);
+      meshRef.current.position.x = position[0] + midIntensity * 0.6 * Math.sin(t * 2 + index);
+      meshRef.current.position.z = position[2] + midIntensity * 0.4 * Math.cos(t * 1.8 + index);
     }
   });
 
@@ -134,9 +135,9 @@ function FluidParticles({ audioData, textureData }) {
     let sum = 0;
     for (let i = 0; i < 255; i++) sum += safeAudioData.frequency[i] || 0;
     const rawIntensity = Math.min(sum / 255 / 255, 1.0);
-    // Use average of all multipliers for total intensity
+    // Use average of all multipliers for total intensity with animation speed control
     const avgMultiplier = (audioSensitivity.bassMultiplier + audioSensitivity.midsMultiplier + audioSensitivity.highsMultiplier) / 3;
-    return rawIntensity * avgMultiplier;
+    return rawIntensity * avgMultiplier * audioSensitivity.animationSpeed * 0.3;
   }, [safeAudioData.frequency, audioSensitivity]);
   
   // Create particle positions (4x smaller)
@@ -243,9 +244,9 @@ export default function FluidBloomVisualizer({
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Overall breathing based on audio (capped at 3x)
-      const baseBreath = 1 + Math.sin(t * 2) * 0.08;
-      const audioBreath = Math.min(1 + (audioData.amplitude || 0) * 1.6 + (audioData.beatStrength || 0) * 2.4, 3);
+      // Overall breathing based on audio (much more subtle)
+      const baseBreath = 1 + Math.sin(t * 2) * 0.03;
+      const audioBreath = Math.min(1 + (audioData.amplitude || 0) * 0.3 + (audioData.beatStrength || 0) * 0.4, 1.5);
       groupRef.current.scale.setScalar(baseBreath * audioBreath);
       
       // Rotation with audio (reduced by 20%)
