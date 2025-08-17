@@ -28,32 +28,37 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
       : rawIntensity * audioSensitivity.highsMultiplier * speedMultiplier * 0.3;
   }, [safeAudioData.frequency, freqStart, freqEnd, audioSensitivity]);
 
-  // Bass frequency for aggressive movement
+  // Bass frequency for slower, more dynamic movement
   const bassIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += safeAudioData.frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier * audioSensitivity.animationSpeed * 0.3, 1.0);
-  }, [safeAudioData.frequency, audioSensitivity.bassMultiplier]);
+    const rawIntensity = (sum / 86 / 255) * audioSensitivity.bassMultiplier;
+    // Make bass more dynamic but slower
+    return Math.min(rawIntensity * audioSensitivity.animationSpeed * 0.15, 1.0);
+  }, [safeAudioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.animationSpeed]);
 
   // High frequency for jittery effects
   const highIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 170; i < 255; i++) sum += safeAudioData.frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier * audioSensitivity.animationSpeed * 0.3, 1.0);
-  }, [safeAudioData.frequency, audioSensitivity.highsMultiplier]);
+    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier * audioSensitivity.animationSpeed * 0.2, 1.0);
+  }, [safeAudioData.frequency, audioSensitivity.highsMultiplier, audioSensitivity.animationSpeed]);
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // Audio-driven morphing (capped at 3x base size)
-      const baseMorphX = 1 + Math.sin(t * 2 + index) * 0.3;
-      const baseMorphY = 1 + Math.cos(t * 1.8 + index * 0.7) * 0.4;
-      const baseMorphZ = 1 + Math.sin(t * 2.2 + index * 0.5) * 0.25;
+      // Audio-driven morphing with dynamic bass response
+      const baseMorphX = 1 + Math.sin(t * 0.8 + index) * 0.2; // Slower base movement
+      const baseMorphY = 1 + Math.cos(t * 0.6 + index * 0.7) * 0.25; // Slower base movement  
+      const baseMorphZ = 1 + Math.sin(t * 0.7 + index * 0.5) * 0.15; // Slower base movement
       
-      const audioMorphX = Math.min(baseMorphX + intensity * 0.8 + bassIntensity * 0.6, 2);
-      const audioMorphY = Math.min(baseMorphY + intensity * 0.9 + safeAudioData.beatStrength * 0.8, 2);
-      const audioMorphZ = Math.min(baseMorphZ + intensity * 0.7 + highIntensity * 0.5, 2);
+      // More dynamic bass response but slower between frequencies
+      const bassResponse = bassIntensity > 0.1 ? bassIntensity * 1.2 : bassIntensity * 0.3;
+      
+      const audioMorphX = Math.min(baseMorphX + intensity * 0.5 + bassResponse * 0.8, 1.8);
+      const audioMorphY = Math.min(baseMorphY + intensity * 0.6 + safeAudioData.beatStrength * 0.6, 1.8);
+      const audioMorphZ = Math.min(baseMorphZ + intensity * 0.4 + highIntensity * 0.4, 1.8);
       
       meshRef.current.scale.set(
         scale[0] * audioMorphX,

@@ -65,10 +65,6 @@ function LightRay({ angle, radius, index, audioData, textureData }) {
 function LightPoint({ position, intensity, pointIndex, totalPoints, textureData, time }) {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Create color variation
-  const hue = (pointIndex / totalPoints) * 360 + time * 30;
-  const color = new THREE.Color().setHSL(hue / 360, 0.8, 0.5 + intensity * 0.4);
-  
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
@@ -79,12 +75,6 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
       const timeScale = 1 + Math.sin(t * 2) * 0.1; // Gentle, unified pulsing
       
       meshRef.current.scale.setScalar(baseScale * audioScale * timeScale * 0.3);
-      
-      // Keep material white for texture mapping
-      if (meshRef.current.material) {
-        (meshRef.current.material as any).emissiveIntensity = 0;
-        (meshRef.current.material as any).emissive.set('#000000');
-      }
     }
   });
 
