@@ -3,14 +3,23 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function LightRay({ angle, radius, index, audioData, textureData }) {
   const groupRef = useRef<THREE.Group>(null);
+  const { audioSensitivity } = useStudioStore();
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   
-  // Calculate frequency range for this ray
+  // Calculate frequency range for this ray with audio sensitivity
   const freqIndex = Math.floor((index / 36) * 255);
-  const intensity = (safeAudioData.frequency[freqIndex] || 0) / 255;
+  const rawIntensity = (safeAudioData.frequency[freqIndex] || 0) / 255;
+  
+  // Apply appropriate multiplier based on frequency range
+  const intensity = freqIndex <= 85 
+    ? rawIntensity * audioSensitivity.bassMultiplier
+    : freqIndex <= 170 
+    ? rawIntensity * audioSensitivity.midsMultiplier
+    : rawIntensity * audioSensitivity.highsMultiplier;
   
   // Create points along the ray
   const points = useMemo(() => {
@@ -32,9 +41,10 @@ function LightRay({ angle, radius, index, audioData, textureData }) {
       // Animate the entire ray
       groupRef.current.rotation.z = Math.sin(t * 0.5 + index * 0.1) * 0.05;
       
-      // Scale based on audio
-      const scale = 0.8 + intensity * 1.5 + Math.sin(t * 3 + index * 0.2) * 0.1;
-      groupRef.current.scale.setScalar(scale);
+      // Scale based on audio - uniform scaling to prevent asymmetry
+      const baseScale = 0.8 + Math.sin(t * 3) * 0.1; // Remove index variation for uniformity
+      const audioScale = 1 + intensity * 1.5;
+      groupRef.current.scale.setScalar(baseScale * audioScale);
     }
   });
 
@@ -99,14 +109,15 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
 
 function CenterCore({ audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   
-  // Use bass frequencies for the core
+  // Use bass frequencies for the core with sensitivity multiplier
   const bassIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += safeAudioData.frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [safeAudioData.frequency]);
+    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+  }, [safeAudioData.frequency, audioSensitivity.bassMultiplier]);
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
