@@ -10,8 +10,7 @@ import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
-import LiquidMetalVisualizerV2 from "./LiquidMetalVisualizerV2";
-import LiquidMetalVisualizerStandalone from "./LiquidMetalVisualizerStandalone";
+import DanasEyeVisualizer from "./DanasEyeVisualizer";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
 
@@ -30,8 +29,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   StroboscopicTunnelVisualizer: 0.3,
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
-  LiquidMetalVisualizerV2: 0.35,
-  LiquidMetalVisualizerStandalone: 0.3,
+  DanasEyeVisualizer: 0.25,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
 };
@@ -49,8 +47,7 @@ export const visualizerRegistry = {
   StroboscopicTunnelVisualizer,
   WaveRibbonsVisualizer,
   DNAHelixVisualizer,
-  LiquidMetalVisualizerV2,
-  LiquidMetalVisualizerStandalone,
+  DanasEyeVisualizer,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
 };
