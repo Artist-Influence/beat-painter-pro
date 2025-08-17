@@ -110,12 +110,11 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
 
   const material = useMemo(() => 
     createVisualizerMaterial('#ffffff', textureData, {
-      emissive: '#000000',
-      emissiveIntensity: 0,
       transparent: true,
       opacity: 0.9,
-      roughness: 0.2,
-      metalness: 0.3,
+      roughness: 1,
+      metalness: 0,
+      basic: true,
     }), [textureData]
   );
 

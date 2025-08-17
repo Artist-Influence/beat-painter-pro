@@ -81,34 +81,43 @@ export const createVisualizerMaterial = (
     wireframe?: boolean;
     opacity?: number;
     transparent?: boolean;
+    basic?: boolean;
   } = {}
 ) => {
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(baseColor),
-    emissive: new THREE.Color(options.emissive || baseColor),
-    emissiveIntensity: options.emissiveIntensity || 0.3,
-    metalness: options.metalness || 0.8,
-    roughness: options.roughness || 0.2,
-    wireframe: options.wireframe || false,
-    opacity: options.opacity || 1,
-    transparent: options.transparent || false,
-  });
+  // Use MeshBasicMaterial for pure-white, lighting-independent mapping when requested
+  const material: any = options.basic
+    ? new THREE.MeshBasicMaterial({
+        color: new THREE.Color(baseColor),
+        wireframe: options.wireframe || false,
+        opacity: options.opacity ?? 1,
+        transparent: options.transparent ?? false,
+      })
+    : new THREE.MeshStandardMaterial({
+        color: new THREE.Color(baseColor),
+        emissive: new THREE.Color(options.emissive || baseColor),
+        emissiveIntensity: options.emissiveIntensity || 0.3,
+        metalness: options.metalness ?? 0.1,
+        roughness: options.roughness ?? 0.9,
+        wireframe: options.wireframe || false,
+        opacity: options.opacity ?? 1,
+        transparent: options.transparent ?? false,
+      });
 
   // Apply texture if available
   if (textureData.texture) {
-    // For wireframe materials, we'll use emissive map to show texture
-    if (options.wireframe) {
-      material.emissiveMap = textureData.texture;
-      material.emissiveIntensity = Math.max(options.emissiveIntensity || 0.3, 0.8);
+    if (!options.basic && options.wireframe) {
+      // For wireframe materials, we'll use emissive map to show texture
+      (material as any).emissiveMap = textureData.texture;
+      (material as any).emissiveIntensity = Math.max(options.emissiveIntensity || 0.3, 0.8);
     } else {
-      material.map = textureData.texture;
-      material.emissiveMap = textureData.texture;
+      (material as any).map = textureData.texture;
+      if (!options.basic) (material as any).emissiveMap = textureData.texture;
     }
     material.needsUpdate = true;
   }
 
   // Force material update when texture version changes
-  material.userData = { textureVersion: textureData.textureVersion };
+  (material as any).userData = { textureVersion: textureData.textureVersion };
 
   return material;
 };

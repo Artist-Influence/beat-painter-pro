@@ -73,10 +73,9 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
 
   const material = useMemo(() => 
     createVisualizerMaterial('#ffffff', textureData, {
-      emissive: '#000000',
-      emissiveIntensity: 0,
       transparent: true,
       opacity: 0.9,
+      basic: true,
     }), [textureData]
   );
 
@@ -119,10 +118,9 @@ function CenterCore({ audioData, textureData }) {
 
   const material = useMemo(() => 
     createVisualizerMaterial('#ffffff', textureData, {
-      emissive: '#000000',
-      emissiveIntensity: 0,
       transparent: true,
       opacity: 1,
+      basic: true,
     }), [textureData]
   );
 
@@ -143,6 +141,7 @@ export default function DanasEyeVisualizer({
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   // Create rays in a radial pattern
   const rays = useMemo(() => {
@@ -158,7 +157,6 @@ export default function DanasEyeVisualizer({
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
-      const { audioSensitivity } = useStudioStore();
       const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
       
       // Calculate average audio intensity for uniform scaling
