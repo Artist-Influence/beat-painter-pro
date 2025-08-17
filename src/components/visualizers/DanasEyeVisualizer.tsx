@@ -34,15 +34,9 @@ function LightRay({ angle, radius, index, audioData, textureData }) {
     return pointsArray;
   }, [angle, radius]);
 
-  useFrame(({ clock }) => {
-    if (groupRef.current) {
-      const t = clock.getElapsedTime();
-      
-      // Smooth uniform scaling - no individual ray rotation for symmetry
-      const baseScale = 1.0; // Fixed base scale for uniformity
-      const audioScale = 1 + intensity * 0.5; // Reduced audio influence
-      groupRef.current.scale.setScalar(baseScale * audioScale);
-    }
+  useFrame(() => {
+    // No individual ray scaling or movement for perfect uniformity
+    // All scaling will be handled at the group level
   });
 
   return (
@@ -69,12 +63,11 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // More natural scaling - unified across all points in a ray
+      // Fixed scaling based only on position in ray - no individual audio response
       const baseScale = Math.max(0.1, 1 - (pointIndex / totalPoints) * 0.5);
-      const audioScale = 1 + intensity * 0.8; // Reduced audio influence
-      const timeScale = 1 + Math.sin(t * 2) * 0.1; // Gentle, unified pulsing
+      const timeScale = 1 + Math.sin(t * 2) * 0.05; // Very subtle unified pulsing
       
-      meshRef.current.scale.setScalar(baseScale * audioScale * timeScale * 0.3);
+      meshRef.current.scale.setScalar(baseScale * timeScale * 0.3);
     }
   });
 
@@ -165,13 +158,27 @@ export default function DanasEyeVisualizer({
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
+      const { audioSensitivity } = useStudioStore();
+      const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+      
+      // Calculate average audio intensity for uniform scaling
+      let totalIntensity = 0;
+      for (let i = 0; i < 256; i++) {
+        const rawIntensity = (safeAudioData.frequency[i] || 0) / 255;
+        const multiplier = i <= 85 ? audioSensitivity.bassMultiplier 
+                         : i <= 170 ? audioSensitivity.midsMultiplier 
+                         : audioSensitivity.highsMultiplier;
+        totalIntensity += rawIntensity * multiplier;
+      }
+      totalIntensity = totalIntensity / 256;
       
       // Very gentle overall rotation for natural movement
       groupRef.current.rotation.z = t * 0.05;
       
-      // Subtle unified breathing motion
-      const breathe = 1 + Math.sin(t * 1.5) * 0.02;
-      groupRef.current.scale.setScalar(breathe);
+      // Uniform breathing motion based on audio
+      const baseBreath = 1 + Math.sin(t * 1.5) * 0.02;
+      const audioBreath = 1 + totalIntensity * 0.3;
+      groupRef.current.scale.setScalar(baseBreath * audioBreath);
     }
   });
 

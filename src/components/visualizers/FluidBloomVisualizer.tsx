@@ -28,13 +28,13 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
       : rawIntensity * audioSensitivity.highsMultiplier * speedMultiplier * 0.3;
   }, [safeAudioData.frequency, freqStart, freqEnd, audioSensitivity]);
 
-  // Bass frequency for slower, more dynamic movement
+  // Bass frequency for much slower, more dynamic movement
   const bassIntensity = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += safeAudioData.frequency[i] || 0;
     const rawIntensity = (sum / 86 / 255) * audioSensitivity.bassMultiplier;
-    // Make bass more dynamic but slower
-    return Math.min(rawIntensity * audioSensitivity.animationSpeed * 0.15, 1.0);
+    // Make bass 2x slower than before
+    return Math.min(rawIntensity * audioSensitivity.animationSpeed * 0.075, 1.0);
   }, [safeAudioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.animationSpeed]);
 
   // High frequency for jittery effects
