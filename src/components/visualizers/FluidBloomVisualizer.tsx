@@ -37,10 +37,10 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       
-      // AGGRESSIVE audio-driven morphing
-      const morphX = 1 + Math.sin(t * 2 + index) * 0.4 + intensity * 2.5 + bassIntensity * 3.0;
-      const morphY = 1 + Math.cos(t * 1.8 + index * 0.7) * 0.5 + intensity * 2.8 + safeAudioData.beatStrength * 4.0;
-      const morphZ = 1 + Math.sin(t * 2.2 + index * 0.5) * 0.3 + intensity * 2.2 + highIntensity * 1.5;
+      // Audio-driven morphing (reduced by 20%)
+      const morphX = 1 + Math.sin(t * 2 + index) * 0.3 + intensity * 2.0 + bassIntensity * 2.4;
+      const morphY = 1 + Math.cos(t * 1.8 + index * 0.7) * 0.4 + intensity * 2.2 + safeAudioData.beatStrength * 3.2;
+      const morphZ = 1 + Math.sin(t * 2.2 + index * 0.5) * 0.25 + intensity * 1.8 + highIntensity * 1.2;
       
       meshRef.current.scale.set(
         scale[0] * morphX,
@@ -48,22 +48,22 @@ function FluidBlob({ position, scale, audioData, textureData, index }) {
         scale[2] * morphZ
       );
       
-      // AGGRESSIVE rotation based on audio
-      meshRef.current.rotation.x = t * (0.3 + intensity * 2) + bassIntensity * Math.PI;
-      meshRef.current.rotation.y = t * (0.4 + intensity * 1.5) + safeAudioData.beatStrength * Math.PI * 2;
-      meshRef.current.rotation.z = Math.sin(t * 0.5 + index) * (0.5 + highIntensity * 2);
+      // Rotation based on audio (reduced by 20%)
+      meshRef.current.rotation.x = t * (0.3 + intensity * 1.6) + bassIntensity * Math.PI * 0.8;
+      meshRef.current.rotation.y = t * (0.4 + intensity * 1.2) + safeAudioData.beatStrength * Math.PI * 1.6;
+      meshRef.current.rotation.z = Math.sin(t * 0.5 + index) * (0.4 + highIntensity * 1.6);
       
-      // AGGRESSIVE floating motion with audio
-      const baseFloat = Math.sin(t * 1.2 + index) * 1.5;
-      const audioFloat = bassIntensity * 4 * Math.sin(t * 8);
-      const beatFloat = safeAudioData.beatStrength * 6 * Math.sin(t * 12);
+      // Floating motion with audio (reduced by 20%)
+      const baseFloat = Math.sin(t * 1.2 + index) * 1.2;
+      const audioFloat = bassIntensity * 3.2 * Math.sin(t * 8);
+      const beatFloat = safeAudioData.beatStrength * 4.8 * Math.sin(t * 12);
       const floatOffset = position[1] + baseFloat + audioFloat + beatFloat;
       meshRef.current.position.y = floatOffset;
       
-      // Add horizontal movement based on mid frequencies
+      // Horizontal movement based on mid frequencies (reduced by 20%)
       const midIntensity = (intensity + highIntensity) * 0.5;
-      meshRef.current.position.x = position[0] + midIntensity * 3 * Math.sin(t * 3 + index);
-      meshRef.current.position.z = position[2] + midIntensity * 2 * Math.cos(t * 2.5 + index);
+      meshRef.current.position.x = position[0] + midIntensity * 2.4 * Math.sin(t * 3 + index);
+      meshRef.current.position.z = position[2] + midIntensity * 1.6 * Math.cos(t * 2.5 + index);
     }
   });
 
@@ -123,13 +123,13 @@ function FluidParticles({ audioData, textureData }) {
     return Math.min(sum / 255 / 255, 1.0);
   }, [safeAudioData.frequency]);
   
-  // Create particle positions
+  // Create particle positions (4x smaller)
   const particles = useMemo(() => {
     const particleArray = [];
     for (let i = 0; i < 40; i++) {
       const theta = (i / 40) * Math.PI * 2;
       const phi = Math.acos(1 - 2 * Math.random());
-      const radius = 2 + Math.random() * 4;
+      const radius = (2 + Math.random() * 4) / 4; // 4x smaller
       
       const x = radius * Math.sin(phi) * Math.cos(theta);
       const y = radius * Math.sin(phi) * Math.sin(theta);
@@ -137,7 +137,7 @@ function FluidParticles({ audioData, textureData }) {
       
       particleArray.push({
         position: [x, y, z],
-        baseScale: 0.05 + Math.random() * 0.1,
+        baseScale: (0.05 + Math.random() * 0.1) / 4, // 4x smaller
         index: i,
         freqIndex: Math.floor((i / 40) * 255)
       });
@@ -149,22 +149,22 @@ function FluidParticles({ audioData, textureData }) {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // AGGRESSIVE rotation based on audio
-      groupRef.current.rotation.y = t * (0.2 + totalIntensity * 3);
-      groupRef.current.rotation.x = Math.sin(t * 0.8) * (0.3 + safeAudioData.beatStrength * 2);
+      // Rotation based on audio (reduced by 20%)
+      groupRef.current.rotation.y = t * (0.2 + totalIntensity * 2.4);
+      groupRef.current.rotation.x = Math.sin(t * 0.8) * (0.24 + safeAudioData.beatStrength * 1.6);
       
-      // Animate individual particles aggressively
+      // Animate individual particles
       particleRefs.current.forEach((mesh, i) => {
         if (mesh && particles[i]) {
           const particle = particles[i];
           const freqIntensity = (safeAudioData.frequency[particle.freqIndex] || 0) / 255;
           
-          // AGGRESSIVE scaling based on frequency
-          const scale = particle.baseScale * (1 + freqIntensity * 15 + safeAudioData.beatStrength * 20);
+          // Scaling based on frequency (reduced by 20%)
+          const scale = particle.baseScale * (1 + freqIntensity * 12 + safeAudioData.beatStrength * 16);
           mesh.scale.setScalar(scale);
           
-          // AGGRESSIVE movement
-          const moveRadius = 1 + freqIntensity * 8 + totalIntensity * 5;
+          // Movement (reduced by 20%)
+          const moveRadius = 1 + freqIntensity * 6.4 + totalIntensity * 4;
           const moveX = particle.position[0] + Math.sin(t * 4 + i * 0.2) * moveRadius;
           const moveY = particle.position[1] + Math.cos(t * 3.5 + i * 0.3) * moveRadius;
           const moveZ = particle.position[2] + Math.sin(t * 3.8 + i * 0.15) * moveRadius;
@@ -211,14 +211,14 @@ export default function FluidBloomVisualizer({
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
   
-  // Create main fluid blobs
+  // Create main fluid blobs (4x smaller)
   const blobs = useMemo(() => {
     return [
-      { position: [0, 0, 0], scale: [1.5, 1.8, 1.2], index: 0 },
-      { position: [-1.2, 0.8, -0.5], scale: [1.0, 1.2, 0.9], index: 1 },
-      { position: [1.5, -0.6, 0.3], scale: [0.8, 1.1, 1.0], index: 2 },
-      { position: [0.2, 1.4, -0.8], scale: [0.9, 0.7, 1.3], index: 3 },
-      { position: [-0.8, -1.1, 0.6], scale: [1.1, 0.9, 0.8], index: 4 },
+      { position: [0, 0, 0], scale: [1.5/4, 1.8/4, 1.2/4], index: 0 },
+      { position: [-1.2/4, 0.8/4, -0.5/4], scale: [1.0/4, 1.2/4, 0.9/4], index: 1 },
+      { position: [1.5/4, -0.6/4, 0.3/4], scale: [0.8/4, 1.1/4, 1.0/4], index: 2 },
+      { position: [0.2/4, 1.4/4, -0.8/4], scale: [0.9/4, 0.7/4, 1.3/4], index: 3 },
+      { position: [-0.8/4, -1.1/4, 0.6/4], scale: [1.1/4, 0.9/4, 0.8/4], index: 4 },
     ];
   }, []);
 
@@ -226,14 +226,14 @@ export default function FluidBloomVisualizer({
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // AGGRESSIVE overall breathing based on audio
-      const baseBreath = 1 + Math.sin(t * 2) * 0.1;
-      const audioBreath = 1 + (audioData.amplitude || 0) * 2 + (audioData.beatStrength || 0) * 3;
+      // Overall breathing based on audio (reduced by 20%)
+      const baseBreath = 1 + Math.sin(t * 2) * 0.08;
+      const audioBreath = 1 + (audioData.amplitude || 0) * 1.6 + (audioData.beatStrength || 0) * 2.4;
       groupRef.current.scale.setScalar(baseBreath * audioBreath);
       
-      // AGGRESSIVE rotation with audio
-      groupRef.current.rotation.y = t * (0.1 + (audioData.amplitude || 0) * 2);
-      groupRef.current.rotation.x = Math.sin(t * 0.8) * (0.2 + (audioData.beatStrength || 0) * 1.5);
+      // Rotation with audio (reduced by 20%)
+      groupRef.current.rotation.y = t * (0.1 + (audioData.amplitude || 0) * 1.6);
+      groupRef.current.rotation.x = Math.sin(t * 0.8) * (0.16 + (audioData.beatStrength || 0) * 1.2);
     }
   });
 
