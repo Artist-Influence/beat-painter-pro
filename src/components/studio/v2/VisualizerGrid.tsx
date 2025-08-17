@@ -17,7 +17,7 @@ export function VisualizerGrid() {
     { id: 'HypercubePortalVisualizer', name: 'Hypercube Portal', preview: '🔮', description: 'Dimensional gateway' },
     { id: 'SacredGeometryPulseVisualizer', name: 'Sacred Geometry', preview: '⚡', description: 'Ancient geometric forms' },
     { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },
-    { id: 'LiquidMetalVisualizerStandalone', name: 'Liquid Metal', preview: '🌐', description: 'Ferrofluid morphing' },
+    { id: 'DanasEyeVisualizer', name: "Dana's Eye", preview: '👁️', description: 'Radial light burst' },
   ];
 
   return (

@@ -73,21 +73,21 @@ function LightPoint({ position, intensity, pointIndex, totalPoints, textureData,
       
       meshRef.current.scale.setScalar(baseScale * audioScale * timeScale * 0.3);
       
-      // Update material properties
+      // Keep material white for texture mapping
       if (meshRef.current.material) {
-        (meshRef.current.material as any).emissiveIntensity = intensity * 3 + 0.5;
-        (meshRef.current.material as any).emissive = color;
+        (meshRef.current.material as any).emissiveIntensity = 0;
+        (meshRef.current.material as any).emissive.set('#000000');
       }
     }
   });
 
   const material = useMemo(() => 
-    createVisualizerMaterial(`#${color.getHexString()}`, textureData, {
-      emissive: `#${color.getHexString()}`,
-      emissiveIntensity: 1,
+    createVisualizerMaterial('#ffffff', textureData, {
+      emissive: '#000000',
+      emissiveIntensity: 0,
       transparent: true,
       opacity: 0.9,
-    }), [color, textureData]
+    }), [textureData]
   );
 
   return (
@@ -119,17 +119,17 @@ function CenterCore({ audioData, textureData }) {
       // Rotation
       meshRef.current.rotation.z += 0.02 + bassIntensity * 0.05;
       
-      // Update material
+      // Keep material white for texture mapping
       if (meshRef.current.material) {
-        (meshRef.current.material as any).emissiveIntensity = 2 + bassIntensity * 4;
+        (meshRef.current.material as any).emissiveIntensity = 0;
       }
     }
   });
 
   const material = useMemo(() => 
     createVisualizerMaterial('#ffffff', textureData, {
-      emissive: '#ffff88',
-      emissiveIntensity: 3,
+      emissive: '#000000',
+      emissiveIntensity: 0,
       transparent: true,
       opacity: 1,
     }), [textureData]
