@@ -17,28 +17,40 @@ export type Database = {
       custom_visualizers: {
         Row: {
           created_at: string
+          description: string | null
           id: string
+          is_public: boolean | null
           jsx_code: string
           name: string
-          prompt: string
+          preview_emoji: string | null
+          prompt: string | null
+          scale_factor: number
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
+          is_public?: boolean | null
           jsx_code: string
           name: string
-          prompt: string
+          preview_emoji?: string | null
+          prompt?: string | null
+          scale_factor?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
+          is_public?: boolean | null
           jsx_code?: string
           name?: string
-          prompt?: string
+          preview_emoji?: string | null
+          prompt?: string | null
+          scale_factor?: number
           updated_at?: string
           user_id?: string
         }

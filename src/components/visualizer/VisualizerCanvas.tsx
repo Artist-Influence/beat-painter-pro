@@ -3,10 +3,12 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useStudioStore } from "@/stores/studioStore";
-import { visualizerRegistry, VISUALIZER_SCALES } from "@/components/visualizers";
+import { visualizerRegistry, VISUALIZER_SCALES, isCustomVisualizer } from "@/components/visualizers";
 import type { VisualizerKey } from "@/components/visualizers";
 import type { AudioData } from "@/hooks/useAudioAnalysis";
 import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
+import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
+import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualizerLoader";
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -14,7 +16,22 @@ interface VisualizerCanvasProps {
 
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
-  const Visualizer = useMemo(() => visualizerRegistry[selected as VisualizerKey], [selected]);
+  const { customVisualizers } = useCustomVisualizers();
+  
+  const { Visualizer, scale } = useMemo(() => {
+    if (isCustomVisualizer(selected)) {
+      const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
+      return {
+        Visualizer: CustomVisualizerLoader,
+        scale: customViz?.scale_factor || 1.0
+      };
+    } else {
+      return {
+        Visualizer: visualizerRegistry[selected as keyof typeof visualizerRegistry],
+        scale: VISUALIZER_SCALES[selected] ?? 0.25
+      };
+    }
+  }, [selected, customVisualizers]);
 
   const [audioData, setAudioData] = useState<AudioData>({ frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 });
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -96,7 +113,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   }, [canvasRef]);
 
 
-  const scale = VISUALIZER_SCALES[selected] ?? 0.25;
+  
 
   const filterStyle = {
     filter: `brightness(${((filters.brightness ?? 100) - 0) / 100}) saturate(${((filters.saturation ?? 100) - 0) / 100}) contrast(${((filters.contrast ?? 100) - 0) / 100})`
@@ -131,7 +148,12 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
           <group position={[0, 0, 0]} scale={zoomLevel * scale}>
             <Suspense fallback={null}>
               {Visualizer && (
-                <Visualizer key={styleVersion} audioData={audioData} backgroundColor={backgroundColor} />
+                <Visualizer 
+                  key={styleVersion} 
+                  audioData={audioData} 
+                  backgroundColor={backgroundColor}
+                  {...(isCustomVisualizer(selected) ? { visualizerKey: selected } : {})}
+                />
               )}
             </Suspense>
           </group>

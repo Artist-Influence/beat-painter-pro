@@ -14,6 +14,7 @@ import DanasEyeVisualizer from "./DanasEyeVisualizer";
 import FluidBloomVisualizer from "./FluidBloomVisualizer";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
+import { CustomVisualizerLoader } from "./CustomVisualizerLoader";
 
 export type { VisualizerProps } from "../visualizer";
 
@@ -53,6 +54,12 @@ export const visualizerRegistry = {
   FluidBloomVisualizer,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
+  CustomVisualizerLoader,
 };
 
-export type VisualizerKey = keyof typeof visualizerRegistry;
+export type VisualizerKey = keyof typeof visualizerRegistry | `custom_${string}`;
+
+// Helper function to check if a key is a custom visualizer
+export function isCustomVisualizer(key: string): key is `custom_${string}` {
+  return key.startsWith('custom_');
+}

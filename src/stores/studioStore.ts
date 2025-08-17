@@ -16,13 +16,13 @@ interface AudioSensitivity {
 }
 
 interface StudioState {
-  selected: VisualizerKey;
+  selected: VisualizerKey | `custom_${string}`;
   backgroundColor: "#00FF00" | "#FFFFFF" | "#000000";
   filters: Filters;
   zoomLevel: number;
   audioElement: HTMLAudioElement | null;
   audioSensitivity: AudioSensitivity;
-  setSelected: (v: VisualizerKey) => void;
+  setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackground: (c: StudioState["backgroundColor"]) => void;
   setFilters: (f: Partial<Filters>) => void;
   setZoom: (z: number) => void;
