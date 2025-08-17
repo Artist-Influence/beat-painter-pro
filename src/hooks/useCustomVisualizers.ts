@@ -80,7 +80,8 @@ export function useCustomVisualizers() {
         description: `${data.visualizer.name} has been created`,
       });
 
-      // Refresh the list
+      // Refresh the list immediately 
+      setCustomVisualizers(prev => [...prev, data.visualizer]);
       await fetchCustomVisualizers();
       
       return data.visualizer;

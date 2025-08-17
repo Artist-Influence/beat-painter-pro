@@ -184,6 +184,11 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
 
     const generatedCode = data.choices[0].message.content;
     
+    // Validate the generated code has required components
+    if (!generatedCode || !generatedCode.includes('export default function') || !generatedCode.includes('useFrame')) {
+      throw new Error('Generated code is incomplete or invalid');
+    }
+    
     // Extract visualizer name from the generated code
     const nameMatch = generatedCode.match(/export default function (\w+)/);
     const visualizerName = nameMatch ? nameMatch[1] : 'CustomVisualizer';
