@@ -7,7 +7,7 @@ import { BottomBar } from './v2/BottomBar';
 import { FloatingActions } from './v2/FloatingActions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
-type LeftPanelType = 'visualizers' | 'styles' | 'custom' | null;
+type LeftPanelType = 'visualizers' | 'styles' | null;
 type RightPanelType = 'controls' | 'upload' | null;
 
 export function StudioLayoutV2() {

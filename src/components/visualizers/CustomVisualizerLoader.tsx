@@ -58,7 +58,19 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
           'createVisualizerMaterial',
           'useStudioStore',
           `
-          ${componentCode.replace('export default function', 'return function')}
+          try {
+            ${componentCode.replace('export default function', 'return function')}
+          } catch (error) {
+            console.error('Error in custom visualizer:', error);
+            return function ErrorVisualizer() {
+              return React.createElement('group', {}, 
+                React.createElement('mesh', {},
+                  React.createElement('boxGeometry', { args: [1, 1, 1] }),
+                  React.createElement('meshBasicMaterial', { color: '#ff0000', wireframe: true })
+                )
+              );
+            };
+          }
           `
         );
 

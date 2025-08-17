@@ -33,7 +33,7 @@ export default function {{VISUALIZER_NAME}}({
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
-  // Audio analysis
+  // Audio analysis with proper scaling
   const bass = useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
@@ -52,6 +52,7 @@ export default function {{VISUALIZER_NAME}}({
     return Math.min(sum / 85 / 255, 1.0);
   }, [frequency]);
 
+  // CRITICAL: Use white material for proper texture mapping
   const material = useMemo(() => 
     createVisualizerMaterial('#ffffff', textureData, {
       transparent: true,
@@ -64,11 +65,11 @@ export default function {{VISUALIZER_NAME}}({
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       
-      // Apply audio sensitivity multipliers
-      const bassIntensity = bass * audioSensitivity.bassMultiplier;
-      const midsIntensity = mids * audioSensitivity.midsMultiplier;
-      const highsIntensity = highs * audioSensitivity.highsMultiplier;
-      const speedMultiplier = audioSensitivity.animationSpeed;
+      // Apply audio sensitivity multipliers for audio-reactivity
+      const bassIntensity = bass * (audioSensitivity?.bassMultiplier || 1);
+      const midsIntensity = mids * (audioSensitivity?.midsMultiplier || 1);
+      const highsIntensity = highs * (audioSensitivity?.highsMultiplier || 1);
+      const speedMultiplier = audioSensitivity?.animationSpeed || 1;
       
       {{ANIMATION_LOGIC}}
     }
@@ -107,19 +108,26 @@ serve(async (req) => {
     // Build the generation prompt
     let generationPrompt = `You are an expert in creating Three.js React audio visualizers. Create a stunning, unique visualizer based on this description: "${prompt}"
 
-Requirements:
-1. The visualizer MUST be audio-reactive using bass, mids, and highs variables
-2. Use ONLY white (#ffffff) materials for seamless texture mapping
-3. Create smooth, organic animations that respond to audio
-4. Use createVisualizerMaterial with basic: true for proper texture mapping
-5. Include proper audio sensitivity multipliers (bassIntensity, midsIntensity, highsIntensity)
+CRITICAL REQUIREMENTS:
+1. The visualizer MUST be audio-reactive using bassIntensity, midsIntensity, and highsIntensity variables
+2. Use ONLY white (#ffffff) materials for seamless texture mapping - NO OTHER COLORS
+3. Create smooth, organic animations that respond to audio frequency data
+4. Use the provided material variable (already configured with createVisualizerMaterial)
+5. Include proper audio sensitivity multipliers in all animations
 6. Create visually striking 3D geometry that matches the description
 7. Use React Three Fiber patterns and hooks properly
 8. Keep animations smooth and performance-optimized
+9. MUST respond to audio - scale, rotate, or modify based on bassIntensity, midsIntensity, highsIntensity
+10. All meshes must use the white material variable provided for proper texture mapping
 
 Replace {{VISUALIZER_NAME}} with a proper React component name (PascalCase, no spaces).
-Replace {{ANIMATION_LOGIC}} with the animation code inside the useFrame hook.
-Replace {{RENDER_LOGIC}} with the 3D objects and geometries.
+Replace {{ANIMATION_LOGIC}} with animation code that uses bassIntensity, midsIntensity, highsIntensity.
+Replace {{RENDER_LOGIC}} with 3D objects that use the white material variable.
+
+EXAMPLE PATTERNS:
+- Scale: groupRef.current.scale.setScalar(1 + bassIntensity * 0.5)
+- Rotation: groupRef.current.rotation.y += (midsIntensity * 0.02 + 0.001) * speedMultiplier
+- Position: mesh.position.y = Math.sin(t + bassIntensity * 10) * highsIntensity
 
 Focus on creating something visually unique and audio-responsive. Make it beautiful and engaging.`;
 

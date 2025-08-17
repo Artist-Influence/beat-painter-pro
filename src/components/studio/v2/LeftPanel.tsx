@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Grid3X3, Palette, Sparkles } from 'lucide-react';
+import { Grid3X3, Palette } from 'lucide-react';
 import { TabButton } from './TabButton';
 import { VisualizerGrid } from './VisualizerGrid';
 import { StyleSelector } from '@/components/styles/StyleSelector';
 
-type LeftPanelType = 'visualizers' | 'styles' | 'custom' | null;
+type LeftPanelType = 'visualizers' | 'styles' | null;
 
 interface LeftPanelProps {
   activePanel: LeftPanelType;
@@ -28,12 +28,6 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
           label="Styles"
           isActive={activePanel === 'styles'}
           onClick={() => setActivePanel(activePanel === 'styles' ? null : 'styles')}
-        />
-        <TabButton
-          icon={<Sparkles />}
-          label="Custom"
-          isActive={activePanel === 'custom'}
-          onClick={() => setActivePanel(activePanel === 'custom' ? null : 'custom')}
         />
       </div>
 
@@ -59,18 +53,6 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
                 <div className="space-y-3">
                   <h3 className="text-white/80 text-sm font-medium mb-3">Visual Styles</h3>
                   <StyleSelector />
-                </div>
-              )}
-
-              {/* Custom Visualizers */}
-              {activePanel === 'custom' && (
-                <div className="space-y-3">
-                  <h3 className="text-white/80 text-sm font-medium mb-3">Custom Visualizers</h3>
-                  <div className="text-center py-8">
-                    <Sparkles className="w-8 h-8 text-white/40 mx-auto mb-2" />
-                    <p className="text-white/60 text-sm">Coming Soon</p>
-                    <p className="text-white/40 text-xs mt-1">Upload your own visualizer code</p>
-                  </div>
                 </div>
               )}
             </div>
