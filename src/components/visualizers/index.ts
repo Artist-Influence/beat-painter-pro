@@ -11,6 +11,7 @@ import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
 import DanasEyeVisualizer from "./DanasEyeVisualizer";
+import FluidBloomVisualizer from "./FluidBloomVisualizer";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
 
@@ -30,6 +31,7 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
   DanasEyeVisualizer: 0.25,
+  FluidBloomVisualizer: 0.3,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
 };
@@ -48,6 +50,7 @@ export const visualizerRegistry = {
   WaveRibbonsVisualizer,
   DNAHelixVisualizer,
   DanasEyeVisualizer,
+  FluidBloomVisualizer,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
 };

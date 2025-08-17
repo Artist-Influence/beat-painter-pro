@@ -18,6 +18,7 @@ export function VisualizerGrid() {
     { id: 'SacredGeometryPulseVisualizer', name: 'Sacred Geometry', preview: '⚡', description: 'Ancient geometric forms' },
     { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },
     { id: 'DanasEyeVisualizer', name: "Dana's Eye", preview: '👁️', description: 'Radial light burst' },
+    { id: 'FluidBloomVisualizer', name: 'Fluid Bloom', preview: '🌊', description: 'Organic flowing shapes' },
   ];
 
   return (
