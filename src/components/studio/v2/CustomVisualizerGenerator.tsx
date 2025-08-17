@@ -58,10 +58,26 @@ export function CustomVisualizerGenerator({
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    // Allow generation with just image, just styles, or just prompt
+    if (!prompt.trim() && !referenceImage && selectedStyles.length === 0) {
+      return;
+    }
+
+    let finalPrompt = prompt.trim();
+    
+    // Generate a default prompt if none provided but have image or styles
+    if (!finalPrompt && (referenceImage || selectedStyles.length > 0)) {
+      if (referenceImage && selectedStyles.length > 0) {
+        finalPrompt = `Create a visualizer inspired by the uploaded reference image and mixing elements from the selected styles: ${selectedStyles.join(', ')}`;
+      } else if (referenceImage) {
+        finalPrompt = "Create a visualizer inspired by the uploaded reference image";
+      } else if (selectedStyles.length > 0) {
+        finalPrompt = `Create a visualizer mixing elements from these styles: ${selectedStyles.join(', ')}`;
+      }
+    }
 
     const result = await generateVisualizer({
-      prompt: prompt.trim(),
+      prompt: finalPrompt,
       referenceImage: referenceImage || undefined,
       mixStyles: selectedStyles.length > 0 ? selectedStyles : undefined,
     });
@@ -120,9 +136,9 @@ export function CustomVisualizerGenerator({
 
             <TabsContent value="prompt" className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/70">Describe your visualizer</label>
+                <label className="text-sm text-white/70">Describe your visualizer (optional)</label>
                 <Textarea
-                  placeholder="Describe the visual style, shapes, movement, and feel you want. For example: 'Flowing liquid mercury with electric blue accents that pulse with the bass, forming organic crystalline structures that rotate and morph..'"
+                  placeholder="Describe the visual style, shapes, movement, and feel you want. Leave blank to generate based on uploaded image or selected styles only."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   className="min-h-24 bg-white/10 border-white/20 text-white placeholder:text-white/50"
@@ -164,7 +180,7 @@ export function CustomVisualizerGenerator({
                         <img 
                           src={imagePreview} 
                           alt="Reference" 
-                          className="w-full h-48 object-cover rounded-lg"
+                          className="w-full max-h-64 object-contain rounded-lg bg-black/20"
                         />
                         <Button
                           variant="outline"
@@ -185,7 +201,7 @@ export function CustomVisualizerGenerator({
                     />
                   </div>
                   <p className="text-xs text-white/50">
-                    Upload a reference image to inspire the visual style of your custom visualizer
+                    Upload a reference image to generate a visualizer inspired by its visual style. No text prompt needed!
                   </p>
                 </div>
               </div>
@@ -193,7 +209,10 @@ export function CustomVisualizerGenerator({
 
             <TabsContent value="mix" className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/70">Mix elements from existing visualizers</label>
+                <label className="text-sm text-white/70">Mix elements from existing visualizers (optional)</label>
+                <p className="text-xs text-white/50 mb-3">
+                  Select styles to combine. No text prompt needed - just pick your favorites!
+                </p>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                   {availableStyles.map((style) => {
                     const isSelected = selectedStyles.includes(style);
@@ -260,7 +279,7 @@ export function CustomVisualizerGenerator({
           
           <Button
             onClick={handleGenerate}
-            disabled={!prompt.trim() || isGenerating}
+            disabled={((!prompt.trim() && !referenceImage && selectedStyles.length === 0) || isGenerating)}
             className="bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
           >
             {isGenerating ? (
