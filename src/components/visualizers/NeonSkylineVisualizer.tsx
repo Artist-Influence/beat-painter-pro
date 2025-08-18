@@ -187,21 +187,6 @@ export default function NeonSkylineVisualizer({
         />
       </group>
 
-      {/* Full-screen style overlay for better visual styles visibility */}
-      {textureData.texture && (
-        <mesh position={[0, 0, -2]} renderOrder={-1} frustumCulled={false}>
-          <planeGeometry args={[viewport.width * 1.2, viewport.height * 1.2]} />
-          <meshBasicMaterial 
-            map={textureData.texture} 
-            transparent 
-            opacity={0.25}
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-            blending={THREE.MultiplyBlending}
-          />
-        </mesh>
-      )}
     </>
   );
 }
