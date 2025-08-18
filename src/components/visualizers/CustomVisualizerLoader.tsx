@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { VisualizerProps } from '../visualizer';
+import { DynamicVisualizer } from '../visualizer/DynamicVisualizer';
 
 interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
@@ -9,7 +10,7 @@ interface CustomVisualizerLoaderProps extends VisualizerProps {
 
 export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisualizerLoaderProps) {
   const { user } = useAuth();
-  const [CustomComponent, setCustomComponent] = useState<React.ComponentType<VisualizerProps> | null>(null);
+  const [code, setCode] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,67 +44,7 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
           throw new Error('Custom visualizer not found');
         }
 
-        // Create a dynamic React component from the JSX code
-        const componentCode = data.jsx_code || '';
-        
-        // Sanitize: remove imports and TypeScript before eval
-        const sanitizedCode = (() => {
-          let code = componentCode;
-          code = code.replace(/^[\t ]*import[^;]+;?$/gm, '');
-          code = code.replace(/useRef<[^>]+>\(/g, 'useRef(');
-          code = code.replace(/useMemo<[^>]+>\(/g, 'useMemo(');
-          code = code.replace(/: [A-Za-z0-9_<>,\[\]\|\.\s]+(?=[,)}\r\n])/g, '');
-          code = code.replace(/\sas\s+[A-Za-z0-9_<>,\[\]\.\s]+/g, '');
-          return code;
-        })();
-        
-        // Create a function that returns the component
-        const createComponent = new Function(
-          'React',
-          'useRef',
-          'useMemo',
-          'useFrame',
-          'THREE',
-          'useVisualizerTexture',
-          'createVisualizerMaterial',
-          'useStudioStore',
-          `
-          try {
-            ${sanitizedCode.replace('export default function', 'return function')}
-          } catch (error) {
-            console.error('Error in custom visualizer:', error);
-            return function ErrorVisualizer() {
-              return React.createElement('group', {}, 
-                React.createElement('mesh', {},
-                  React.createElement('boxGeometry', { args: [1, 1, 1] }),
-                  React.createElement('meshBasicMaterial', { color: '#ff0000', wireframe: true })
-                )
-              );
-            };
-          }
-          `
-        );
-
-        // Import the required dependencies
-        const { useRef, useMemo } = React;
-        const { useFrame } = await import('@react-three/fiber');
-        const THREE = await import('three');
-        const { useVisualizerTexture, createVisualizerMaterial } = await import('@/hooks/useVisualizerTexture');
-        const { useStudioStore } = await import('@/stores/studioStore');
-
-        // Create the component with all dependencies
-        const CustomVisualizerComponent = createComponent(
-          React,
-          useRef,
-          useMemo,
-          useFrame,
-          THREE,
-          useVisualizerTexture,
-          createVisualizerMaterial,
-          useStudioStore
-        );
-
-        setCustomComponent(() => CustomVisualizerComponent);
+        setCode(data.jsx_code || '');
       } catch (err) {
         console.error('Error loading custom visualizer:', err);
         setError(err instanceof Error ? err.message : 'Failed to load custom visualizer');
@@ -117,7 +58,7 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
 
   if (isLoading) {
     return (
-      <group>
+      <group scale={0.25}>
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
           <meshBasicMaterial color="#666666" wireframe />
@@ -126,9 +67,9 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
     );
   }
 
-  if (error || !CustomComponent) {
+  if (error || !code) {
     return (
-      <group>
+      <group scale={0.25}>
         <mesh>
           <boxGeometry args={[2, 2, 2]} />
           <meshBasicMaterial color="#ff0000" wireframe />
@@ -137,5 +78,5 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
     );
   }
 
-  return <CustomComponent {...props} />;
+  return <DynamicVisualizer code={code} {...props} />;
 }

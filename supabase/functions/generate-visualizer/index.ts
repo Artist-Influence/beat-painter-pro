@@ -11,81 +11,59 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const VISUALIZER_TEMPLATE = `import React, { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import type { VisualizerProps } from "../visualizer";
-import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
-import { useStudioStore } from "@/stores/studioStore";
+const VISUALIZER_TEMPLATE = `
+// Create a React Three Fiber visualizer component
+// Return a plain JavaScript function (no imports, no TypeScript)
+// Use React.createElement instead of JSX
+// Must follow this EXACT structure:
 
-export default function {{VISUALIZER_NAME}}({
-  audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 },
-  styleAdjustments = { brightness: 100, saturation: 100, contrast: 100 },
-  width = 1080,
-  height = 1080,
-  zoomLevel = 1,
-  backgroundColor = '#FFFFFF',
-}: VisualizerProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const textureData = useVisualizerTexture();
-  const { audioSensitivity } = useStudioStore();
+function {{VISUALIZER_NAME}}(props) {
+  const audioData = props.audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const meshRef = React.useRef(null);
   
-  const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
-  const frequency = safeAudioData.frequency || Array(256).fill(0);
+  // Calculate frequency bands
+  const frequency = audioData.frequency || Array(256).fill(0);
   
-  // Audio analysis with proper scaling
-  const bass = useMemo(() => {
+  const bass = React.useMemo(() => {
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
     return Math.min(sum / 86 / 255, 1.0);
   }, [frequency]);
   
-  const mids = useMemo(() => {
+  const mids = React.useMemo(() => {
     let sum = 0;
     for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
     return Math.min(sum / 85 / 255, 1.0);
   }, [frequency]);
   
-  const highs = useMemo(() => {
+  const highs = React.useMemo(() => {
     let sum = 0;
     for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
     return Math.min(sum / 85 / 255, 1.0);
   }, [frequency]);
-
-  // CRITICAL: Use white material for proper texture mapping
-  const material = useMemo(() => 
-    createVisualizerMaterial('#ffffff', textureData, {
-      transparent: true,
-      opacity: 0.9,
-      basic: true,
-    }), [textureData]
-  );
-
-  useFrame(({ clock }) => {
-    if (groupRef.current) {
-      const t = clock.getElapsedTime();
-      
-      // Apply audio sensitivity multipliers for audio-reactivity
-      const bassIntensity = bass * (audioSensitivity?.bassMultiplier || 1);
-      const midsIntensity = mids * (audioSensitivity?.midsMultiplier || 1);
-      const highsIntensity = highs * (audioSensitivity?.highsMultiplier || 1);
-      const speedMultiplier = audioSensitivity?.animationSpeed || 1;
-      
+  
+  // Animation using useFrame
+  ReactThreeFiber.useFrame(function(state) {
+    if (meshRef.current) {
+      const t = state.clock.getElapsedTime();
       {{ANIMATION_LOGIC}}
     }
   });
   
-  return (
-    <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
-      
-      <group ref={groupRef}>
-        {{RENDER_LOGIC}}
-      </group>
-    </>
+  // Return React.createElement structure (no JSX!)
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement('ambientLight', { intensity: 0.5 }),
+    React.createElement('directionalLight', { 
+      position: [5, 5, 5], 
+      intensity: 1 
+    }),
+    {{RENDER_LOGIC}}
   );
-}`;
+}
+
+return {{VISUALIZER_NAME}};`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -110,42 +88,39 @@ serve(async (req) => {
     const randomSeed = Math.random().toString(36).substring(7);
     
     // Build the generation prompt
-    let generationPrompt = `You are an expert in creating Three.js React audio visualizers. Create a stunning, UNIQUE visualizer based on this description: "${prompt}"
+    let generationPrompt = `You are an expert React Three.js developer who creates audio-reactive visualizers using React.createElement.
+
+Create a visualizer based on: "${prompt}"
 
 GENERATION ID: ${timestamp}-${randomSeed}
 
 CRITICAL REQUIREMENTS:
-1. The visualizer MUST be audio-reactive using bassIntensity, midsIntensity, and highsIntensity variables
-2. Use ONLY white (#ffffff) materials - NEVER use any other colors, even with low opacity
-3. MUST include natural resting animations (gentle rotation, breathing, subtle movements) when no audio is present
-4. Create smooth, organic animations that respond to audio frequency data
-5. Use the provided white material variable (already configured with createVisualizerMaterial)
-6. Include proper audio sensitivity multipliers in all animations
-7. Create visually striking 3D geometry that matches the description uniquely
-8. Use React Three Fiber patterns and hooks properly
-9. Keep animations smooth and performance-optimized
-10. MUST respond to audio - scale, rotate, or modify based on bassIntensity, midsIntensity, highsIntensity
-11. ALL meshes must use the white material variable - NO exceptions
-12. Add natural idle animations like gentle rotation or breathing motion using time (t)
+1. Return ONLY a JavaScript function (no imports, no exports, no TypeScript)
+2. Use React.createElement() instead of JSX syntax
+3. All materials must use color: '#ffffff' (white only)
+4. Use audio reactivity (bass, mids, highs) for animations
+5. Include natural idle animations using time (t)
+6. Keep geometry at reasonable scale (1-2 units max)
+7. Use these available objects: React, ReactThreeFiber, THREE
 
-ABSOLUTE FORMAT RULES:
-- Do NOT include any import statements.
-- Do NOT use TypeScript types or generics. Use plain JavaScript only.
-- Only use these in-scope variables: React, useFrame, THREE, useVisualizerTexture, createVisualizerMaterial, useStudioStore.
-- Return a single React component that fills the template EXACTLY.
+TEMPLATE STRUCTURE TO FOLLOW:
+${VISUALIZER_TEMPLATE}
 
-Replace {{VISUALIZER_NAME}} with a proper React component name (PascalCase, no spaces).
-Replace {{ANIMATION_LOGIC}} with animation code that uses bassIntensity, midsIntensity, highsIntensity.
-Replace {{RENDER_LOGIC}} with 3D objects that use the white material variable.
+Replace {{VISUALIZER_NAME}} with a PascalCase component name.
+Replace {{ANIMATION_LOGIC}} with animation code using bass, mids, highs, and t.
+Replace {{RENDER_LOGIC}} with React.createElement calls for 3D objects.
 
-EXAMPLE PATTERNS:
-- Natural rotation: groupRef.current.rotation.z = t * 0.05 + bassIntensity * 0.1
-- Breathing motion: groupRef.current.scale.setScalar(1 + Math.sin(t * 1.5) * 0.02 + bassIntensity * 0.5)
-- Audio-reactive position: mesh.position.y = Math.sin(t + bassIntensity * 10) * highsIntensity
-- Combined effects: mesh.rotation.y = t * 0.1 + midsIntensity * 2
+ANIMATION EXAMPLES:
+- meshRef.current.rotation.x = t * 0.5 + bass * 2;
+- meshRef.current.rotation.y = t * 0.3 + mids * 3;
+- meshRef.current.scale.setScalar(1 + bass * 0.5 + Math.sin(t) * 0.1);
 
-MANDATORY: Include both resting animations (using time t) AND audio-reactive animations.
-Focus on creating something visually UNIQUE and engaging. Each generation must be completely different.`;
+RENDER EXAMPLES:
+- React.createElement('mesh', { ref: meshRef }, ...)
+- React.createElement('boxGeometry', { args: [1, 1, 1] })
+- React.createElement('meshStandardMaterial', { color: '#ffffff' })
+
+Return ONLY the function code that matches the template exactly.`;
 
     if (referenceImage) {
       generationPrompt += `\n\nReference image provided - analyze the visual style and incorporate similar aesthetics into the 3D visualizer.`;
@@ -190,21 +165,64 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
 
     const generatedCode = data.choices[0].message.content;
     
-    // Validate the generated code has required components
-    if (!generatedCode || !generatedCode.includes('export default function') || !generatedCode.includes('useFrame')) {
-      throw new Error('Generated code is incomplete or invalid');
-    }
-    
-    // Sanitize generated code to ensure it's runtime-safe JS
-    const cleanedCode = generatedCode
+    // Clean the generated code
+    let cleanedCode = generatedCode
+      .replace(/```javascript/g, '')
+      .replace(/```js/g, '')
+      .replace(/```/g, '')
       .replace(/^[\t ]*import[^;]+;?$/gm, '')
       .replace(/useRef<[^>]+>\(/g, 'useRef(')
       .replace(/useMemo<[^>]+>\(/g, 'useMemo(')
       .replace(/: [A-Za-z0-9_<>,\[\]\|\.\s]+(?=[,)}\r\n])/g, '')
-      .replace(/\sas\s+[A-Za-z0-9_<>,\[\]\.\s]+/g, '');
+      .replace(/\sas\s+[A-Za-z0-9_<>,\[\]\.\s]+/g, '')
+      .trim();
+
+    // Validate the generated code has required components
+    if (!cleanedCode || !cleanedCode.includes('function') || !cleanedCode.includes('return')) {
+      // Return a fallback visualizer if generation fails
+      const fallbackName = `FallbackVisualizer${timestamp}`;
+      cleanedCode = `
+        function ${fallbackName}(props) {
+          const meshRef = React.useRef(null);
+          
+          ReactThreeFiber.useFrame(function(state) {
+            if (meshRef.current) {
+              const t = state.clock.getElapsedTime();
+              meshRef.current.rotation.x = t * 0.5;
+              meshRef.current.rotation.y = t * 0.3;
+              meshRef.current.scale.setScalar(1 + Math.sin(t * 2) * 0.1);
+            }
+          });
+          
+          return React.createElement(
+            React.Fragment,
+            null,
+            React.createElement('ambientLight', { intensity: 0.5 }),
+            React.createElement('directionalLight', { position: [5, 5, 5], intensity: 1 }),
+            React.createElement('mesh', { ref: meshRef },
+              React.createElement('boxGeometry', { args: [1, 1, 1] }),
+              React.createElement('meshStandardMaterial', { 
+                color: '#ffffff',
+                metalness: 0.3,
+                roughness: 0.7
+              })
+            )
+          );
+        }
+        
+        return ${fallbackName};
+      `;
+    }
+    
+    // Wrap in a function that returns the component
+    const wrappedCode = `
+      return (function() {
+        ${cleanedCode}
+      })();
+    `;
     
     // Extract visualizer name from the cleaned code
-    const nameMatch = cleanedCode.match(/export default function (\w+)/);
+    const nameMatch = cleanedCode.match(/function (\w+)/);
     const visualizerName = nameMatch ? nameMatch[1] : 'CustomVisualizer';
     
     // Generate a preview emoji based on the prompt
@@ -237,7 +255,7 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
         name: visualizerName,
         description: prompt,
         prompt: prompt,
-        jsx_code: cleanedCode,
+        jsx_code: wrappedCode,
         scale_factor: 0.25,
         preview_emoji: previewEmoji,
         is_public: false
@@ -255,7 +273,7 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
 
     return new Response(JSON.stringify({ 
       visualizer: savedVisualizer,
-      code: cleanedCode
+      code: wrappedCode
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
