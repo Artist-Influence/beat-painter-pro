@@ -57,25 +57,29 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   useFrame(({ clock }) => {
     if (buildingRef.current && buildingMaterial) {
       const t = clock.getElapsedTime();
-      const height = baseHeight + buildingFreq * 5.0; // Much more dramatic height response
+      const height = Math.max(baseHeight + buildingFreq * 3.0, 0.1); // Prevent zero/negative height
       const pulse = Math.sin(t * 4 + index * 0.5) * 0.5 + 0.5;
       
-      // Much more dramatic audio response for width and depth
-      const audioWidth = width * (1 + buildingFreq * 3.0);
-      const audioDepth = width * (1 + buildingFreq * 2.5);
+      // Controlled audio response for width and depth
+      const audioWidth = Math.max(width * (1 + buildingFreq * 1.5), 0.1);
+      const audioDepth = Math.max(width * (1 + buildingFreq * 1.2), 0.1);
       
       // Keep buildings on ground level - no Y movement
       buildingRef.current.scale.set(audioWidth, height, audioDepth);
-      buildingRef.current.position.set(0, height / 2, 0);
-      buildingMaterial.emissiveIntensity = 1.2 + buildingFreq * 8.0 + pulse * 2.0;
+      buildingRef.current.position.set(position[0], height / 2, position[2]);
+      
+      // Update material emissive intensity safely
+      if (buildingMaterial.emissiveIntensity !== undefined) {
+        buildingMaterial.emissiveIntensity = Math.min(1.2 + buildingFreq * 4.0 + pulse * 1.0, 10.0);
+      }
     }
     
     if (glowRef.current && glowMaterial) {
-      glowMaterial.opacity = 0.1 + buildingFreq * 0.3;
+      glowMaterial.opacity = Math.min(0.1 + buildingFreq * 0.3, 0.8);
     }
     
     if (windowsRef.current) {
-      const showWindows = buildingFreq > 0.3;
+      const showWindows = buildingFreq > 0.2;
       windowsRef.current.visible = showWindows;
     }
   });
@@ -97,7 +101,7 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
       </mesh>
       
       {/* Glow effect */}
-      <mesh ref={glowRef} material={glowMaterial}>
+      <mesh ref={glowRef} material={glowMaterial} position={[0, baseHeight / 2, 0]}>
         <boxGeometry args={[width * 1.1, baseHeight * 1.1, width * 1.1]} />
       </mesh>
       
@@ -146,7 +150,10 @@ export default function NeonSkylineVisualizer({
   useFrame(({ clock }) => {
     if (groupRef.current) {
       // Keep horizontal - remove vertical movement
-      groupRef.current.position.y = 0;
+      groupRef.current.position.y = -1;
+      // Add subtle breathing effect
+      const breathe = Math.sin(clock.getElapsedTime() * 0.5) * 0.05;
+      groupRef.current.scale.setScalar(1 + breathe);
     }
   });
 
@@ -182,16 +189,16 @@ export default function NeonSkylineVisualizer({
 
       {/* Full-screen style overlay for better visual styles visibility */}
       {textureData.texture && (
-        <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
-          <planeGeometry args={[viewport.width, viewport.height]} />
+        <mesh position={[0, 0, -2]} renderOrder={-1} frustumCulled={false}>
+          <planeGeometry args={[viewport.width * 1.2, viewport.height * 1.2]} />
           <meshBasicMaterial 
             map={textureData.texture} 
             transparent 
-            opacity={0.35}
+            opacity={0.25}
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
-            blending={THREE.AdditiveBlending}
+            blending={THREE.MultiplyBlending}
           />
         </mesh>
       )}
