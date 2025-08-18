@@ -62,7 +62,7 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
         const y = Math.sin(angle) * radius;
         
         const material = createVisualizerMaterial(
-          "#ffffff",
+          primaryColor,
           textureData,
           {
             emissive: i % 2 === 0 ? primaryColor : accentColor,
@@ -143,7 +143,7 @@ export default function PsychedelicMandalaVisualizer({
         {/* Sacred geometry center - attracts focus */}
         <mesh
           material={createVisualizerMaterial(
-            "#ffffff",
+            textureData.colors.primary,
             textureData,
             {
               emissive: textureData.colors.primary,

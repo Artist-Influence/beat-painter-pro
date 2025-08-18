@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { generateLocalVisualizer } from '@/components/studio/LocalVisualizerGenerator';
 
 interface DynamicVisualizerProps {
   code: string;
@@ -20,48 +21,53 @@ export function DynamicVisualizer({
 
   useEffect(() => {
     console.log('Loading custom visualizer with code:', code);
-    
-    try {
-      // Clean the code more thoroughly
-      let cleanCode = code
+
+    const sanitize = (src: string) => {
+      if (!src) return '';
+      let c = String(src)
+        .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, ''))
         .replace(/export\s+default\s+/g, '')
-        .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
-        .replace(/:\s*\w+(\[\])?/g, '') // Remove TypeScript types
-        .replace(/interface\s+\w+\s*{[^}]*}/g, '') // Remove interfaces
-        .replace(/type\s+\w+\s*=.*?;/g, '') // Remove type definitions
+        .replace(/import\s+.*?from\s+['\"][^'\"]+['\"];?/g, '')
+        .replace(/:\s*\w+(\[\])?/g, '')
+        .replace(/interface\s+\w+\s*{[^}]*}/g, '')
+        .replace(/type\s+\w+\s*=.*?;/g, '')
         .trim();
 
-      console.log('Cleaned code:', cleanCode);
+      // Ensure we return a function from the factory
+      if (!/^return\s/.test(c)) {
+        if (/function\s+CustomVisualizer\b/.test(c)) {
+          c += '\nreturn CustomVisualizer;';
+        } else if (/^function\s+\w+/.test(c)) {
+          c += '\nreturn (typeof CustomVisualizer !== "undefined" ? CustomVisualizer : null);';
+        } else if (/^\(/.test(c) || /=>/.test(c)) {
+          c = 'return (' + c + ');';
+        } else if (!c.startsWith('return')) {
+          // As a last resort, wrap it so we can "return" whatever it defines
+          c = 'return (function(){' + c + '})();';
+        }
+      }
+      return c;
+    };
 
-      // Create the component function
-      const createComponent = new Function(
-        'React',
-        'ReactThreeFiber',
-        'THREE',
-        cleanCode
-      );
+    const compile = (src: string) => {
+      const factory = new Function('React', 'ReactThreeFiber', 'THREE', src);
+      return factory(React, { useFrame }, THREE);
+    };
 
-      // Execute with dependencies
-      const GeneratedComponent = createComponent(
-        React,
-        { useFrame },
-        THREE
-      );
+    try {
+      const cleanCode = sanitize(code);
+      console.log('Sanitized code to execute:', cleanCode);
+      const GeneratedComponent: any = compile(cleanCode);
 
-      console.log('Generated component:', GeneratedComponent);
-
-      // Test if it's a valid function
       if (typeof GeneratedComponent !== 'function') {
         throw new Error('Generated code did not return a function');
       }
 
-      // Wrap in error boundary with better error handling
       const SafeComponent = (props: any) => {
         try {
           return <GeneratedComponent {...props} />;
         } catch (err) {
           console.error('Runtime error in custom visualizer:', err);
-          // Return fallback white cube
           return (
             <>
               <ambientLight intensity={0.5} />
@@ -78,11 +84,23 @@ export function DynamicVisualizer({
       setComponent(() => SafeComponent);
       setError('');
     } catch (err) {
-      console.error('Error creating component:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      
-      // Set fallback component
-      setComponent(() => FallbackVisualizer);
+      console.error('Error creating component, falling back to local template:', err);
+
+      try {
+        const fallbackCode = generateLocalVisualizer('icosahedron');
+        const cleanFallback = sanitize(fallbackCode);
+        const FallbackComponent: any = compile(cleanFallback);
+        if (typeof FallbackComponent === 'function') {
+          setComponent(() => FallbackComponent);
+          setError('');
+          return;
+        }
+        throw new Error('Local fallback did not return a function');
+      } catch (fallbackErr) {
+        console.error('Local fallback failed:', fallbackErr);
+        setError(fallbackErr instanceof Error ? fallbackErr.message : 'Unknown error');
+        setComponent(() => FallbackVisualizer);
+      }
     }
   }, [code]);
 

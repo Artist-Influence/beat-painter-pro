@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 
 function NeonBuilding({ position, baseHeight, width, index, audioData, textureData }) {
   const buildingRef = useRef<THREE.Mesh>(null);
@@ -20,33 +21,22 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
     return Math.min(sum / 8 / 255, 1.0);
   }, [freqData, index]);
 
-  // Get applied texture and colors directly like other visualizers
-  const extractedColors = (window as any).extractedColors;
-  const appliedTexture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const secondaryColor = extractedColors?.secondary || '#ffff00';
+  // Use provided textureData for colors and texture mapping
+  const primaryColor = textureData?.colors?.primary || '#ffffff';
+  const secondaryColor = textureData?.colors?.secondary || '#ffff00';
 
   const buildingMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(primaryColor),
-      emissive: new THREE.Color(extractedColors?.isNeon ? primaryColor : primaryColor),
-      emissiveIntensity: extractedColors?.isNeon ? 2.0 : 1.2,
-      metalness: extractedColors?.isMetallic ? 0.9 : 0.7,
-      roughness: extractedColors?.isMetallic ? 0.1 : 0.3,
-      map: appliedTexture,
-      emissiveMap: appliedTexture,
-    });
-  }, [primaryColor, appliedTexture, extractedColors]);
+    return createVisualizerMaterial(
+      primaryColor,
+      textureData || { texture: null, colors: { primary: primaryColor, secondary: secondaryColor, accent: secondaryColor, isNeon: false, isMetallic: false }, textureVersion: 0 },
+      {
+        emissive: primaryColor,
+        emissiveIntensity: 1.2,
+        metalness: textureData?.colors?.isMetallic ? 0.9 : 0.7,
+        roughness: textureData?.colors?.isMetallic ? 0.1 : 0.3,
+      }
+    );
+  }, [primaryColor, secondaryColor, textureData]);
 
   const glowMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
@@ -133,6 +123,7 @@ export default function NeonSkylineVisualizer({
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { viewport } = useThree();
+  const textureData = useVisualizerTexture();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
@@ -175,7 +166,7 @@ export default function NeonSkylineVisualizer({
             width={building.width}
             index={building.index}
             audioData={audioData}
-            textureData={null}
+            textureData={textureData}
           />
         ))}
         
@@ -185,18 +176,18 @@ export default function NeonSkylineVisualizer({
           size={1 + bassIntensity * 2}
           speed={0.3 + bassIntensity}
           opacity={0.2 + bassIntensity * 0.3}
-          color={(window as any).extractedColors?.primary || "#ffffff"}
+          color={textureData.colors.primary}
         />
       </group>
 
       {/* Full-screen style overlay for better visual styles visibility */}
-      {(window as any).appliedTexture && (
+      {textureData.texture && (
         <mesh position={[0, 0, 0]} renderOrder={999} frustumCulled={false}>
           <planeGeometry args={[viewport.width, viewport.height]} />
           <meshBasicMaterial 
-            map={(window as any).appliedTexture} 
+            map={textureData.texture} 
             transparent 
-            opacity={0.4}
+            opacity={0.35}
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
