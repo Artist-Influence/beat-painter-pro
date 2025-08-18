@@ -128,6 +128,12 @@ CRITICAL REQUIREMENTS:
 11. ALL meshes must use the white material variable - NO exceptions
 12. Add natural idle animations like gentle rotation or breathing motion using time (t)
 
+ABSOLUTE FORMAT RULES:
+- Do NOT include any import statements.
+- Do NOT use TypeScript types or generics. Use plain JavaScript only.
+- Only use these in-scope variables: React, useFrame, THREE, useVisualizerTexture, createVisualizerMaterial, useStudioStore.
+- Return a single React component that fills the template EXACTLY.
+
 Replace {{VISUALIZER_NAME}} with a proper React component name (PascalCase, no spaces).
 Replace {{ANIMATION_LOGIC}} with animation code that uses bassIntensity, midsIntensity, highsIntensity.
 Replace {{RENDER_LOGIC}} with 3D objects that use the white material variable.
@@ -189,8 +195,16 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
       throw new Error('Generated code is incomplete or invalid');
     }
     
-    // Extract visualizer name from the generated code
-    const nameMatch = generatedCode.match(/export default function (\w+)/);
+    // Sanitize generated code to ensure it's runtime-safe JS
+    const cleanedCode = generatedCode
+      .replace(/^[\t ]*import[^;]+;?$/gm, '')
+      .replace(/useRef<[^>]+>\(/g, 'useRef(')
+      .replace(/useMemo<[^>]+>\(/g, 'useMemo(')
+      .replace(/: [A-Za-z0-9_<>,\[\]\|\.\s]+(?=[,)}\r\n])/g, '')
+      .replace(/\sas\s+[A-Za-z0-9_<>,\[\]\.\s]+/g, '');
+    
+    // Extract visualizer name from the cleaned code
+    const nameMatch = cleanedCode.match(/export default function (\w+)/);
     const visualizerName = nameMatch ? nameMatch[1] : 'CustomVisualizer';
     
     // Generate a preview emoji based on the prompt
@@ -223,8 +237,8 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
         name: visualizerName,
         description: prompt,
         prompt: prompt,
-        jsx_code: generatedCode,
-        scale_factor: 1.0,
+        jsx_code: cleanedCode,
+        scale_factor: 0.25,
         preview_emoji: previewEmoji,
         is_public: false
       })
@@ -241,7 +255,7 @@ Focus on creating something visually UNIQUE and engaging. Each generation must b
 
     return new Response(JSON.stringify({ 
       visualizer: savedVisualizer,
-      code: generatedCode
+      code: cleanedCode
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

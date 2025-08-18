@@ -23,7 +23,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
       return {
         Visualizer: CustomVisualizerLoader,
-        scale: customViz?.scale_factor || 1.0
+        scale: customViz?.scale_factor || 0.25
       };
     } else {
       return {

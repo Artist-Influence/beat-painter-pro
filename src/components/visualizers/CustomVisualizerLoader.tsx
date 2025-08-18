@@ -44,8 +44,18 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
         }
 
         // Create a dynamic React component from the JSX code
-        // This is safe because we control the code generation and it comes from our own database
-        const componentCode = data.jsx_code;
+        const componentCode = data.jsx_code || '';
+        
+        // Sanitize: remove imports and TypeScript before eval
+        const sanitizedCode = (() => {
+          let code = componentCode;
+          code = code.replace(/^[\t ]*import[^;]+;?$/gm, '');
+          code = code.replace(/useRef<[^>]+>\(/g, 'useRef(');
+          code = code.replace(/useMemo<[^>]+>\(/g, 'useMemo(');
+          code = code.replace(/: [A-Za-z0-9_<>,\[\]\|\.\s]+(?=[,)}\r\n])/g, '');
+          code = code.replace(/\sas\s+[A-Za-z0-9_<>,\[\]\.\s]+/g, '');
+          return code;
+        })();
         
         // Create a function that returns the component
         const createComponent = new Function(
@@ -59,7 +69,7 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
           'useStudioStore',
           `
           try {
-            ${componentCode.replace('export default function', 'return function')}
+            ${sanitizedCode.replace('export default function', 'return function')}
           } catch (error) {
             console.error('Error in custom visualizer:', error);
             return function ErrorVisualizer() {
