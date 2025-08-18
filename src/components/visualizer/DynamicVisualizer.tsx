@@ -19,15 +19,21 @@ export function DynamicVisualizer({
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
+    console.log('Loading custom visualizer with code:', code);
+    
     try {
-      // Clean the code
+      // Clean the code more thoroughly
       let cleanCode = code
         .replace(/export\s+default\s+/g, '')
         .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
         .replace(/:\s*\w+(\[\])?/g, '') // Remove TypeScript types
+        .replace(/interface\s+\w+\s*{[^}]*}/g, '') // Remove interfaces
+        .replace(/type\s+\w+\s*=.*?;/g, '') // Remove type definitions
         .trim();
 
-      // Create a function that returns the component
+      console.log('Cleaned code:', cleanCode);
+
+      // Create the component function
       const createComponent = new Function(
         'React',
         'ReactThreeFiber',
@@ -35,14 +41,21 @@ export function DynamicVisualizer({
         cleanCode
       );
 
-      // Execute with the required dependencies
+      // Execute with dependencies
       const GeneratedComponent = createComponent(
         React,
         { useFrame },
         THREE
       );
 
-      // Wrap in error boundary
+      console.log('Generated component:', GeneratedComponent);
+
+      // Test if it's a valid function
+      if (typeof GeneratedComponent !== 'function') {
+        throw new Error('Generated code did not return a function');
+      }
+
+      // Wrap in error boundary with better error handling
       const SafeComponent = (props: any) => {
         try {
           return <GeneratedComponent {...props} />;
@@ -65,7 +78,7 @@ export function DynamicVisualizer({
       setComponent(() => SafeComponent);
       setError('');
     } catch (err) {
-      console.error('Error loading custom visualizer:', err);
+      console.error('Error creating component:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       
       // Set fallback component
@@ -74,11 +87,20 @@ export function DynamicVisualizer({
   }, [code]);
 
   if (error) {
-    return <FallbackVisualizer audioData={audioData} />;
+    console.error('Rendering fallback due to error:', error);
+    return (
+      <group scale={0.25}>
+        <FallbackVisualizer audioData={audioData} />
+      </group>
+    );
   }
 
   if (!Component) {
-    return <LoadingVisualizer />;
+    return (
+      <group scale={0.25}>
+        <LoadingVisualizer />
+      </group>
+    );
   }
 
   // Apply base scale of 0.25 to match other visualizers
