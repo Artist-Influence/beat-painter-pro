@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { generateLocalVisualizer } from '@/components/studio/LocalVisualizerGenerator';
+import { transform as sucraseTransform } from 'sucrase';
 
 interface DynamicVisualizerProps {
   code: string;
@@ -23,35 +24,36 @@ export function DynamicVisualizer({
     console.log('Loading custom visualizer with code:', code);
 
     const sanitize = (src: string) => {
-      if (!src) return '';
-      let c = String(src)
-        .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, ''))
-        .replace(/export\s+default\s+/g, '')
-        .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
-        .replace(/interface\s+\w+\s*{[^}]*}/g, '')
-        .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
-        // Remove generic annotations like useRef<THREE.Mesh>()
-        .replace(/\b([A-Za-z_$][\w$]*)<[^>]*>/g, '$1')
-        // Remove TS "as Type" assertions
-        .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]\|.,\s]*/g, '')
-        // Remove parameter/var type annotations (avoid object literals by requiring type-like start)
-        .replace(/:\s*(?:[A-Za-z_{][^,\)\n=]+)(?=[,\)\n=])/g, '')
-        .trim();
+      try {
+        if (!src) return '';
+        // Strip code fences and export/imports first
+        let c = String(src)
+          .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, ''))
+          .replace(/export\s+default\s+/g, '')
+          .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
+          .trim();
 
-      // Ensure we return a function from the factory
-      if (!/^return\s/.test(c)) {
-        if (/function\s+CustomVisualizer\b/.test(c)) {
-          c += '\nreturn CustomVisualizer;';
-        } else if (/^function\s+\w+/.test(c)) {
-          c += '\nreturn (typeof CustomVisualizer !== \"undefined\" ? CustomVisualizer : null);';
-        } else if (/^\(/.test(c) || /=>/.test(c)) {
-          c = 'return (' + c + ');';
-        } else if (!c.startsWith('return')) {
-          // As a last resort, wrap it so we can "return" whatever it defines
-          c = 'return (function(){' + c + '})();';
+        // Transform TS/TSX to plain JS using Sucrase
+        c = sucraseTransform(c, { transforms: ['typescript', 'jsx'] }).code;
+
+        // Ensure we return a function from the factory
+        if (!/^return\s/.test(c)) {
+          if (/function\s+CustomVisualizer\b/.test(c)) {
+            c += '\nreturn CustomVisualizer;';
+          } else if (/^function\s+\w+/.test(c)) {
+            c += '\nreturn (typeof CustomVisualizer !== "undefined" ? CustomVisualizer : null);';
+          } else if (/^\(/.test(c) || /=>/.test(c)) {
+            c = 'return (' + c + ');';
+          } else if (!c.startsWith('return')) {
+            // As a last resort, wrap it so we can "return" whatever it defines
+            c = 'return (function(){' + c + '})();';
+          }
         }
+        return c;
+      } catch (e) {
+        console.error('Sanitization/transform failed:', e, '\nSource:', src);
+        return '';
       }
-      return c;
     };
 
     const compile = (src: string) => {
