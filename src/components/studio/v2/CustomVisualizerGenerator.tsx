@@ -22,7 +22,7 @@ export function CustomVisualizerGenerator({
   onClose, 
   onSuccess 
 }: CustomVisualizerGeneratorProps) {
-  const { generateVisualizer, isGenerating } = useCustomVisualizers();
+  const { generateVisualizer, isGenerating, userRole, quotaRemaining } = useCustomVisualizers();
   const [activeTab, setActiveTab] = useState('prompt');
   const [prompt, setPrompt] = useState('');
   const [referenceImage, setReferenceImage] = useState<string>('');
@@ -111,9 +111,16 @@ export function CustomVisualizerGenerator({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden bg-black/95 border border-white/20">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
-            <Wand2 className="w-5 h-5 text-purple-400" />
-            Generate Custom Visualizer
+          <DialogTitle className="text-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-purple-400" />
+              Generate Custom Visualizer
+            </div>
+            {userRole !== 'admin' && (
+              <Badge variant="secondary" className="bg-purple-600/30 text-purple-200">
+                {quotaRemaining} remaining
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 

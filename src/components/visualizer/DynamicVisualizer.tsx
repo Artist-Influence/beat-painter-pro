@@ -106,30 +106,20 @@ export function DynamicVisualizer({
 
   if (error) {
     console.error('Rendering fallback due to error:', error);
-    return (
-      <group scale={0.25}>
-        <FallbackVisualizer audioData={audioData} />
-      </group>
-    );
+    return <FallbackVisualizer audioData={audioData} />;
   }
 
   if (!Component) {
-    return (
-      <group scale={0.25}>
-        <LoadingVisualizer />
-      </group>
-    );
+    return <LoadingVisualizer />;
   }
 
-  // Apply base scale of 0.25 to match other visualizers
+  // Don't scale - the generated visualizers already have proper sizing
   return (
-    <group scale={0.25}>
-      <Component 
-        audioData={audioData}
-        backgroundColor={backgroundColor}
-        zoomLevel={zoomLevel}
-      />
-    </group>
+    <Component 
+      audioData={audioData}
+      backgroundColor={backgroundColor}
+      zoomLevel={zoomLevel}
+    />
   );
 }
 

@@ -5,11 +5,19 @@ import { visualizerRegistry, type VisualizerKey } from '@/components/visualizers
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { CustomVisualizerGenerator } from './CustomVisualizerGenerator';
 import { Button } from '@/components/ui/button';
-import { Wand2, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wand2, Trash2, Crown, Star } from 'lucide-react';
 
 export function VisualizerGrid() {
   const { selected, setSelected } = useStudioStore();
-  const { customVisualizers, isLoading, deleteVisualizer } = useCustomVisualizers();
+  const { 
+    customVisualizers, 
+    isLoading, 
+    deleteVisualizer,
+    promoteToStandard,
+    userRole,
+    quotaRemaining 
+  } = useCustomVisualizers();
   const [showGenerator, setShowGenerator] = useState(false);
 
   const visualizers = [
@@ -39,15 +47,36 @@ export function VisualizerGrid() {
         {(customVisualizers.length > 0 || !isLoading) && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-white/80 text-sm font-medium">My Custom Visualizers</h3>
-              <Button
-                size="sm"
-                onClick={() => setShowGenerator(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
-              >
-                <Wand2 className="w-3 h-3 mr-1" />
-                Generate
-              </Button>
+              <div className="flex items-center gap-2">
+                <h3 className="text-white/80 text-sm font-medium">My Custom Visualizers</h3>
+                {userRole === 'admin' && (
+                  <Badge variant="secondary" className="bg-yellow-600/30 text-yellow-200 text-xs">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Admin
+                  </Badge>
+                )}
+                {customVisualizers.length > 0 && (
+                  <Badge variant="secondary" className="bg-purple-600/30 text-purple-200 text-xs">
+                    {customVisualizers.length}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {userRole !== 'admin' && (
+                  <div className="text-xs text-white/50">
+                    {quotaRemaining}/5 remaining
+                  </div>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => setShowGenerator(true)}
+                  disabled={userRole !== 'admin' && quotaRemaining <= 0}
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs disabled:opacity-50"
+                >
+                  <Wand2 className="w-3 h-3 mr-1" />
+                  Generate
+                </Button>
+              </div>
             </div>
             
             {customVisualizers.length === 0 && !isLoading ? (
@@ -99,16 +128,30 @@ export function VisualizerGrid() {
                       )}
                     </motion.button>
                     
-                    {/* Delete button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteVisualizer(customViz.id);
-                      }}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {/* Action buttons */}
+                    <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {userRole === 'admin' && !customViz.is_public && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            promoteToStandard(customViz.id);
+                          }}
+                          className="w-5 h-5 bg-yellow-600 hover:bg-yellow-700 rounded-full flex items-center justify-center text-white"
+                          title="Promote to standard visualizer"
+                        >
+                          <Star className="w-3 h-3" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteVisualizer(customViz.id);
+                        }}
+                        className="w-5 h-5 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-white"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </motion.div>
                 ))}
               </div>

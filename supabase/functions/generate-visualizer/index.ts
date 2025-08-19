@@ -117,6 +117,18 @@ serve(async (req) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check quota before generating
+    const { data: quotaCheck } = await supabase.rpc('check_visualizer_quota', { 
+      _user_id: userId 
+    });
+
+    if (!quotaCheck) {
+      return new Response(JSON.stringify({ error: 'Quota exceeded. You can create up to 5 custom visualizers. Delete some to create new ones.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Add randomness for unique generation
     const timestamp = Date.now();
     const randomSeed = Math.random().toString(36).substring(7);

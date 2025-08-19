@@ -288,6 +288,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: number
       }
+      get_visualizer_count: {
+        Args: { _user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

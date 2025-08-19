@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'admin' | 'user';
+  created_at: string;
+}
+
 interface CustomVisualizer {
   id: string;
   user_id: string;
@@ -22,6 +29,30 @@ export function useCustomVisualizers() {
   const [customVisualizers, setCustomVisualizers] = useState<CustomVisualizer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
+  const [visualizerCount, setVisualizerCount] = useState(0);
+
+  // Check user role and visualizer count
+  const checkUserRole = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      const { data: countData } = await supabase.rpc('get_visualizer_count', { 
+        _user_id: user.id 
+      });
+      
+      setUserRole(roleData?.role || 'user');
+      setVisualizerCount(countData || 0);
+    } catch (error) {
+      console.error('Error checking user role:', error);
+    }
+  };
 
   const fetchCustomVisualizers = async () => {
     if (!user) return;
@@ -62,6 +93,16 @@ export function useCustomVisualizers() {
       return null;
     }
 
+    // Check quota for non-admin users
+    if (userRole !== 'admin' && visualizerCount >= 5) {
+      toast({
+        title: "Quota Exceeded",
+        description: `You've reached the limit of 5 custom visualizers. Delete some to create new ones, or contact an admin for more.`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-visualizer', {
@@ -80,9 +121,10 @@ export function useCustomVisualizers() {
         description: `${data.visualizer.name} has been created`,
       });
 
-      // Refresh the list immediately 
+      // Refresh the list and counts immediately 
       setCustomVisualizers(prev => [...prev, data.visualizer]);
       await fetchCustomVisualizers();
+      await checkUserRole(); // Refresh count
       
       return data.visualizer;
     } catch (error) {
@@ -116,6 +158,7 @@ export function useCustomVisualizers() {
       });
 
       await fetchCustomVisualizers();
+      await checkUserRole(); // Refresh count
     } catch (error) {
       console.error('Error deleting visualizer:', error);
       toast({
@@ -128,7 +171,35 @@ export function useCustomVisualizers() {
 
   useEffect(() => {
     fetchCustomVisualizers();
+    checkUserRole();
   }, [user]);
+
+  const promoteToStandard = async (id: string) => {
+    if (!user || userRole !== 'admin') return;
+
+    try {
+      const { error } = await supabase
+        .from('custom_visualizers')
+        .update({ is_public: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Promoted to Standard",
+        description: "Visualizer is now available in the standard visualizers section",
+      });
+
+      await fetchCustomVisualizers();
+    } catch (error) {
+      console.error('Error promoting visualizer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to promote visualizer",
+        variant: "destructive",
+      });
+    }
+  };
 
   return {
     customVisualizers,
@@ -136,6 +207,10 @@ export function useCustomVisualizers() {
     isGenerating,
     generateVisualizer,
     deleteVisualizer,
+    promoteToStandard,
     refetch: fetchCustomVisualizers,
+    userRole,
+    visualizerCount,
+    quotaRemaining: userRole === 'admin' ? 999 : Math.max(0, 5 - visualizerCount),
   };
 }
