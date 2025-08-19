@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { VisualizerProps } from '../visualizer';
-import { DynamicVisualizer } from '../visualizer/DynamicVisualizer';
+import DynamicVisualizer from '../visualizer/DynamicVisualizer';
 
 interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
@@ -78,5 +78,5 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
     );
   }
 
-  return <DynamicVisualizer code={code} {...props} />;
+  return <DynamicVisualizer jsxCode={code} audioData={props.audioData.frequency} />;
 }

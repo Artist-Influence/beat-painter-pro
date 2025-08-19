@@ -3,6 +3,7 @@ import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useStudioStore } from '@/stores/studioStore';
+import * as THREE from 'three';
 
 interface DynamicVisualizerProps {
   jsxCode: string;
