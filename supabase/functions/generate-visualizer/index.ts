@@ -120,8 +120,8 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: numb
     };
   }
   
-  // Flower/petal template - creates dancing petals in wind
-  if (/\b(flower|petal|blossom|bloom)\b/.test(normalizedPrompt) && /\b(wind|breeze|dance|dancing|sway|moving)\b/.test(normalizedPrompt)) {
+  // Flower/petal template - creates dancing petals in wind with robust matching
+  if (/\b(flowers?|petals?|petal\w*|blossoms?|blooms?)\b/.test(normalizedPrompt) && /\b(winds?|wind\w*|breeze\w*|blow\w*|gust\w*|danc\w*|sway\w*|mov\w*|flutter\w*)\b/.test(normalizedPrompt)) {
     return {
       name: "Flower Petals Dancing in Wind",
       emoji: "🌸",
@@ -135,71 +135,106 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: numbe
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
-  const petals = useMemo(() => {
-    const petalArray = [];
-    const flowerCount = 20;
-    const petalsPerFlower = 8;
+  const flowers = useMemo(() => {
+    const flowerArray = [];
+    const flowerCount = 25;
+    const petalsPerFlower = 12;
     
     for (let f = 0; f < flowerCount; f++) {
       const flowerAngle = (f / flowerCount) * Math.PI * 2;
-      const flowerRadius = 8 + Math.sin(f * 0.5) * 4;
+      const flowerRadius = 6 + Math.sin(f * 0.4) * 3 + Math.cos(f * 0.7) * 2;
       const flowerX = Math.cos(flowerAngle) * flowerRadius;
       const flowerZ = Math.sin(flowerAngle) * flowerRadius;
-      const flowerY = Math.sin(f * 0.3) * 2;
+      const flowerY = Math.sin(f * 0.5) * 1.5 + Math.cos(f * 0.3) * 1;
+      
+      const flower = {
+        id: f,
+        center: [flowerX, flowerY, flowerZ],
+        petals: [] as any[],
+        freqIndex: Math.floor((f / flowerCount) * (audioData.length - 1))
+      };
       
       for (let p = 0; p < petalsPerFlower; p++) {
         const petalAngle = (p / petalsPerFlower) * Math.PI * 2;
-        const petalRadius = 1.5 + Math.random() * 0.5;
+        const petalDistance = 1.8 + Math.sin(p * 0.5) * 0.3;
         
-        petalArray.push({
-          id: f * petalsPerFlower + p,
-          flowerCenter: [flowerX, flowerY, flowerZ],
-          localX: Math.cos(petalAngle) * petalRadius,
-          localZ: Math.sin(petalAngle) * petalRadius,
-          rotation: [Math.random() * 0.5, petalAngle + Math.PI / 2, Math.random() * 0.3],
-          scale: 0.8 + Math.random() * 0.4,
+        flower.petals.push({
+          id: p,
+          angle: petalAngle,
+          distance: petalDistance,
+          baseRotation: [
+            Math.random() * 0.4 - 0.2,
+            petalAngle,
+            Math.random() * 0.6 - 0.3
+          ],
+          scale: 0.9 + Math.random() * 0.2,
           swayPhase: Math.random() * Math.PI * 2,
-          freqIndex: Math.floor((f / flowerCount) * (audioData.length - 1))
+          twistPhase: Math.random() * Math.PI * 2
         });
       }
+      
+      flowerArray.push(flower);
     }
-    return petalArray;
+    return flowerArray;
   }, [audioData.length]);
   
   useFrame(({ clock }) => {
     if (!groupRef.current || !audioData.length) return;
     
     const time = clock.getElapsedTime();
-    const windStrength = Math.sin(time * 0.5) * 0.3 + 0.7;
     
-    petals.forEach((petal, i) => {
-      const child = groupRef.current?.children[i];
-      if (!child) return;
+    flowers.forEach((flower, flowerIndex) => {
+      const freq = audioData[flower.freqIndex] || 0;
+      const bassResponse = freq * audioSensitivity.frequency;
       
-      const freq = audioData[petal.freqIndex] || 0;
-      const bassResponse = freq * audioSensitivity.frequency * 2;
+      // Wind field calculations
+      const windX = Math.sin(time * 0.6 + flowerIndex * 0.3) * 0.4;
+      const windY = Math.cos(time * 0.4 + flowerIndex * 0.5) * 0.2;
+      const windZ = Math.sin(time * 0.8 + flowerIndex * 0.2) * 0.3;
       
-      // Wind sway motion with audio response
-      const swayX = Math.sin(time * 0.8 + petal.swayPhase) * windStrength * (1 + bassResponse);
-      const swayY = Math.cos(time * 0.6 + petal.swayPhase * 0.5) * windStrength * 0.5;
-      const swayZ = Math.sin(time * 0.9 + petal.swayPhase * 1.3) * windStrength * 0.7;
+      flower.petals.forEach((petal, petalIndex) => {
+        const childIndex = flowerIndex * (flower.petals.length + 1) + petalIndex;
+        const child = groupRef.current?.children[childIndex];
+        if (!child) return;
+        
+        // Calculate petal position with wind sway and audio response
+        const petalX = flower.center[0] + Math.cos(petal.angle) * petal.distance;
+        const petalZ = flower.center[2] + Math.sin(petal.angle) * petal.distance;
+        const petalY = flower.center[1] + Math.sin(petal.angle * 2) * 0.3;
+        
+        // Apply wind and audio-driven motion
+        const swayX = Math.sin(time * 0.9 + petal.swayPhase) * (0.5 + bassResponse);
+        const swayY = Math.cos(time * 0.7 + petal.swayPhase * 0.8) * (0.3 + bassResponse * 0.5);
+        const swayZ = Math.sin(time * 1.1 + petal.swayPhase * 1.2) * (0.4 + bassResponse);
+        
+        child.position.set(
+          petalX + windX + swayX,
+          petalY + windY + swayY + bassResponse * 1.5,
+          petalZ + windZ + swayZ
+        );
+        
+        // Petal rotation with natural flutter
+        const twistX = petal.baseRotation[0] + Math.sin(time + petal.twistPhase) * 0.4;
+        const twistY = petal.baseRotation[1] + time * 0.1 + windX * 0.8;
+        const twistZ = petal.baseRotation[2] + Math.cos(time * 0.8 + petal.twistPhase) * 0.5 + bassResponse * 0.3;
+        
+        child.rotation.set(twistX, twistY, twistZ);
+        
+        // Dynamic scaling with audio pulse
+        child.scale.setScalar(petal.scale * (1 + bassResponse * 0.4));
+      });
       
-      // Combine flower center position with local petal offset and sway
-      child.position.set(
-        petal.flowerCenter[0] + petal.localX + swayX,
-        petal.flowerCenter[1] + petal.localZ * 0.2 + swayY + bassResponse * 2,
-        petal.flowerCenter[2] + petal.localZ + swayZ
-      );
-      
-      // Rotation with wind and audio influence
-      child.rotation.set(
-        petal.rotation[0] + Math.sin(time + petal.swayPhase) * 0.3,
-        petal.rotation[1] + time * 0.2 + swayX * 0.5,
-        petal.rotation[2] + Math.cos(time * 0.7 + petal.swayPhase) * 0.4 + bassResponse * 0.5
-      );
-      
-      // Scale with audio pulsing
-      child.scale.setScalar(petal.scale * (1 + bassResponse * 0.4));
+      // Animate flower center
+      const centerChildIndex = flowerIndex * (flower.petals.length + 1) + flower.petals.length;
+      const centerChild = groupRef.current?.children[centerChildIndex];
+      if (centerChild) {
+        centerChild.position.set(
+          flower.center[0] + windX * 0.3,
+          flower.center[1] + windY + bassResponse * 0.8,
+          flower.center[2] + windZ * 0.3
+        );
+        centerChild.scale.setScalar(1 + bassResponse * 0.5);
+      }
     });
   });
   
@@ -207,39 +242,74 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: numbe
   
   return (
     <group ref={groupRef}>
-      {petals.map((petal) => (
-        <mesh key={petal.id} rotation={petal.rotation}>
-          {/* Petal shape - elongated and curved */}
+      {flowers.map((flower) => (
+        <group key={flower.id}>
+          {/* Render individual petals with realistic curved shapes */}
+          {flower.petals.map((petal) => (
+            <group key={petal.id}>
+              {/* Main petal body - elongated ellipsoid */}
+              <mesh>
+                <sphereGeometry args={[0.6, 8, 12]} />
+                <primitive object={material} />
+              </mesh>
+              {/* Petal tip - smaller sphere for natural taper */}
+              <mesh position={[0, 0.8, 0]}>
+                <sphereGeometry args={[0.3, 6, 8]} />
+                <primitive object={material} />
+              </mesh>
+              {/* Petal base - wider connection point */}
+              <mesh position={[0, -0.4, 0]}>
+                <sphereGeometry args={[0.4, 6, 8]} />
+                <primitive object={material} />
+              </mesh>
+            </group>
+          ))}
+          
+          {/* Flower center - detailed pistil and stamen */}
           <group>
-            <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 6]}>
-              <boxGeometry args={[0.1, 1.2, 0.02]} />
+            {/* Main center */}
+            <mesh>
+              <sphereGeometry args={[0.4, 12, 12]} />
               <primitive object={material} />
             </mesh>
-            <mesh position={[0.15, 0.3, 0]} rotation={[0, 0, -Math.PI / 8]}>
-              <boxGeometry args={[0.08, 0.8, 0.02]} />
-              <primitive object={material} />
-            </mesh>
-            <mesh position={[-0.15, 0.3, 0]} rotation={[0, 0, Math.PI / 8]}>
-              <boxGeometry args={[0.08, 0.8, 0.02]} />
-              <primitive object={material} />
-            </mesh>
+            {/* Small stamen details */}
+            {Array.from({ length: 8 }, (_, i) => {
+              const angle = (i / 8) * Math.PI * 2;
+              const radius = 0.25;
+              return (
+                <mesh
+                  key={i}
+                  position={[
+                    Math.cos(angle) * radius,
+                    0.2,
+                    Math.sin(angle) * radius
+                  ]}
+                >
+                  <sphereGeometry args={[0.05, 4, 4]} />
+                  <primitive object={material} />
+                </mesh>
+              );
+            })}
           </group>
-        </mesh>
+        </group>
       ))}
-      {/* Flower centers */}
-      {Array.from({ length: 20 }, (_, i) => {
-        const angle = (i / 20) * Math.PI * 2;
-        const radius = 8 + Math.sin(i * 0.5) * 4;
+      
+      {/* Floating petal particles for enhanced atmosphere */}
+      {Array.from({ length: 40 }, (_, i) => {
+        const x = (Math.random() - 0.5) * 30;
+        const y = Math.random() * 15 + 5;
+        const z = (Math.random() - 0.5) * 30;
         return (
           <mesh
-            key={\`center-\${i}\`}
-            position={[
-              Math.cos(angle) * radius,
-              Math.sin(i * 0.3) * 2,
-              Math.sin(angle) * radius
+            key={\`particle-\${i}\`}
+            position={[x, y, z]}
+            rotation={[
+              Math.random() * Math.PI,
+              Math.random() * Math.PI,
+              Math.random() * Math.PI
             ]}
           >
-            <sphereGeometry args={[0.3, 8, 8]} />
+            <sphereGeometry args={[0.15, 6, 8]} />
             <primitive object={material} />
           </mesh>
         );
