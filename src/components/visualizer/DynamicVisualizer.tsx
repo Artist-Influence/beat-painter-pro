@@ -27,10 +27,15 @@ export function DynamicVisualizer({
       let c = String(src)
         .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, ''))
         .replace(/export\s+default\s+/g, '')
-        .replace(/import\s+.*?from\s+['\"][^'\"]+['\"];?/g, '')
-        .replace(/:\s*\w+(\[\])?/g, '')
+        .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
         .replace(/interface\s+\w+\s*{[^}]*}/g, '')
-        .replace(/type\s+\w+\s*=.*?;/g, '')
+        .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
+        // Remove generic annotations like useRef<THREE.Mesh>()
+        .replace(/\b([A-Za-z_$][\w$]*)<[^>]*>/g, '$1')
+        // Remove TS "as Type" assertions
+        .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]\|.,\s]*/g, '')
+        // Remove parameter/var type annotations (avoid object literals by requiring type-like start)
+        .replace(/:\s*(?:[A-Za-z_{][^,\)\n=]+)(?=[,\)\n=])/g, '')
         .trim();
 
       // Ensure we return a function from the factory
@@ -38,7 +43,7 @@ export function DynamicVisualizer({
         if (/function\s+CustomVisualizer\b/.test(c)) {
           c += '\nreturn CustomVisualizer;';
         } else if (/^function\s+\w+/.test(c)) {
-          c += '\nreturn (typeof CustomVisualizer !== "undefined" ? CustomVisualizer : null);';
+          c += '\nreturn (typeof CustomVisualizer !== \"undefined\" ? CustomVisualizer : null);';
         } else if (/^\(/.test(c) || /=>/.test(c)) {
           c = 'return (' + c + ');';
         } else if (!c.startsWith('return')) {
