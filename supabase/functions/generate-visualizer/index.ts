@@ -2,7 +2,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { SEMANTIC_TEMPLATES } from './semantic-templates.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -136,15 +135,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get geometry type from prompt
+// Helper function to get geometry type from prompt with word-boundary matching
 function getGeometryType(prompt: string): string {
   const lower = prompt.toLowerCase();
-  if (lower.includes('sphere') || lower.includes('ball') || lower.includes('orb')) return 'sphereGeometry';
-  if (lower.includes('cube') || lower.includes('box')) return 'boxGeometry';
-  if (lower.includes('cylinder') || lower.includes('tube')) return 'cylinderGeometry';
-  if (lower.includes('cone') || lower.includes('pyramid')) return 'coneGeometry';
-  if (lower.includes('torus') || lower.includes('donut') || lower.includes('ring')) return 'torusGeometry';
-  if (lower.includes('plane') || lower.includes('flat')) return 'planeGeometry';
+  // Use word boundary regex to prevent substring matching (airplane -> plane)
+  if (/\b(sphere|ball|orb)\b/.test(lower)) return 'sphereGeometry';
+  if (/\b(cube|box)\b/.test(lower)) return 'boxGeometry';  
+  if (/\b(cylinder|tube)\b/.test(lower)) return 'cylinderGeometry';
+  if (/\b(cone|pyramid)\b/.test(lower)) return 'coneGeometry';
+  if (/\b(torus|donut|ring)\b/.test(lower)) return 'torusGeometry';
+  if (/\b(plane|flat)\b/.test(lower) && !/\b(airplane|aircraft)\b/.test(lower)) return 'planeGeometry';
   return 'icosahedronGeometry'; // Default to interesting shape
 }
 
@@ -189,13 +189,17 @@ function getSemanticVisualizer(prompt: string, analysis: {
 }): string {
   const lowerPrompt = prompt.toLowerCase();
   
-  // Use semantic templates for complex objects
-  if (analysis.category === 'vehicles' || lowerPrompt.includes('airplane') || lowerPrompt.includes('plane') || lowerPrompt.includes('aircraft') || lowerPrompt.includes('jet')) {
-    return SEMANTIC_TEMPLATES.airplane.template;
+  // Use semantic template generators for complex objects
+  if (analysis.category === 'vehicles' || /\b(airplane|aircraft|jet|plane)\b/.test(lowerPrompt)) {
+    return getAirplaneFleetTemplate(analysis.objectCount, analysis.enhancedPrompt);
   }
   
-  if (analysis.category === 'nature' || lowerPrompt.includes('flower') || lowerPrompt.includes('petal') || lowerPrompt.includes('bloom') || lowerPrompt.includes('garden')) {
-    return SEMANTIC_TEMPLATES.flower.template;
+  if (analysis.category === 'nature' || /\b(flower|petal|bloom|garden)\b/.test(lowerPrompt)) {
+    return getFlowerFieldTemplate(analysis.objectCount, analysis.enhancedPrompt);
+  }
+
+  if (/\b(apple|fruit)\b/.test(lowerPrompt) && /\b(bite|bitten|eaten)\b/.test(lowerPrompt)) {
+    return getAppleWithBiteTemplate(analysis.objectCount, analysis.enhancedPrompt);
   }
   
   // Default to enhanced multi-object template for simple geometries
@@ -374,6 +378,110 @@ function getFlowerFieldTemplate(count: number, description: string): string {
     React.createElement('ambientLight', { intensity: 0.4 }),
     React.createElement('directionalLight', { position: [5, 8, 3], intensity: 0.8 }),
     ...flowers
+  );
+};`;
+}
+
+function getAppleWithBiteTemplate(count: number, description: string): string {
+  const appleCount = Math.min(Math.max(count, 20), 80);
+  return `return function CustomVisualizer(props) {
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
+  const groupRef = React.useRef(null);
+  
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    return { bass, mids, highs, beat: audioData.beatStrength || 0 };
+  }, [audioData]);
+
+  const appleData = React.useMemo(() => {
+    const apples = [];
+    let seed = ${Math.floor(Math.random() * 99999)};
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    
+    for (let i = 0; i < ${appleCount}; i++) {
+      const radius = 1.2 + rnd() * 0.8;
+      const theta = rnd() * Math.PI * 2;
+      const phi = Math.acos(2 * rnd() - 1);
+      
+      apples.push({
+        x: radius * Math.sin(phi) * Math.cos(theta),
+        y: radius * Math.cos(phi),
+        z: radius * Math.sin(phi) * Math.sin(theta),
+        scale: 0.15 + rnd() * 0.1,
+        rotation: [rnd() * Math.PI * 2, rnd() * Math.PI * 2, rnd() * Math.PI * 2],
+        audioIndex: i % 48,
+        bounceOffset: rnd() * Math.PI * 2
+      });
+    }
+    return apples;
+  }, []);
+
+  ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (groupRef.current) {
+      groupRef.current.rotation.y = t * (0.08 + audioAnalysis.bass * 0.15);
+      groupRef.current.position.y = audioAnalysis.mids * 0.2;
+    }
+  });
+
+  const apples = appleData.map((apple, i) => {
+    const freqBin = Math.floor((apple.audioIndex / 48) * 255);
+    const localIntensity = audioData.frequency ? (audioData.frequency[freqBin] || 0) / 255 : 0;
+    const t = performance.now() * 0.001;
+    
+    return React.createElement('group', {
+      key: i,
+      position: [
+        apple.x, 
+        apple.y + Math.sin(t * 0.8 + apple.bounceOffset) * (0.1 + audioAnalysis.bass * 0.3), 
+        apple.z
+      ],
+      rotation: apple.rotation,
+      scale: [apple.scale * (1 + localIntensity * 0.4), apple.scale * (1 + localIntensity * 0.4), apple.scale * (1 + localIntensity * 0.4)]
+    },
+      React.createElement('mesh', { position: [0, 0, 0] },
+        React.createElement('sphereGeometry', { args: [1, 16, 12] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.03 + localIntensity * 0.12 })
+      ),
+      React.createElement('mesh', { 
+        position: [0.6, 0.2, 0],
+        scale: [0.4, 0.8, 0.6]
+      },
+        React.createElement('sphereGeometry', { args: [1, 8, 8] }),
+        React.createElement('meshStandardMaterial', { 
+          color: '#ffffff', 
+          transparent: true, 
+          opacity: 0.3,
+          emissiveIntensity: 0.02
+        })
+      ),
+      React.createElement('mesh', { 
+        position: [0, 1.2, 0],
+        rotation: [0, 0, Math.PI/6],
+        scale: [0.08, 0.3, 0.08]
+      },
+        React.createElement('cylinderGeometry', { args: [0.5, 0.3, 1, 6] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.02 + audioAnalysis.highs * 0.08 })
+      ),
+      React.createElement('mesh', { 
+        position: [0.15, 1.1, 0],
+        rotation: [0, 0, -Math.PI/4],
+        scale: [0.6, 0.2, 0.02]
+      },
+        React.createElement('ellipsoidGeometry', { args: [0.8, 0.4, 0.1, 8, 6] }) || 
+        React.createElement('sphereGeometry', { args: [0.5, 8, 6] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.02 + audioAnalysis.mids * 0.1 })
+      )
+    );
+  });
+
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.5 }),
+    React.createElement('directionalLight', { position: [8, 6, 4], intensity: 0.9 }),
+    ...apples
   );
 };`;
 }
@@ -689,6 +797,15 @@ Modify ONLY the geometry type (boxGeometry, sphereGeometry, etc.) and rotation s
       console.log('Using fallback visualizer for prompt:', prompt, usedDefault);
       cleanedCode = getEnhancedDefaultVisualizer(prompt);
     }
+
+    // CRITICAL: Enforce all-white materials in any generated code for proper style mapping
+    if (cleanedCode) {
+      cleanedCode = cleanedCode
+        .replace(/color:\s*['"][^'"]*['"]/g, "color: '#ffffff'")
+        .replace(/color:\s*0x[0-9a-fA-F]+/g, "color: '#ffffff'")
+        .replace(/color:\s*['"](#[0-9a-fA-F]+|rgb\([^)]+\)|hsl\([^)]+\))['"]/g, "color: '#ffffff'")
+        .replace(/(color:\s*['"])(?!#ffffff['"]).+?(['"])/g, "$1#ffffff$2");
+    }
     
     // Extract visualizer name from the cleaned code
     const nameMatch = cleanedCode.match(/function (\w+)/);
@@ -696,7 +813,9 @@ Modify ONLY the geometry type (boxGeometry, sphereGeometry, etc.) and rotation s
     
     // Generate a simple emoji based on geometry type or complex template
     let previewEmoji = '✨';
-    if (prompt.toLowerCase().match(/flower|flowers|blossom|petal|garden|field/)) previewEmoji = '🌸';
+    if (prompt.toLowerCase().match(/airplane|aircraft|jet|plane/)) previewEmoji = '✈️';
+    else if (prompt.toLowerCase().match(/apple|fruit.*bite/)) previewEmoji = '🍎';
+    else if (prompt.toLowerCase().match(/flower|flowers|blossom|petal|garden|field/)) previewEmoji = '🌸';
     else if (prompt.toLowerCase().match(/swarm|cloud|particles|stars|rain|snow/)) previewEmoji = '🫧';
     else if (prompt.toLowerCase().match(/grid|matrix|lattice/)) previewEmoji = '🔲';
     else {

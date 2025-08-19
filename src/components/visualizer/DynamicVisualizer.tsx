@@ -33,6 +33,12 @@ export function DynamicVisualizer({
           .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
           .trim();
 
+        // Enforce all-white materials for proper style mapping
+        c = c
+          .replace(/color:\s*['"][^'"]*['"]/g, "color: '#ffffff'")
+          .replace(/color:\s*0x[0-9a-fA-F]+/g, "color: '#ffffff'")
+          .replace(/color:\s*['"](#[0-9a-fA-F]+|rgb\([^)]+\)|hsl\([^)]+\))['"]/g, "color: '#ffffff'");
+
         // Transform TS/TSX to plain JS using Sucrase
         c = sucraseTransform(c, { transforms: ['typescript', 'jsx'] }).code;
 
