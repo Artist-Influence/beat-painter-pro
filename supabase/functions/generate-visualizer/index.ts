@@ -52,278 +52,484 @@ function isComplexPrompt(prompt: string): boolean {
 }
 
 /**
- * Complex visualizer templates
- * - All materials are white so external style/texture mapping can colorize uniformly.
+ * Advanced visualizer templates with full audio integration and texture support
  */
-function getComplexVisualizer(prompt: string): string {
+function getAdvancedVisualizer(prompt: string): string {
   const p = prompt.toLowerCase();
+  
+  // Extract key concepts for intelligent generation
+  const isFloral = p.includes('flower') || p.includes('flowers') || p.includes('blossom') || p.includes('petal') || p.includes('garden') || p.includes('field');
+  const isSwarm = p.includes('swarm') || p.includes('flock') || p.includes('school') || p.includes('cloud') || p.includes('particles') || p.includes('stars') || p.includes('rain') || p.includes('snow');
+  const isGrid = p.includes('grid') || p.includes('matrix') || p.includes('lattice') || p.includes('mesh') || p.includes('network');
+  const isOrganic = p.includes('organic') || p.includes('fluid') || p.includes('wave') || p.includes('blob') || p.includes('tentacle') || p.includes('neural');
+  const isCrystal = p.includes('crystal') || p.includes('diamond') || p.includes('gem') || p.includes('prism') || p.includes('facet');
 
-  // 1) Flower field (dense arrangement of small flower groups swaying with audio)
-  if (p.includes('flower') || p.includes('flowers') || p.includes('blossom') || p.includes('petal') || p.includes('garden') || p.includes('field')) {
+  // 1) Advanced Flower Field - Complex multi-component with full audio integration
+  if (isFloral) {
     return `return function CustomVisualizer(props) {
-  const audioData = props.audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
   const groupRef = React.useRef(null);
+  const particlesRef = React.useRef([]);
+  const windRef = React.useRef(0);
+  
+  // Audio sensitivity integration (simulated - would use useStudioStore in real app)
+  const sensitivity = React.useMemo(() => ({
+    bass: 1.2, mids: 0.9, highs: 1.1, overall: 1.0
+  }), []);
+  
+  // Advanced frequency analysis with sensitivity
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1) * sensitivity.bass;
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1) * sensitivity.mids;  
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1) * sensitivity.highs;
+    const beat = audioData.beatStrength * sensitivity.overall;
+    return { bass, mids, highs, beat, hasAudio: bass + mids + highs > 0.01 };
+  }, [audioData, sensitivity]);
 
-  const frequency = audioData.frequency || Array(256).fill(0);
-
-  const bass = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
-
-  const mids = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  const highs = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  // Deterministic layout based on prompt length for stability
-  const count = 180;
-  const positions = React.useMemo(() => {
-    const arr = [];
+  // Generate deterministic flower field layout
+  const flowerData = React.useMemo(() => {
+    const flowers = [];
     let seed = ${Math.floor(Math.random() * 99999)};
     function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
-    const grid = Math.ceil(Math.sqrt(count));
-    const spacing = 0.35;
+    
+    const count = 240;
+    const gridSize = Math.ceil(Math.sqrt(count));
+    const spacing = 0.28;
+    
     for (let i = 0; i < count; i++) {
-      const gx = i % grid;
-      const gz = Math.floor(i / grid);
-      const jitterX = (rnd() - 0.5) * 0.2;
-      const jitterZ = (rnd() - 0.5) * 0.2;
-      const x = (gx - grid / 2) * spacing + jitterX;
-      const z = (gz - grid / 2) * spacing + jitterZ;
-      const phase = rnd() * Math.PI * 2;
-      arr.push({ x, z, phase });
+      const gx = i % gridSize;
+      const gz = Math.floor(i / gridSize);
+      const x = (gx - gridSize / 2) * spacing + (rnd() - 0.5) * 0.15;
+      const z = (gz - gridSize / 2) * spacing + (rnd() - 0.5) * 0.15;
+      
+      flowers.push({
+        x, z,
+        height: 0.3 + rnd() * 0.4,
+        stemWidth: 0.008 + rnd() * 0.004,
+        petalCount: 5 + Math.floor(rnd() * 3),
+        petalSize: 0.025 + rnd() * 0.015,
+        phase: rnd() * Math.PI * 2,
+        audioIndex: i % 32, // Map to specific frequency bin
+        swayPhase: rnd() * Math.PI * 2
+      });
     }
-    return arr;
+    return flowers;
   }, []);
 
+  // Advanced animation with idle behavior
   ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    windRef.current = Math.sin(t * 0.3) * 0.05; // Base wind simulation
+    
     if (groupRef.current) {
-      const t = state.clock.getElapsedTime();
-      groupRef.current.rotation.y = Math.sin(t * 0.05) * 0.1; // subtle scene drift
+      // Scene breathing when no audio
+      if (!audioAnalysis.hasAudio) {
+        groupRef.current.position.y = Math.sin(t * 0.5) * 0.02;
+        groupRef.current.rotation.y = Math.sin(t * 0.1) * 0.03;
+      } else {
+        // Audio-reactive scene movement
+        groupRef.current.position.y = audioAnalysis.bass * 0.1;
+        groupRef.current.rotation.y = audioAnalysis.mids * 0.2;
+      }
     }
   });
 
-  const flowers = positions.map((pos, i) => {
-    // Sway each flower slightly with mids; bloom pulsates with bass/highs
-    const sway = 0.15; // max radians
+  // Generate flower meshes with individual audio reactivity
+  const flowers = flowerData.map((flower, i) => {
+    const freqBin = Math.floor((flower.audioIndex / 32) * 255);
+    const localIntensity = audioData.frequency ? (audioData.frequency[freqBin] || 0) / 255 : 0;
+    const swayAmount = windRef.current + localIntensity * 0.3;
+    
     return React.createElement('group', {
       key: i,
-      position: [pos.x, 0, pos.z],
-      rotation: [0, 0, 0],
+      position: [flower.x, 0, flower.z],
+      rotation: [swayAmount * Math.sin(flower.swayPhase), 0, swayAmount * Math.cos(flower.swayPhase)]
     },
-      // stem
-      React.createElement('mesh', { position: [0, 0.25, 0], rotation: [0, 0, 0] },
-        React.createElement('cylinderGeometry', { args: [0.01, 0.01, 0.5, 6] }),
+      // Stem with texture support
+      React.createElement('mesh', { 
+        position: [0, flower.height / 2, 0],
+        scale: [1, 1 + audioAnalysis.bass * 0.3, 1]
+      },
+        React.createElement('cylinderGeometry', { args: [flower.stemWidth, flower.stemWidth * 0.7, flower.height, 8] }),
         React.createElement('meshStandardMaterial', {
           color: '#ffffff',
-          metalness: 0.2,
-          roughness: 0.85,
+          metalness: 0.1,
+          roughness: 0.9,
           emissive: '#ffffff',
-          emissiveIntensity: 0.05 + bass * 0.1
+          emissiveIntensity: 0.02 + audioAnalysis.bass * 0.08
         })
       ),
-      // center
-      React.createElement('mesh', { position: [0, 0.52, 0] },
-        React.createElement('sphereGeometry', { args: [0.03, 12, 12] }),
+      // Flower center
+      React.createElement('mesh', { 
+        position: [0, flower.height, 0],
+        scale: [1 + audioAnalysis.highs * 0.4, 1 + audioAnalysis.highs * 0.4, 1 + audioAnalysis.highs * 0.4]
+      },
+        React.createElement('sphereGeometry', { args: [0.02, 12, 12] }),
         React.createElement('meshStandardMaterial', {
           color: '#ffffff',
           metalness: 0.3,
-          roughness: 0.7,
+          roughness: 0.6,
           emissive: '#ffffff',
-          emissiveIntensity: 0.08 + highs * 0.2
+          emissiveIntensity: 0.1 + audioAnalysis.highs * 0.3
         })
       ),
-      // petals (5)
-      ...[0,1,2,3,4].map((k) =>
-        React.createElement('mesh', {
-          key: 'p' + k,
+      // Dynamic petals
+      ...Array(flower.petalCount).fill(null).map((_, k) => {
+        const angle = (k / flower.petalCount) * Math.PI * 2;
+        const petalDistance = 0.04 + localIntensity * 0.02;
+        return React.createElement('mesh', {
+          key: 'petal' + k,
           position: [
-            Math.cos((k/5)*Math.PI*2) * 0.07,
-            0.52,
-            Math.sin((k/5)*Math.PI*2) * 0.07
+            Math.cos(angle) * petalDistance,
+            flower.height,
+            Math.sin(angle) * petalDistance
           ],
-          rotation: [ -Math.PI/2 + 0.15 * mids, (k/5)*Math.PI*2, 0 ],
-          scale: [1 + bass * 0.2, 1 + bass * 0.2, 1]
+          rotation: [-Math.PI/2 + audioAnalysis.mids * 0.3, angle, 0],
+          scale: [1 + audioAnalysis.beat * 0.5, 1 + audioAnalysis.beat * 0.5, 1]
         },
-          React.createElement('coneGeometry', { args: [0.03, 0.08, 10] }),
+          React.createElement('coneGeometry', { args: [flower.petalSize, 0.06, 8] }),
           React.createElement('meshStandardMaterial', {
             color: '#ffffff',
-            metalness: 0.25,
-            roughness: 0.65,
+            metalness: 0.2,
+            roughness: 0.7,
             emissive: '#ffffff',
-            emissiveIntensity: 0.05 + mids * 0.15
+            emissiveIntensity: 0.05 + audioAnalysis.mids * 0.2
           })
-        )
-      )
-    );
-  });
-
-  return React.createElement(
-    'group',
-    { ref: groupRef },
-    React.createElement('ambientLight', { intensity: 0.55 }),
-    React.createElement('directionalLight', { position: [5, 5, 5], intensity: 1 }),
-    ...flowers
-  );
-};`;
-  }
-
-  // 2) Swarm of orbs (instanced-like via many meshes), good for "swarm/cloud/particles"
-  if (p.includes('swarm') || p.includes('cloud') || p.includes('particles') || p.includes('stars') || p.includes('rain') || p.includes('snow') || p.includes('many') || p.includes('multiple')) {
-    return `return function CustomVisualizer(props) {
-  const audioData = props.audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
-  const groupRef = React.useRef(null);
-
-  const frequency = audioData.frequency || Array(256).fill(0);
-
-  const bass = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
-
-  const mids = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  const highs = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  const count = 240;
-  const particles = React.useMemo(() => {
-    const arr = [];
-    let seed = ${Math.floor(Math.random() * 99999)};
-    function rnd() { seed = (seed * 1103515245 + 12345) % 4294967296; return seed / 4294967296; }
-    for (let i = 0; i < count; i++) {
-      const r = 1.5 + rnd() * 1.0;
-      const a = rnd() * Math.PI * 2;
-      const h = (rnd() - 0.5) * 1.5;
-      const size = 0.02 + rnd() * 0.06;
-      arr.push({ r, a, h, size, speed: 0.1 + rnd() * 0.4 });
-    }
-    return arr;
-  }, []);
-
-  ReactThreeFiber.useFrame((state) => {
-    if (groupRef.current) {
-      const t = state.clock.getElapsedTime();
-      groupRef.current.rotation.y = t * 0.05 * (0.5 + highs);
-    }
-  });
-
-  const nodes = particles.map((p, i) => {
-    return React.createElement('mesh', {
-      key: i,
-      position: [Math.cos(p.a) * p.r, p.h + Math.sin(p.a * 2) * 0.2 * bass, Math.sin(p.a) * p.r],
-      scale: [p.size * (1 + bass), p.size * (1 + bass), p.size * (1 + bass)],
-      rotation: [p.a, 0, 0]
-    },
-      React.createElement('sphereGeometry', { args: [8 * p.size + 6, 12, 12] }),
-      React.createElement('meshStandardMaterial', {
-        color: '#ffffff',
-        metalness: 0.2,
-        roughness: 0.6,
-        emissive: '#ffffff',
-        emissiveIntensity: 0.07 + mids * 0.2
+        );
       })
     );
   });
 
-  return React.createElement(
-    'group',
-    { ref: groupRef },
-    React.createElement('ambientLight', { intensity: 0.5 }),
-    React.createElement('directionalLight', { position: [5, 5, 5], intensity: 1 }),
-    ...nodes
+  // Add floating particles for ambiance
+  const particles = Array(60).fill(null).map((_, i) => {
+    const x = (Math.random() - 0.5) * 8;
+    const y = 0.5 + Math.random() * 2;
+    const z = (Math.random() - 0.5) * 8;
+    
+    return React.createElement('mesh', {
+      key: 'particle' + i,
+      position: [x + Math.sin(Date.now() * 0.001 + i) * 0.1, y + audioAnalysis.highs * 0.3, z],
+      scale: [0.01 + audioAnalysis.beat * 0.02, 0.01 + audioAnalysis.beat * 0.02, 0.01 + audioAnalysis.beat * 0.02]
+    },
+      React.createElement('sphereGeometry', { args: [1, 6, 6] }),
+      React.createElement('meshStandardMaterial', {
+        color: '#ffffff',
+        metalness: 0.8,
+        roughness: 0.2,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.15 + audioAnalysis.highs * 0.4,
+        transparent: true,
+        opacity: 0.6 + audioAnalysis.beat * 0.4
+      })
+    );
+  });
+
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.4 }),
+    React.createElement('directionalLight', { position: [10, 10, 5], intensity: 0.8 }),
+    React.createElement('pointLight', { 
+      position: [0, 2, 0], 
+      intensity: 0.5 + audioAnalysis.beat * 0.8,
+      color: '#ffffff'
+    }),
+    ...flowers,
+    ...particles
   );
 };`;
   }
 
-  // 3) Grid lattice of shapes
-  if (p.includes('grid') || p.includes('matrix') || p.includes('lattice')) {
+  // 2) Advanced Swarm/Particle System
+  if (isSwarm) {
     return `return function CustomVisualizer(props) {
-  const audioData = props.audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
   const groupRef = React.useRef(null);
+  const particleRefs = React.useRef([]);
+  
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    return { bass, mids, highs, beat: audioData.beatStrength, hasAudio: bass + mids + highs > 0.01 };
+  }, [audioData]);
 
-  const frequency = audioData.frequency || Array(256).fill(0);
-
-  const bass = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
-
-  const mids = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  const highs = React.useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  const N = 12;
-  const spacing = 0.25;
-
-  const cells = [];
-  for (let x = -N/2; x < N/2; x++) {
-    for (let y = -N/2; y < N/2; y++) {
-      for (let z = -N/2; z < N/2; z++) {
-        if ((Math.abs(x) + Math.abs(y) + Math.abs(z)) % 3 === 0) {
-          cells.push([x * spacing, y * spacing, z * spacing]);
-        }
-      }
+  const swarmData = React.useMemo(() => {
+    const particles = [];
+    let seed = ${Math.floor(Math.random() * 99999)};
+    function rnd() { seed = (seed * 1103515245 + 12345) % 4294967296; return seed / 4294967296; }
+    
+    const count = 320;
+    for (let i = 0; i < count; i++) {
+      const r = 0.8 + rnd() * 1.5;
+      const theta = rnd() * Math.PI * 2;
+      const phi = Math.acos(2 * rnd() - 1);
+      
+      particles.push({
+        x: r * Math.sin(phi) * Math.cos(theta),
+        y: r * Math.cos(phi),
+        z: r * Math.sin(phi) * Math.sin(theta),
+        size: 0.015 + rnd() * 0.025,
+        speed: 0.2 + rnd() * 0.8,
+        phase: rnd() * Math.PI * 2,
+        orbit: rnd() * Math.PI * 2,
+        audioIndex: i % 128
+      });
     }
-  }
+    return particles;
+  }, []);
 
   ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
     if (groupRef.current) {
-      const t = state.clock.getElapsedTime();
-      groupRef.current.rotation.x = t * 0.08;
-      groupRef.current.rotation.y = t * 0.06;
+      if (!audioAnalysis.hasAudio) {
+        // Idle breathing motion
+        groupRef.current.rotation.x = Math.sin(t * 0.3) * 0.1;
+        groupRef.current.rotation.y = t * 0.05;
+        groupRef.current.scale.setScalar(1 + Math.sin(t * 0.7) * 0.05);
+      } else {
+        // Audio-reactive motion
+        groupRef.current.rotation.x = audioAnalysis.bass * 0.5;
+        groupRef.current.rotation.y = t * (0.1 + audioAnalysis.mids);
+        groupRef.current.scale.setScalar(1 + audioAnalysis.beat * 0.3);
+      }
     }
   });
 
-  const nodes = cells.map((pos, i) => React.createElement('mesh', { key: i, position: pos, scale: [0.07 + 0.05 * bass, 0.07 + 0.05 * bass, 0.07 + 0.05 * bass] },
-    React.createElement('boxGeometry', { args: [1, 1, 1] }),
-    React.createElement('meshStandardMaterial', {
-      color: '#ffffff',
-      metalness: 0.25,
-      roughness: 0.7,
-      emissive: '#ffffff',
-      emissiveIntensity: 0.05 + highs * 0.2
-    })
-  ));
+  const particles = swarmData.map((particle, i) => {
+    const freqBin = Math.floor((particle.audioIndex / 128) * 255);
+    const localIntensity = audioData.frequency ? (audioData.frequency[freqBin] || 0) / 255 : 0;
+    
+    return React.createElement('mesh', {
+      key: i,
+      position: [
+        particle.x + Math.sin(particle.phase + particle.orbit) * (0.2 + localIntensity * 0.3),
+        particle.y + Math.cos(particle.phase) * (0.1 + audioAnalysis.mids * 0.4),
+        particle.z + Math.sin(particle.orbit) * (0.15 + audioAnalysis.highs * 0.2)
+      ],
+      scale: [
+        particle.size * (1 + audioAnalysis.beat * 0.6),
+        particle.size * (1 + audioAnalysis.beat * 0.6),
+        particle.size * (1 + audioAnalysis.beat * 0.6)
+      ]
+    },
+      React.createElement('sphereGeometry', { args: [1, 12, 12] }),
+      React.createElement('meshStandardMaterial', {
+        color: '#ffffff',
+        metalness: 0.4,
+        roughness: 0.4,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.08 + localIntensity * 0.4,
+        transparent: true,
+        opacity: 0.7 + audioAnalysis.beat * 0.3
+      })
+    );
+  });
 
-  return React.createElement(
-    'group',
-    { ref: groupRef },
-    React.createElement('ambientLight', { intensity: 0.5 }),
-    React.createElement('directionalLight', { position: [5, 5, 5], intensity: 1 }),
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.3 }),
+    React.createElement('directionalLight', { position: [5, 5, 5], intensity: 0.7 }),
+    React.createElement('pointLight', { 
+      position: [0, 0, 0], 
+      intensity: 1 + audioAnalysis.beat * 2,
+      distance: 10,
+      color: '#ffffff'
+    }),
+    ...particles
+  );
+};`;
+  }
+
+  // 3) Advanced Grid/Matrix System
+  if (isGrid) {
+    return `return function CustomVisualizer(props) {
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
+  const groupRef = React.useRef(null);
+  
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    return { bass, mids, highs, beat: audioData.beatStrength, hasAudio: bass + mids + highs > 0.01 };
+  }, [audioData]);
+
+  const gridData = React.useMemo(() => {
+    const nodes = [];
+    const size = 16;
+    const spacing = 0.2;
+    
+    for (let x = -size/2; x < size/2; x++) {
+      for (let y = -size/2; y < size/2; y++) {
+        for (let z = -size/2; z < size/2; z++) {
+          if ((Math.abs(x) + Math.abs(y) + Math.abs(z)) % 4 === 0) {
+            nodes.push({
+              position: [x * spacing, y * spacing, z * spacing],
+              audioIndex: ((x + size/2) * size + (y + size/2)) % 256
+            });
+          }
+        }
+      }
+    }
+    return nodes;
+  }, []);
+
+  ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    if (groupRef.current) {
+      if (!audioAnalysis.hasAudio) {
+        groupRef.current.rotation.x = t * 0.03;
+        groupRef.current.rotation.y = t * 0.05;
+        groupRef.current.rotation.z = t * 0.02;
+      } else {
+        groupRef.current.rotation.x = t * (0.05 + audioAnalysis.bass * 0.1);
+        groupRef.current.rotation.y = t * (0.08 + audioAnalysis.mids * 0.15);
+        groupRef.current.rotation.z = audioAnalysis.highs * 0.3;
+      }
+    }
+  });
+
+  const nodes = gridData.map((node, i) => {
+    const localIntensity = audioData.frequency ? (audioData.frequency[node.audioIndex] || 0) / 255 : 0;
+    const wavePhase = (node.position[0] + node.position[1] + node.position[2]) * 2;
+    
+    return React.createElement('mesh', {
+      key: i,
+      position: node.position,
+      scale: [
+        0.05 + localIntensity * 0.1 + Math.sin(wavePhase) * 0.02,
+        0.05 + localIntensity * 0.1 + Math.sin(wavePhase) * 0.02,
+        0.05 + localIntensity * 0.1 + Math.sin(wavePhase) * 0.02
+      ]
+    },
+      React.createElement('boxGeometry', { args: [1, 1, 1] }),
+      React.createElement('meshStandardMaterial', {
+        color: '#ffffff',
+        metalness: 0.6,
+        roughness: 0.3,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.05 + localIntensity * 0.3,
+        wireframe: false
+      })
+    );
+  });
+
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.2 }),
+    React.createElement('directionalLight', { position: [10, 10, 10], intensity: 0.8 }),
     ...nodes
   );
 };`;
   }
 
-  // fallback to default single object template when complex set didn't trigger
-  return getDefaultVisualizer(prompt);
+  // Default to simple but enhanced template
+  return getEnhancedDefaultVisualizer(prompt);
+}
+
+// Enhanced default visualizer with better audio reactivity and idle behavior
+function getEnhancedDefaultVisualizer(prompt: string): string {
+  const geometryType = getGeometryType(prompt);
+  const geometryArgs = getGeometryArgs(prompt);
+  
+  return `return function CustomVisualizer(props) {
+    const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
+    const meshRef = React.useRef(null);
+    const groupRef = React.useRef(null);
+    const orbitRef = React.useRef(null);
+    
+    // Enhanced audio analysis
+    const audioAnalysis = React.useMemo(() => {
+      const freq = audioData.frequency || Array(256).fill(0);
+      const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+      const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+      const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+      return { bass, mids, highs, beat: audioData.beatStrength, hasAudio: bass + mids + highs > 0.01 };
+    }, [audioData]);
+    
+    // Advanced animation with idle behavior
+    ReactThreeFiber.useFrame((state) => {
+      const t = state.clock.getElapsedTime();
+      
+      if (meshRef.current) {
+        if (!audioAnalysis.hasAudio) {
+          // Elegant idle animation
+          meshRef.current.rotation.x = Math.sin(t * 0.3) * 0.2;
+          meshRef.current.rotation.y = t * 0.1;
+          meshRef.current.scale.setScalar(1 + Math.sin(t * 0.5) * 0.1);
+        } else {
+          // Full audio reactivity
+          meshRef.current.rotation.x = t * (0.2 + audioAnalysis.bass * 0.8) + audioAnalysis.bass * 2;
+          meshRef.current.rotation.y = t * (0.15 + audioAnalysis.mids * 0.6) + audioAnalysis.mids * 3;
+          meshRef.current.rotation.z = audioAnalysis.highs * 1.5;
+          meshRef.current.scale.setScalar(1 + audioAnalysis.beat * 0.4 + audioAnalysis.bass * 0.3);
+        }
+      }
+      
+      if (groupRef.current) {
+        if (!audioAnalysis.hasAudio) {
+          groupRef.current.rotation.z = Math.sin(t * 0.2) * 0.05;
+          groupRef.current.position.y = Math.sin(t * 0.4) * 0.03;
+        } else {
+          groupRef.current.rotation.z = audioAnalysis.mids * 0.3;
+          groupRef.current.position.y = audioAnalysis.bass * 0.2;
+        }
+      }
+      
+      if (orbitRef.current) {
+        orbitRef.current.rotation.x = t * (0.1 + audioAnalysis.highs * 0.2);
+        orbitRef.current.rotation.y = t * (0.08 + audioAnalysis.mids * 0.15);
+      }
+    });
+    
+    // Create orbital elements for added complexity
+    const orbitalElements = Array(8).fill(null).map((_, i) => {
+      const angle = (i / 8) * Math.PI * 2;
+      const radius = 1.2 + Math.sin(angle * 3) * 0.3;
+      return React.createElement('mesh', {
+        key: 'orbit' + i,
+        position: [Math.cos(angle) * radius, Math.sin(angle * 2) * 0.2, Math.sin(angle) * radius],
+        scale: [0.08 + audioAnalysis.highs * 0.1, 0.08 + audioAnalysis.highs * 0.1, 0.08 + audioAnalysis.highs * 0.1]
+      },
+        React.createElement('sphereGeometry', { args: [1, 8, 8] }),
+        React.createElement('meshStandardMaterial', {
+          color: '#ffffff',
+          metalness: 0.7,
+          roughness: 0.2,
+          emissive: '#ffffff',
+          emissiveIntensity: 0.1 + audioAnalysis.highs * 0.3,
+          transparent: true,
+          opacity: 0.6 + audioAnalysis.beat * 0.4
+        })
+      );
+    });
+    
+    return React.createElement('group', { ref: groupRef },
+      React.createElement('ambientLight', { intensity: 0.4 }),
+      React.createElement('directionalLight', { position: [5, 5, 5], intensity: 0.8 }),
+      React.createElement('pointLight', { 
+        position: [0, 0, 0], 
+        intensity: 0.6 + audioAnalysis.beat * 1.2,
+        color: '#ffffff'
+      }),
+      
+      // Main mesh
+      React.createElement('mesh', { ref: meshRef },
+        React.createElement('${geometryType}', { args: ${geometryArgs} }),
+        React.createElement('meshStandardMaterial', { 
+          color: '#ffffff',
+          metalness: 0.4,
+          roughness: 0.6,
+          emissive: '#ffffff',
+          emissiveIntensity: 0.08 + audioAnalysis.beat * 0.2
+        })
+      ),
+      
+      // Orbital elements
+      React.createElement('group', { ref: orbitRef }, ...orbitalElements)
+    );
+  };`;
 }
 
 // Working default visualizer (kept but ensure white materials)
@@ -417,11 +623,11 @@ serve(async (req) => {
       });
     }
 
-    // Prefer complex template if prompt indicates plurality/fields/swarms
+    // Prefer advanced template if prompt indicates plurality/fields/swarms
     let cleanedCode = '';
     if (isComplexPrompt(prompt)) {
-      cleanedCode = getComplexVisualizer(prompt);
-      console.log('[generator] Using complex template for prompt:', prompt);
+      cleanedCode = getAdvancedVisualizer(prompt);
+      console.log('[generator] Using advanced template for prompt:', prompt);
     } else if (openAIApiKey) {
       try {
         // Use a VERY specific prompt that produces working code
@@ -518,9 +724,9 @@ Modify ONLY the geometry type (boxGeometry, sphereGeometry, etc.) and rotation s
     
     // If OpenAI failed or no API key, or we still don't have code, use default logic
     if (!cleanedCode || !cleanedCode.includes('return function') || !cleanedCode.includes('React.createElement')) {
-      const usedDefault = isComplexPrompt(prompt) ? '[complex-local]' : '[simple-default]';
+      const usedDefault = isComplexPrompt(prompt) ? '[advanced-local]' : '[enhanced-default]';
       console.log('Using fallback visualizer for prompt:', prompt, usedDefault);
-      cleanedCode = isComplexPrompt(prompt) ? getComplexVisualizer(prompt) : getDefaultVisualizer(prompt);
+      cleanedCode = isComplexPrompt(prompt) ? getAdvancedVisualizer(prompt) : getEnhancedDefaultVisualizer(prompt);
     }
     
     // Extract visualizer name from the cleaned code
