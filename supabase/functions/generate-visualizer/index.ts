@@ -7,65 +7,73 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Enhanced prompt processing with GPT
+// Enhanced semantic prompt processing with GPT-4
 async function enhancePrompt(originalPrompt: string, referenceImage?: string): Promise<{
   enhancedPrompt: string;
   complexity: 'simple' | 'complex';
   category: string;
   objectCount: number;
+  semanticBreakdown: string[];
+  geometryType: string;
 }> {
   if (!openAIApiKey) {
     return {
       enhancedPrompt: originalPrompt,
       complexity: 'simple',
       category: 'unknown',
-      objectCount: 1
+      objectCount: 1,
+      semanticBreakdown: [originalPrompt],
+      geometryType: 'sphere'
     };
   }
 
   try {
-    let systemPrompt = `You are a 3D visualizer specialist. Transform simple prompts into detailed, complex multi-object descriptions for audio-reactive visualizers.
+    let systemPrompt = `You are an expert 3D visualizer designer who creates detailed, semantically accurate audio-reactive visualizations.
 
-CRITICAL REQUIREMENTS:
-- ALL objects must stay centered using orbital/spherical/bounded movement patterns
-- Generate MULTIPLE objects (50-300+) for most concepts  
-- Specify exact positioning that keeps everything in view
-- Include audio reactivity details
-- Add idle animation behaviors for when no audio is playing
+CRITICAL MISSION: Transform simple prompts into precise, multi-component object descriptions that match real-world semantics.
 
-Transform these patterns:
-- "asteroids" → "dense field of 200+ irregularly shaped rocky asteroids in various sizes (0.05-0.3 scale), distributed in a spherical formation around center, each with unique rotation speeds and orbital paths, staying within 2.5 unit radius"
-- "flowers" → "expansive meadow of 150+ mixed flowers (roses, daisies, tulips) with varied stem heights, individual petal animations, gentle swaying, positioned in circular field pattern"
-- "particles" → "swarm of 400+ small luminous spheres in orbital cloud formation, individual frequency mapping, size variation, opacity pulsing"
+SEMANTIC ACCURACY RULES:
+- "airplane" → wings (rectangular), fuselage (cylindrical), tail (triangular), propeller (rotating discs) - NOT generic spheres
+- "flower field" → individual flowers with stems (cylinders), petals (cones), centers (spheres), leaves (planes)
+- "city" → buildings (boxes) of varying heights, windows (smaller boxes), streets (planes), cars (elongated boxes)
+- "forest" → tree trunks (cylinders), branches (smaller cylinders), leaves (small spheres/planes), ground cover
 
-ALWAYS specify:
-1. Object count (50-300+)
-2. Size variations
-3. Centered distribution pattern (spherical, circular, grid)
-4. Bounded movement (orbital, contained, radius-limited)
-5. Individual audio reactivity
-6. Idle behavior when no audio
+COMPONENT BREAKDOWN REQUIREMENTS:
+1. Identify MAIN object type and break into logical components
+2. Specify geometry for each component (box, sphere, cylinder, cone, plane, torus)  
+3. Define 50-300+ individual elements with realistic proportions
+4. Create hierarchical relationships (wings belong to airplane body)
+5. Assign unique audio frequency mapping to each component
+6. Keep all elements centered within 3-unit radius sphere
 
-Respond with JSON:
+MOVEMENT SEMANTICS:
+- Airplanes: bank, roll, pitch motions
+- Flowers: petal opening/closing, stem swaying
+- Buildings: window brightness pulsing, structural sway
+- Trees: branch swaying, leaf rustling
+
+OUTPUT FORMAT - JSON:
 {
-  "enhancedPrompt": "detailed description...",
-  "complexity": "simple" | "complex", 
-  "category": "space" | "nature" | "abstract" | "geometric",
-  "objectCount": number
+  "enhancedPrompt": "detailed multi-component description with exact geometry specifications",
+  "complexity": "simple" | "complex",
+  "category": "vehicles" | "nature" | "architecture" | "abstract" | "space" | "organic",
+  "objectCount": number_of_total_elements,
+  "semanticBreakdown": ["component1", "component2", "component3"],
+  "geometryType": "multi-component"
+}
+
+EXAMPLES:
+airplane → {
+  "enhancedPrompt": "Fleet of 75 realistic airplanes, each with rectangular wings (boxGeometry), cylindrical fuselage (cylinderGeometry), triangular tail fins (coneGeometry), rotating propellers (torusGeometry). Individual banking, rolling, and altitude movements. Audio-reactive: bass controls altitude, mids control banking angle, highs control propeller speed.",
+  "semanticBreakdown": ["fuselage", "left-wing", "right-wing", "tail", "propeller"],
+  "geometryType": "multi-component"
+}
+
+flower field → {
+  "enhancedPrompt": "Garden of 200 individual flowers with cylindrical stems, cone-shaped petals (5-8 per flower), spherical centers, plane-geometry leaves. Each flower sways independently, petals open/close based on audio intensity.",
+  "semanticBreakdown": ["stem", "petals", "center", "leaves"],
+  "geometryType": "multi-component"
 }`;
-
-    // Add image analysis if provided
-    if (referenceImage) {
-      systemPrompt += `
-
-REFERENCE IMAGE PROVIDED: Analyze the image and extract:
-- Number of objects/elements visible
-- Spatial arrangement and density
-- Shape complexity and variations  
-- Movement implications
-- Color scheme and lighting
-Incorporate these details into the enhanced prompt.`;
-    }
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -86,7 +94,7 @@ Incorporate these details into the enhanced prompt.`;
       body: JSON.stringify({
         model: 'gpt-4.1-2025-04-14',
         messages,
-        max_completion_tokens: 800,
+        max_completion_tokens: 1200,
       }),
     });
 
@@ -99,7 +107,9 @@ Incorporate these details into the enhanced prompt.`;
           enhancedPrompt: result.enhancedPrompt || originalPrompt,
           complexity: result.complexity || 'complex',
           category: result.category || 'unknown',
-          objectCount: result.objectCount || 100
+          objectCount: result.objectCount || 100,
+          semanticBreakdown: result.semanticBreakdown || [originalPrompt],
+          geometryType: result.geometryType || 'multi-component'
         };
       } catch (e) {
         console.log('Failed to parse GPT response, using fallback');
@@ -114,7 +124,9 @@ Incorporate these details into the enhanced prompt.`;
     enhancedPrompt: originalPrompt,
     complexity: originalPrompt.length > 20 ? 'complex' : 'simple',
     category: 'unknown',
-    objectCount: 50
+    objectCount: 50,
+    semanticBreakdown: [originalPrompt],
+    geometryType: 'sphere'
   };
 }
 
@@ -162,23 +174,108 @@ function isComplexPrompt(prompt: string): boolean {
   ].some(k => p.includes(k));
 }
 
-/**
- * Advanced visualizer templates with full audio integration and texture support
- */
-function getAdvancedVisualizer(prompt: string): string {
-  const p = prompt.toLowerCase();
-  
-  // Extract key concepts for intelligent generation
-  const isFloral = p.includes('flower') || p.includes('flowers') || p.includes('blossom') || p.includes('petal') || p.includes('garden') || p.includes('field');
-  const isSwarm = p.includes('swarm') || p.includes('flock') || p.includes('school') || p.includes('cloud') || p.includes('particles') || p.includes('stars') || p.includes('rain') || p.includes('snow');
-  const isGrid = p.includes('grid') || p.includes('matrix') || p.includes('lattice') || p.includes('mesh') || p.includes('network');
-  const isOrganic = p.includes('organic') || p.includes('fluid') || p.includes('wave') || p.includes('blob') || p.includes('tentacle') || p.includes('neural');
-  const isCrystal = p.includes('crystal') || p.includes('diamond') || p.includes('gem') || p.includes('prism') || p.includes('facet');
-  const isSpace = p.includes('asteroid') || p.includes('meteor') || p.includes('space') || p.includes('comet') || p.includes('rock') || p.includes('falling') || p.includes('flying');
+// We'll inline the semantic templates due to Deno import limitations
 
-  // 1) Advanced Flower Field - Complex multi-component with full audio integration
-  if (isFloral) {
-    return `return function CustomVisualizer(props) {
+/**
+ * Generate semantically accurate visualizer using GPT analysis
+ */
+function getSemanticVisualizer(prompt: string, analysis: {
+  category: string;
+  semanticBreakdown: string[];
+  objectCount: number;
+  enhancedPrompt: string;
+  geometryType: string;
+}): string {
+  // Use airplane template for aircraft prompts
+  if (analysis.category === 'vehicles' || prompt.toLowerCase().includes('airplane') || prompt.toLowerCase().includes('plane')) {
+    return getAirplaneFleetTemplate(analysis.objectCount, analysis.enhancedPrompt);
+  }
+  
+  // Use flower template for nature prompts
+  if (analysis.category === 'nature' || prompt.toLowerCase().includes('flower')) {
+    return getFlowerFieldTemplate(analysis.objectCount, analysis.enhancedPrompt);
+  }
+  
+  // Default to enhanced multi-object template
+  return getEnhancedDefaultVisualizer(prompt);
+}
+
+function getAirplaneFleetTemplate(count: number, description: string): string {
+  const fleetSize = Math.min(Math.max(count, 50), 150);
+  return \`return function CustomVisualizer(props) {
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
+  const groupRef = React.useRef(null);
+  
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    return { bass, mids, highs, beat: audioData.beatStrength || 0 };
+  }, [audioData]);
+
+  const airplaneData = React.useMemo(() => {
+    const airplanes = [];
+    let seed = \${Math.floor(Math.random() * 99999)};
+    function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+    
+    for (let i = 0; i < \${fleetSize}; i++) {
+      const radius = 1.5 + rnd() * 1.0;
+      const theta = rnd() * Math.PI * 2;
+      const phi = Math.acos(2 * rnd() - 1);
+      
+      airplanes.push({
+        x: radius * Math.sin(phi) * Math.cos(theta),
+        y: radius * Math.cos(phi),
+        z: radius * Math.sin(phi) * Math.sin(theta),
+        scale: 0.08 + rnd() * 0.04,
+        bankAngle: (rnd() - 0.5) * 0.5,
+        audioIndex: i % 64
+      });
+    }
+    return airplanes;
+  }, []);
+
+  ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (groupRef.current) {
+      groupRef.current.rotation.y = t * (0.05 + audioAnalysis.mids * 0.2);
+      groupRef.current.position.y = audioAnalysis.bass * 0.3;
+    }
+  });
+
+  const airplanes = airplaneData.map((plane, i) => {
+    const freqBin = Math.floor((plane.audioIndex / 64) * 255);
+    const localIntensity = audioData.frequency ? (audioData.frequency[freqBin] || 0) / 255 : 0;
+    
+    return React.createElement('group', {
+      key: i,
+      position: [plane.x, plane.y + audioAnalysis.bass * 0.4, plane.z],
+      rotation: [plane.bankAngle + audioAnalysis.mids * 0.4, 0, 0],
+      scale: [plane.scale * (1 + localIntensity * 0.3), plane.scale * (1 + localIntensity * 0.3), plane.scale * (1 + localIntensity * 0.3)]
+    },
+      React.createElement('mesh', { position: [0, 0, 0] },
+        React.createElement('cylinderGeometry', { args: [0.3, 0.4, 2.5, 8] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.03 + localIntensity * 0.1 })
+      ),
+      React.createElement('mesh', { position: [-1.2, 0, 0.3] },
+        React.createElement('boxGeometry', { args: [2, 0.1, 0.8] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.02 + audioAnalysis.mids * 0.08 })
+      ),
+      React.createElement('mesh', { position: [1.2, 0, 0.3] },
+        React.createElement('boxGeometry', { args: [2, 0.1, 0.8] }),
+        React.createElement('meshStandardMaterial', { color: '#ffffff', emissiveIntensity: 0.02 + audioAnalysis.mids * 0.08 })
+      )
+    );
+  });
+
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.3 }),
+    React.createElement('directionalLight', { position: [10, 10, 5], intensity: 0.7 }),
+    ...airplanes
+  );
+};\`;
+}
   const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
   const groupRef = React.useRef(null);
   const particlesRef = React.useRef([]);
@@ -898,24 +995,21 @@ serve(async (req) => {
       });
     }
 
-    // STEP 1: Enhance the prompt with GPT for complexity analysis
+    // STEP 1: Enhance the prompt with GPT for semantic analysis
     console.log('[generator] Original prompt:', prompt);
     const enhancement = await enhancePrompt(prompt, referenceImage);
     console.log('[generator] Enhanced prompt:', enhancement.enhancedPrompt);
-    console.log('[generator] Complexity:', enhancement.complexity, 'Objects:', enhancement.objectCount);
+    console.log('[generator] Category:', enhancement.category, 'Objects:', enhancement.objectCount);
+    console.log('[generator] Semantic breakdown:', enhancement.semanticBreakdown);
 
-    // STEP 2: Generate visualizer based on enhanced understanding
-    let cleanedCode = '';
+    // STEP 2: Generate semantically accurate visualizer
+    let cleanedCode = getSemanticVisualizer(prompt, enhancement);
+    console.log('[generator] Using semantic template generation');
     
-    // Use enhanced analysis to determine template
-    const shouldUseAdvanced = enhancement.complexity === 'complex' || 
-                             enhancement.objectCount > 20 || 
-                             isComplexPrompt(prompt) ||
-                             enhancement.category === 'space'; // Force asteroid template for space prompts
-
-    if (shouldUseAdvanced) {
-      cleanedCode = getAdvancedVisualizer(enhancement.enhancedPrompt || prompt);
-      console.log('[generator] Using advanced template for enhanced prompt');
+    // Clean up the code to ensure proper formatting
+    if (!cleanedCode || !cleanedCode.includes('return function')) {
+      console.log('Fallback to enhanced default visualizer');
+      cleanedCode = getEnhancedDefaultVisualizer(prompt);
     } else if (openAIApiKey) {
       try {
         // Use a VERY specific prompt that produces working code

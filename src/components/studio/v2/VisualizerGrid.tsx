@@ -36,8 +36,9 @@ export function VisualizerGrid() {
   ];
 
   const handleCustomVisualizerSuccess = (visualizer: any) => {
-    // Automatically select the newly generated visualizer
+    // Automatically select the newly generated visualizer and close generator
     setSelected(`custom_${visualizer.id}` as VisualizerKey);
+    setShowGenerator(false);
   };
 
   return (

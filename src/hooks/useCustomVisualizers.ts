@@ -121,10 +121,15 @@ export function useCustomVisualizers() {
         description: `${data.visualizer.name} has been created`,
       });
 
-      // Refresh the list and counts immediately 
-      setCustomVisualizers(prev => [...prev, data.visualizer]);
-      await fetchCustomVisualizers();
-      await checkUserRole(); // Refresh count
+      // Immediately add to state for instant UI update
+      setCustomVisualizers(prev => [data.visualizer, ...prev]);
+      setVisualizerCount(prev => prev + 1);
+      
+      // Refresh in background to ensure consistency
+      setTimeout(() => {
+        fetchCustomVisualizers();
+        checkUserRole();
+      }, 100);
       
       return data.visualizer;
     } catch (error) {
