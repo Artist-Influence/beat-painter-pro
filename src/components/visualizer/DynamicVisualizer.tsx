@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import { transform as sucraseTransform } from 'sucrase';
 
 interface DynamicVisualizerProps {
   jsxCode: string;
@@ -128,13 +129,20 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       const transformedCode = transformJSXCode(jsxCode);
       validateJSX(transformedCode);
 
+      // Compile TSX/JSX to plain JavaScript using Sucrase
+      const { code: compiledCode } = sucraseTransform(transformedCode, { 
+        transforms: ['typescript', 'jsx'] 
+      });
+
       // Helpful dev logging
       if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'development') {
         // eslint-disable-next-line no-console
-        console.debug('DynamicVisualizer transformed code:', transformedCode);
+        console.debug('DynamicVisualizer transformed code:', transformedCode.slice(0, 200) + '...');
+        // eslint-disable-next-line no-console
+        console.debug('DynamicVisualizer compiled code:', compiledCode.slice(0, 200) + '...');
       }
       
-      // Create the component function from the transformed JSX code
+      // Create the component function from the compiled JavaScript code
       const componentFunction = new Function(
         'React',
         'useRef',
@@ -143,7 +151,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         'useStudioStore',
         'createVisualizerMaterial',
         'THREE',
-        transformedCode
+        compiledCode
       );
       
       // Provide necessary dependencies
