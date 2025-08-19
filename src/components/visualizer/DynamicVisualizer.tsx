@@ -87,9 +87,12 @@ const validateJSX = (code: string) => {
   }
   for (const tag of htmlTags) {
     if (new RegExp(`<\\/?${tag}\\b`, 'i').test(code)) {
-      // We already convert most HTML to groups above, but block any leftovers
       throw new Error('HTML elements are not allowed inside the 3D Canvas');
     }
+  }
+  // Guard against leftover capitalized JSX elements (e.g., <Button>)
+  if (/<[A-Z][A-Za-z0-9_]*\b/.test(code)) {
+    throw new Error('Unsupported JSX component inside Canvas');
   }
 };
 
