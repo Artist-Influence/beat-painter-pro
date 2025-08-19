@@ -401,13 +401,12 @@ Requirements:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-5-2025-08-07',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ],
-          max_tokens: 2000,
-          temperature: 0.8,
+          max_completion_tokens: 2000
         }),
       });
 
@@ -418,21 +417,29 @@ Requirements:
       const data = await response.json();
       visualizerCode = data.choices[0]?.message?.content || '';
 
-      // Strip Markdown fences and trim
-      visualizerCode = visualizerCode.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
-      
-      // Ensure all-white materials in generated code
-      visualizerCode = visualizerCode.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
-      visualizerCode = visualizerCode.replace(/<meshStandardMaterial[^>]*\/?>(?:<\/meshStandardMaterial>)?/g, '<primitive object={material} />');
-      visualizerCode = visualizerCode.replace(/<meshBasicMaterial[^>]*\/?>(?:<\/meshBasicMaterial>)?/g, '<primitive object={material} />');
-      visualizerCode = visualizerCode.replace(/<meshPhongMaterial[^>]*\/?>(?:<\/meshPhongMaterial>)?/g, '<primitive object={material} />');
-      visualizerCode = visualizerCode.replace(/<meshLambertMaterial[^>]*\/?>(?:<\/meshLambertMaterial>)?/g, '<primitive object={material} />');
-      visualizerCode = visualizerCode.replace(/<meshPhysicalMaterial[^>]*\/?>(?:<\/meshPhysicalMaterial>)?/g, '<primitive object={material} />');
+      // Sanitize and normalize the generated code
+      visualizerCode = visualizerCode
+        // Strip Markdown fences and trim
+        .replace(/```[a-z]*\n?/gi, '')
+        .replace(/```/g, '')
+        .trim()
+        // Remove imports/exports
+        .replace(/^import\s+.*$/gm, '')
+        .replace(/^export\s+.*$/gm, '')
+        // Enforce white materials
+        .replace(/color\s*[:=]\s*["'][^"']*["']/g, '')
+        .replace(/<mesh(Standard|Basic|Phong|Lambert|Physical)Material[^>]*\/?>(?:<\/mesh\1Material>)?/g, '<primitive object={material} />')
+        // Replace HTML tags not allowed in Canvas
+        .replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => m.replace(/(div|span|button|p|img|video|canvas)/i, 'group'))
+        // Replace capitalized JSX elements (e.g., <Button />) with groups
+        .replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, '<group$2 />')
+        .replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)>/g, '<group$2>')
+        .replace(/<\/(?:[A-Z][A-Za-z0-9_]*)>/g, '</group>');
 
       // Generate name and emoji
       const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));
       visualizerName = words.join(' ') + ' Visualizer';
-      
+
       // Emoji mapping
       const emojiMap: Record<string, string> = {
         forest: '🌲', city: '🏙️', ocean: '🌊', space: '🌌', fire: '🔥',
