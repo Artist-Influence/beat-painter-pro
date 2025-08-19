@@ -1,4 +1,3 @@
-
 import React, { Suspense, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -16,46 +15,74 @@ interface DynamicVisualizerProps {
 // Enhanced sanitization and transformation function
 const transformJSXCode = (code: string): string => {
   let transformed = code;
-  
+
+  // Strip code fences if present
+  transformed = transformed.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '');
+
   // Remove imports and exports to make code executable
   transformed = transformed.replace(/^import\s+.*$/gm, '');
   transformed = transformed.replace(/^export\s+.*$/gm, '');
-  
-  // Transform export default function to return function
+
+  // Transform `export default function Name` to named function and return it
   const exportMatch = transformed.match(/export\s+default\s+function\s+(\w+)/);
   if (exportMatch) {
     const functionName = exportMatch[1];
     transformed = transformed.replace(/export\s+default\s+function\s+\w+/, `function ${functionName}`);
     transformed = transformed + `\nreturn ${functionName};`;
   }
-  
+
+  // Remove TypeScript generics and param types often present in templates
+  transformed = transformed.replace(/useRef<[^>]+>\(/g, 'useRef(');
+  transformed = transformed.replace(/useMemo<[^>]+>\(/g, 'useMemo(');
+  transformed = transformed.replace(/\(\{\s*audioData\s*\}\)\s*:\s*\{[^}]+\}/g, '({ audioData })');
+
+  // Enforce all-white materials by replacing material tags with our material instance
+  transformed = transformed.replace(/<meshStandardMaterial[^>]*\/?>(?:<\/meshStandardMaterial>)?/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshBasicMaterial[^>]*\/?>(?:<\/meshBasicMaterial>)?/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshPhongMaterial[^>]*\/?>(?:<\/meshPhongMaterial>)?/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshLambertMaterial[^>]*\/?>(?:<\/meshLambertMaterial>)?/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshPhysicalMaterial[^>]*\/?>(?:<\/meshPhysicalMaterial>)?/g, '<primitive object={material} />');
+
   // Remove any color specifications to enforce all-white materials
   transformed = transformed.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
-  transformed = transformed.replace(/\bcolor\s*=\s*{[^}]*}/g, '');
-  
-  // Fix THREE.js references - ensure they use proper R3F syntax
-  transformed = transformed.replace(/THREE\./g, '');
-  transformed = transformed.replace(/new\s+(Box|Sphere|Cylinder|Cone|Plane|Torus)Geometry/g, '$1Geometry');
-  
-  // Replace material components with createVisualizerMaterial
-  transformed = transformed.replace(/<meshStandardMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  transformed = transformed.replace(/<meshBasicMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  transformed = transformed.replace(/<meshPhongMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  transformed = transformed.replace(/<meshLambertMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  
-  // Fix geometry references to use proper R3F syntax
-  transformed = transformed.replace(/<(\w+)Geometry\s+args=\{([^}]+)\}\s*\/>/g, '<$1Geometry args={$2} />');
-  
+  transformed = transformed.replace(/\bcolor\s*=\s*\{[^}]*\}/g, '');
+
+  // Convert common HTML elements to groups (HTML isn't allowed inside Canvas)
+  transformed = transformed.replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => {
+    return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
+  });
+
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
-    const materialDeclaration = 'const material = createVisualizerMaterial();';
+    const materialDeclaration = 'const material = createVisualizerMaterial("#ffffff", { texture: null, colors: { primary: "#ffffff", secondary: "#ffffff", accent: "#ffffff", isNeon: false, isMetallic: false }, textureVersion: 0 });';
     const insertIndex = transformed.indexOf('return (');
     if (insertIndex !== -1) {
-      transformed = transformed.slice(0, insertIndex) + materialDeclaration + '\n  \n  ' + transformed.slice(insertIndex);
+      transformed = transformed.slice(0, insertIndex) + materialDeclaration + '\n\n  ' + transformed.slice(insertIndex);
+    }
+  } else if (!/const\s+material\s*=\s*createVisualizerMaterial\(/.test(transformed)) {
+    // If function is referenced but instance not created, create it
+    const insertIndex = transformed.indexOf('return (');
+    if (insertIndex !== -1) {
+      transformed = transformed.slice(0, insertIndex) + 'const material = createVisualizerMaterial("#ffffff", { texture: null, colors: { primary: "#ffffff", secondary: "#ffffff", accent: "#ffffff", isNeon: false, isMetallic: false }, textureVersion: 0 });' + '\n\n  ' + transformed.slice(insertIndex);
     }
   }
-  
+
   return transformed;
+};
+
+// Lightweight runtime validator to prevent obvious crashes
+const validateJSX = (code: string) => {
+  const forbidden = [/document\./i, /window\./i, /fetch\(/i, /<canvas/i];
+  const htmlTags = ['div','span','button','input','select','textarea','img','video','canvas'];
+  for (const rx of forbidden) {
+    if (rx.test(code)) throw new Error('Forbidden APIs used in visualizer code');
+  }
+  for (const tag of htmlTags) {
+    if (new RegExp(`<\\/?${tag}\\b`, 'i').test(code)) {
+      // We already convert most HTML to groups above, but block any leftovers
+      throw new Error('HTML elements are not allowed inside the 3D Canvas');
+    }
+  }
 };
 
 const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({ 
@@ -116,38 +143,17 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
           }
         });
         
-        const material = createVisualizerMaterial();
-        
-        return (
-          <group>
-            <mesh ref={meshRef}>
-              <sphereGeometry args={[2, 32, 32]} />
-              <primitive object={material} />
-            </mesh>
-            {/* Error indicator - red wireframe cube */}
-            <mesh position={[0, 4, 0]}>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color="#ff0000" wireframe />
-            </mesh>
-          </group>
-        );
-      };
-    }
-  }, [jsxCode]);
-
-        const meshRef = React.useRef<THREE.Mesh>(null);
-        const { useFrame } = require('@react-three/fiber');
-        const { createVisualizerMaterial } = require('@/lib/visualizerUtils');
-        
-        useFrame(() => {
-          if (meshRef.current && audioData.length > 0) {
-            const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
-            meshRef.current.scale.setScalar(1 + avgFreq * 0.5);
-            meshRef.current.rotation.y += 0.01;
-          }
+        const material = createVisualizerMaterial('#ffffff', { 
+          texture: null, 
+          colors: {
+            primary: '#ffffff', 
+            secondary: '#ffffff', 
+            accent: '#ffffff', 
+            isNeon: false, 
+            isMetallic: false
+          }, 
+          textureVersion: 0 
         });
-        
-        const material = createVisualizerMaterial();
         
         return (
           <group>
