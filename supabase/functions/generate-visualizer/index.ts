@@ -533,11 +533,19 @@ serve(async (req) => {
     });
   }
 
+  // Hoisted variables for catch usage across the whole request
+  let finalCode: string | null = null;
+  let finalName: string | null = null;
+  let finalEmoji: string | null = null;
+
   try {
     const { prompt, userId } = await req.json();
     
     if (!prompt || !userId) {
-      return new Response('Missing required fields', { status: 400 });
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Generating visualizer for prompt:', prompt);
@@ -555,6 +563,10 @@ serve(async (req) => {
       visualizerName = semanticTemplate.name;
       previewEmoji = semanticTemplate.emoji;
       console.log('Using semantic template for:', visualizerName);
+      // Save for catch fallback
+      finalCode = visualizerCode;
+      finalName = visualizerName;
+      finalEmoji = previewEmoji;
     } else {
       // Generate with LLM for custom prompts
       const detectedGeometry = detectGeometry(prompt);
@@ -734,6 +746,11 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
       previewEmoji = Object.entries(emojiMap).find(([key]) => 
         prompt.toLowerCase().includes(key)
       )?.[1] || '✨';
+
+      // Save for catch fallback
+      finalCode = visualizerCode;
+      finalName = visualizerName;
+      finalEmoji = previewEmoji;
     }
 
     // Store in database

@@ -30,27 +30,31 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
         setIsLoading(true);
         setError(null);
 
-        // Try to fetch the visualizer (RLS will handle permissions)
+        // 1) Check for in-memory preview visualizer first
+        const W = window as any;
+        const previewMap = W.__PREVIEW_VISUALIZERS__ || {};
+        if (previewMap && previewMap[visualizerId]) {
+          setCode(previewMap[visualizerId]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2) Fetch from Supabase (RLS will handle permissions)
         const { data, error: fetchError } = await supabase
           .from('custom_visualizers')
           .select('jsx_code, name')
           .eq('id', visualizerId)
-          .or(`user_id.eq.${user?.id || 'none'},is_public.eq.true`)
-          .single();
+          .maybeSingle();
 
         if (fetchError) {
-          if (fetchError.code === 'PGRST116') {
-            setError(!user ? 'Sign in to view this visualizer' : 'Visualizer not found or no access');
-          } else {
-            setError('Failed to load visualizer');
-          }
+          setError('Failed to load visualizer');
           console.error('Error loading custom visualizer:', fetchError);
           setIsLoading(false);
           return;
         }
 
         if (!data?.jsx_code) {
-          setError('Visualizer has no code');
+          setError(!user ? 'Sign in to view this visualizer' : 'Visualizer not found or no access');
           setIsLoading(false);
           return;
         }

@@ -32,6 +32,7 @@ export function CustomVisualizerGenerator({
   const [progress, setProgress] = useState(0);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState<string>("");
+  const [previewViz, setPreviewViz] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableStyles = Object.keys(visualizerRegistry);
@@ -89,6 +90,7 @@ export function CustomVisualizerGenerator({
       if (result.jsx_code) {
         setPreviewCode(result.jsx_code);
         setPreviewName(result.name || "Generated Visualizer");
+        setPreviewViz(result);
       }
       
       // If it's a full saved visualizer, close and notify parent
@@ -298,7 +300,11 @@ export function CustomVisualizerGenerator({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={onClose}
+                  onClick={() => {
+                    if (previewViz && onSuccess) onSuccess(previewViz);
+                    onClose();
+                  }}
+                  disabled={!previewViz}
                   className="border-green-500/30 text-green-200 hover:bg-green-500/20"
                 >
                   Use This Preview

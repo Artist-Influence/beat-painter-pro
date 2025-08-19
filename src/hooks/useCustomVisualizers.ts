@@ -153,50 +153,67 @@ export function useCustomVisualizers() {
         },
       });
 
-      if (error) throw error;
-
-      toast({
-        title: "Visualizer Generated!",
-        description: `${data.visualizer.name} has been created`,
-      });
-
-      // Immediately add to state for instant UI update
-      setCustomVisualizers(prev => [data.visualizer, ...prev]);
-      setVisualizerCount(prev => prev + 1);
-      
-      // Refresh in background to ensure consistency
-      setTimeout(() => {
-        fetchCustomVisualizers();
-        checkUserRole();
-      }, 100);
-      
-      return data.visualizer;
-    } catch (error) {
-      console.error('Error generating visualizer:', error);
-      
-      // Check if we got preview code even though save failed
-      if (error.code && error.name) {
-        toast({
-          title: "Saved Preview Only",
-          description: `Generated "${error.name}" but couldn't save to database. ${error.error || 'Database error'}`,
-          variant: "default",
-        });
-        return {
-          id: `preview-${Date.now()}`,
-          name: error.name,
-          jsx_code: error.code,
-          preview_emoji: error.emoji || '🌟',
-          isPreview: true
-        };
+      if (error) {
+        throw error;
       }
-      
-      // Show specific error message from the function
-      const errorMessage = error.message || error.error || "Failed to generate custom visualizer. Please try again.";
-      toast({
-        title: "Generation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+
+      // Success path: saved to DB and returned visualizer
+      if (data?.success && data?.visualizer) {
+        toast({
+          title: "Visualizer Generated!",
+          description: `${data.visualizer.name} has been created`,
+        });
+
+        setCustomVisualizers(prev => [data.visualizer, ...prev]);
+        setVisualizerCount(prev => prev + 1);
+        // Background refresh
+        setTimeout(() => {
+          fetchCustomVisualizers();
+          checkUserRole();
+        }, 100);
+        return data.visualizer;
+      }
+
+      // Preview-only path: function returned usable code but couldn't save
+      if (data?.code && data?.name) {
+        const previewId = `preview-${Date.now()}`;
+        const emoji = data.emoji || '🌟';
+        // Register preview code globally for the loader
+        const W = window as any;
+        W.__PREVIEW_VISUALIZERS__ = W.__PREVIEW_VISUALIZERS__ || {};
+        W.__PREVIEW_VISUALIZERS__[previewId] = data.code as string;
+
+        const previewViz: any = {
+          id: previewId,
+          user_id: user.id,
+          name: data.name,
+          jsx_code: data.code,
+          preview_emoji: emoji,
+          is_public: false,
+          scale_factor: 1.0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          isPreview: true,
+        };
+
+        // Add to list so it appears in the grid immediately
+        setCustomVisualizers(prev => [previewViz, ...prev]);
+
+        toast({
+          title: "Preview Ready",
+          description: `Generated "${data.name}". Using in-memory preview (not saved).`,
+        });
+        return previewViz;
+      }
+
+      // Otherwise, show specific error if present
+      const errorMessage = data?.error || 'Failed to generate custom visualizer. Please try again.';
+      toast({ title: 'Generation Failed', description: errorMessage, variant: 'destructive' });
+      return null;
+    } catch (error: any) {
+      console.error('Error generating visualizer:', error);
+      const message = error?.message || 'Failed to generate custom visualizer. Please try again.';
+      toast({ title: 'Generation Failed', description: message, variant: 'destructive' });
       return null;
     } finally {
       setIsGenerating(false);
