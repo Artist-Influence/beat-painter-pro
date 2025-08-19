@@ -52,6 +52,14 @@ const transformJSXCode = (code: string): string => {
     return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
   });
 
+  // Fix THREE.js references
+  transformed = transformed.replace(/THREE\./g, '');
+
+  // Replace any capitalized JSX elements (e.g., <Button />) with groups
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, '<group$2 />');
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)>/g, '<group$2>');
+  transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_]*)>/g, '</group>');
+
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
     const materialDeclaration = 'const material = createVisualizerMaterial("#ffffff", { texture: null, colors: { primary: "#ffffff", secondary: "#ffffff", accent: "#ffffff", isNeon: false, isMetallic: false }, textureVersion: 0 });';
