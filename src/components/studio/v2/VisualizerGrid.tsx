@@ -36,7 +36,7 @@ export function VisualizerGrid() {
   ];
 
   const handleCustomVisualizerSuccess = (visualizer: any) => {
-    // Automatically select the newly generated visualizer and close generator
+    // Select the new visualizer immediately - real-time subscription will handle list update
     setSelected(`custom_${visualizer.id}` as VisualizerKey);
     setShowGenerator(false);
   };

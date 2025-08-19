@@ -2,6 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { SEMANTIC_TEMPLATES } from './semantic-templates.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -186,17 +187,18 @@ function getSemanticVisualizer(prompt: string, analysis: {
   enhancedPrompt: string;
   geometryType: string;
 }): string {
-  // Use airplane template for aircraft prompts
-  if (analysis.category === 'vehicles' || prompt.toLowerCase().includes('airplane') || prompt.toLowerCase().includes('plane')) {
-    return getAirplaneFleetTemplate(analysis.objectCount, analysis.enhancedPrompt);
+  const lowerPrompt = prompt.toLowerCase();
+  
+  // Use semantic templates for complex objects
+  if (analysis.category === 'vehicles' || lowerPrompt.includes('airplane') || lowerPrompt.includes('plane') || lowerPrompt.includes('aircraft') || lowerPrompt.includes('jet')) {
+    return SEMANTIC_TEMPLATES.airplane.template;
   }
   
-  // Use flower template for nature prompts
-  if (analysis.category === 'nature' || prompt.toLowerCase().includes('flower')) {
-    return getFlowerFieldTemplate(analysis.objectCount, analysis.enhancedPrompt);
+  if (analysis.category === 'nature' || lowerPrompt.includes('flower') || lowerPrompt.includes('petal') || lowerPrompt.includes('bloom') || lowerPrompt.includes('garden')) {
+    return SEMANTIC_TEMPLATES.flower.template;
   }
   
-  // Default to enhanced multi-object template
+  // Default to enhanced multi-object template for simple geometries
   return getEnhancedDefaultVisualizer(prompt);
 }
 

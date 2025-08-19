@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -31,6 +31,45 @@ export function useCustomVisualizers() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [visualizerCount, setVisualizerCount] = useState(0);
+
+  // Real-time subscription to custom visualizers
+  const subscribeToRealtime = useCallback(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('custom-visualizers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'custom_visualizers',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New custom visualizer created:', payload);
+          setCustomVisualizers(prev => [payload.new as CustomVisualizer, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'custom_visualizers',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Custom visualizer deleted:', payload);
+          setCustomVisualizers(prev => prev.filter(v => v.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Check user role and visualizer count
   const checkUserRole = async () => {
@@ -177,7 +216,9 @@ export function useCustomVisualizers() {
   useEffect(() => {
     fetchCustomVisualizers();
     checkUserRole();
-  }, [user]);
+    const unsubscribe = subscribeToRealtime();
+    return unsubscribe;
+  }, [user, subscribeToRealtime]);
 
   const promoteToStandard = async (id: string) => {
     if (!user || userRole !== 'admin') return;
