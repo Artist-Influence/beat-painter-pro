@@ -47,7 +47,7 @@ import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 export default function AirplaneFleetVisualizer({ audioData }: { audioData: number[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const sensitivity = useStudioStore((state) => state.sensitivity);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
   const airplanes = useMemo(() => {
     const planes = [];
@@ -78,10 +78,10 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: numb
       const child = groupRef.current.children[i];
       if (child) {
         // Banking motion based on audio
-        child.rotation.z = Math.sin(time + i * 0.2) * 0.3 + freq * sensitivity * 0.5;
+        child.rotation.z = Math.sin(time + i * 0.2) * 0.3 + freq * audioSensitivity.frequency * 0.5;
         child.rotation.y = time * 0.1 + i * 0.05;
-        child.position.y = plane.y + Math.sin(time + i * 0.3) * 2 + freq * sensitivity * 3;
-        child.scale.setScalar(plane.scale + freq * sensitivity * 0.3);
+        child.position.y = plane.y + Math.sin(time + i * 0.3) * 2 + freq * audioSensitivity.frequency * 3;
+        child.scale.setScalar(plane.scale + freq * audioSensitivity.frequency * 0.3);
       }
     });
   });
@@ -120,6 +120,136 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: numb
     };
   }
   
+  // Flower/petal template - creates dancing petals in wind
+  if (/\b(flower|petal|blossom|bloom)\b/.test(normalizedPrompt) && /\b(wind|breeze|dance|dancing|sway|moving)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Flower Petals Dancing in Wind",
+      emoji: "🌸",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+
+export default function FlowerPetalsVisualizer({ audioData }: { audioData: number[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const petals = useMemo(() => {
+    const petalArray = [];
+    const flowerCount = 20;
+    const petalsPerFlower = 8;
+    
+    for (let f = 0; f < flowerCount; f++) {
+      const flowerAngle = (f / flowerCount) * Math.PI * 2;
+      const flowerRadius = 8 + Math.sin(f * 0.5) * 4;
+      const flowerX = Math.cos(flowerAngle) * flowerRadius;
+      const flowerZ = Math.sin(flowerAngle) * flowerRadius;
+      const flowerY = Math.sin(f * 0.3) * 2;
+      
+      for (let p = 0; p < petalsPerFlower; p++) {
+        const petalAngle = (p / petalsPerFlower) * Math.PI * 2;
+        const petalRadius = 1.5 + Math.random() * 0.5;
+        
+        petalArray.push({
+          id: f * petalsPerFlower + p,
+          flowerCenter: [flowerX, flowerY, flowerZ],
+          localX: Math.cos(petalAngle) * petalRadius,
+          localZ: Math.sin(petalAngle) * petalRadius,
+          rotation: [Math.random() * 0.5, petalAngle + Math.PI / 2, Math.random() * 0.3],
+          scale: 0.8 + Math.random() * 0.4,
+          swayPhase: Math.random() * Math.PI * 2,
+          freqIndex: Math.floor((f / flowerCount) * (audioData.length - 1))
+        });
+      }
+    }
+    return petalArray;
+  }, [audioData.length]);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.length) return;
+    
+    const time = clock.getElapsedTime();
+    const windStrength = Math.sin(time * 0.5) * 0.3 + 0.7;
+    
+    petals.forEach((petal, i) => {
+      const child = groupRef.current?.children[i];
+      if (!child) return;
+      
+      const freq = audioData[petal.freqIndex] || 0;
+      const bassResponse = freq * audioSensitivity.frequency * 2;
+      
+      // Wind sway motion with audio response
+      const swayX = Math.sin(time * 0.8 + petal.swayPhase) * windStrength * (1 + bassResponse);
+      const swayY = Math.cos(time * 0.6 + petal.swayPhase * 0.5) * windStrength * 0.5;
+      const swayZ = Math.sin(time * 0.9 + petal.swayPhase * 1.3) * windStrength * 0.7;
+      
+      // Combine flower center position with local petal offset and sway
+      child.position.set(
+        petal.flowerCenter[0] + petal.localX + swayX,
+        petal.flowerCenter[1] + petal.localZ * 0.2 + swayY + bassResponse * 2,
+        petal.flowerCenter[2] + petal.localZ + swayZ
+      );
+      
+      // Rotation with wind and audio influence
+      child.rotation.set(
+        petal.rotation[0] + Math.sin(time + petal.swayPhase) * 0.3,
+        petal.rotation[1] + time * 0.2 + swayX * 0.5,
+        petal.rotation[2] + Math.cos(time * 0.7 + petal.swayPhase) * 0.4 + bassResponse * 0.5
+      );
+      
+      // Scale with audio pulsing
+      child.scale.setScalar(petal.scale * (1 + bassResponse * 0.4));
+    });
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {petals.map((petal) => (
+        <mesh key={petal.id} rotation={petal.rotation}>
+          {/* Petal shape - elongated and curved */}
+          <group>
+            <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 6]}>
+              <boxGeometry args={[0.1, 1.2, 0.02]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[0.15, 0.3, 0]} rotation={[0, 0, -Math.PI / 8]}>
+              <boxGeometry args={[0.08, 0.8, 0.02]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[-0.15, 0.3, 0]} rotation={[0, 0, Math.PI / 8]}>
+              <boxGeometry args={[0.08, 0.8, 0.02]} />
+              <primitive object={material} />
+            </mesh>
+          </group>
+        </mesh>
+      ))}
+      {/* Flower centers */}
+      {Array.from({ length: 20 }, (_, i) => {
+        const angle = (i / 20) * Math.PI * 2;
+        const radius = 8 + Math.sin(i * 0.5) * 4;
+        return (
+          <mesh
+            key={\`center-\${i}\`}
+            position={[
+              Math.cos(angle) * radius,
+              Math.sin(i * 0.3) * 2,
+              Math.sin(angle) * radius
+            ]}
+          >
+            <sphereGeometry args={[0.3, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}`
+    };
+  }
+
   // Apple with bite template - creates voxel-style apple
   if (/\b(apple|fruit)\b/.test(normalizedPrompt)) {
     return {
@@ -133,7 +263,7 @@ import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 export default function AppleWithBiteVisualizer({ audioData }: { audioData: number[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const sensitivity = useStudioStore((state) => state.sensitivity);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
   const voxels = useMemo(() => {
     const cubes = [];
@@ -178,8 +308,8 @@ export default function AppleWithBiteVisualizer({ audioData }: { audioData: numb
         const voxel = voxels[i];
         const freq = audioData[voxel.freqIndex] || 0;
         
-        child.position.y = voxel.y + Math.sin(time + i * 0.1) * 0.1 + freq * sensitivity * 0.5;
-        child.scale.setScalar(1 + freq * sensitivity * 0.3);
+        child.position.y = voxel.y + Math.sin(time + i * 0.1) * 0.1 + freq * audioSensitivity.frequency * 0.5;
+        child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.3);
       }
     });
   });
@@ -218,7 +348,7 @@ import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 export default function MedievalShieldVisualizer({ audioData }: { audioData: number[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const sensitivity = useStudioStore((state) => state.sensitivity);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
   const segments = useMemo(() => {
     const parts = [];
@@ -254,7 +384,7 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
     const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
     
     // Rotate entire shield
-    groupRef.current.rotation.z = time * 0.1 + avgFreq * sensitivity * 0.5;
+    groupRef.current.rotation.z = time * 0.1 + avgFreq * audioSensitivity.frequency * 0.5;
     
     groupRef.current.children.forEach((child, i) => {
       if (i < segments.length) {
@@ -262,10 +392,10 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
         const freq = audioData[segment.freqIndex] || 0;
         
         if (segment.type === 'segment') {
-          child.scale.setScalar(1 + freq * sensitivity * 0.4);
-          child.position.z = freq * sensitivity * 1;
+          child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.4);
+          child.position.z = freq * audioSensitivity.frequency * 1;
         } else {
-          child.scale.setScalar(0.8 + freq * sensitivity * 0.3);
+          child.scale.setScalar(0.8 + freq * audioSensitivity.frequency * 0.3);
         }
       }
     });
@@ -424,7 +554,7 @@ Requirements:
 
       let rawCode = await tryGenerateWithLLM();
       if (!rawCode) {
-        // Fallback: Procedural petal field reacting to audio
+        // Fallback: Procedural geometric pattern reacting to audio
         rawCode = `
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -433,17 +563,17 @@ import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 export default function FallbackVisualizer({ audioData }: { audioData: number[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const sensitivity = useStudioStore((s) => s.sensitivity);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   const items = useMemo(() => {
     const arr: { x:number; y:number; z:number; r:number; fi:number }[] = [];
-    const count = 240;
+    const count = 120;
     for (let i = 0; i < count; i++) {
       const a = (i / count) * Math.PI * 2;
-      const r = 6 + (i % 12) * 0.2;
+      const r = 4 + (i % 8) * 0.5;
       arr.push({
         x: Math.cos(a) * r,
         z: Math.sin(a) * r,
-        y: Math.sin(i * 0.3) * 1.2,
+        y: Math.sin(i * 0.2) * 2,
         r: Math.random() * Math.PI,
         fi: Math.floor((i / count) * (audioData.length - 1))
       });
@@ -458,10 +588,11 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
       const it = items[i];
       if (!it) return;
       const f = audioData[it.fi] || 0;
-      child.rotation.y = it.r + Math.sin(t + i * 0.02) * 0.5;
-      child.rotation.x = Math.sin(t * 0.5 + i * 0.03) * (0.2 + f * sensitivity * 0.8);
-      child.position.y = it.y + Math.sin(t + i * 0.05) * (0.2 + f * sensitivity * 1.2);
-      (child as any).scale.setScalar(0.8 + f * sensitivity * 0.6);
+      const response = f * audioSensitivity.frequency;
+      child.rotation.y = it.r + Math.sin(t + i * 0.03) * 0.4;
+      child.rotation.x = Math.sin(t * 0.3 + i * 0.02) * (0.3 + response * 0.5);
+      child.position.y = it.y + Math.sin(t + i * 0.04) * (0.5 + response * 1.5);
+      (child as any).scale.setScalar(0.9 + response * 0.6);
     });
   });
 
@@ -470,14 +601,10 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
     <group ref={groupRef}>
       {items.map((p, i) => (
         <mesh key={i} position={[p.x, p.y, p.z]} rotation={[0, p.r, 0]}>
-          <planeGeometry args={[0.6, 1.2, 1, 1]} />
+          <boxGeometry args={[0.4, 0.8, 0.2]} />
           <primitive object={material} />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
-        <planeGeometry args={[40, 40, 1, 1]} />
-        <primitive object={material} />
-      </mesh>
     </group>
   );
 }
@@ -488,41 +615,40 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
 
       // Sanitize and normalize the generated code
       const allowSanitize = (code: string) => {
-        const allow = [
-          'group','mesh','instancedMesh',
-          'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry',
-          'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight',
-          'line','lineSegments'
-        ];
-        // Replace self-closing
-        code = code.replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allow.includes(name) ? m : `<group${attrs} />`);
-        // Replace open tags
-        code = code.replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => allow.includes(name) ? m : `<group${attrs}>`);
-        // Replace closing tags
-        code = code.replace(/<\/(?:[A-Za-z][A-Za-z0-9_.-]*)>/g, (m) => {
-          const nm = m.slice(2, -1);
-          return allow.includes(nm) ? m : '</group>';
-        });
-        return code;
-      };
-
-      visualizerCode = allowSanitize(visualizerCode
-        // Strip Markdown fences and trim
+        let sanitized = code
         .replace(/```[a-z]*\n?/gi, '')
         .replace(/```/g, '')
         .trim()
         // Remove imports (keep exports so client can detect default export)
         .replace(/^import\s+.*$/gm, '')
+        // Legacy compatibility: Fix old store access patterns
+        .replace(/useStudioStore\(\([^)]*\)\s*=>\s*[^)]*\.sensitivity\)/g, 'useStudioStore((state) => state.audioSensitivity)')
+        .replace(/sensitivity\s*\*\s*/g, 'audioSensitivity.frequency * ')
+        .replace(/\bsensitivity\b(?!\s*[:=])/g, 'audioSensitivity.frequency')
         // Enforce white materials
         .replace(/color\s*[:=]\s*["'][^"']*["']/g, '')
         .replace(/<mesh(Standard|Basic|Phong|Lambert|Physical)Material[^>]*\/?>(?:<\/mesh\1Material>)?/g, '<primitive object={material} />')
-        // Replace HTML tags not allowed in Canvas
-        .replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => m.replace(/(div|span|button|p|img|video|canvas)/i, 'group'))
-        // Replace capitalized and dotted JSX elements (e.g., <Button />, <UI.Button>) with groups
+        // Convert common HTML elements to groups (HTML isn't allowed inside Canvas)
+        .replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => {
+          return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
+        })
+        // Replace any capitalized JSX elements and namespaced ones with groups
         .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />')
         .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>')
-        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>')
-      );
+        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+        
+        // Inject material declaration if missing but primitive object={material} is used
+        if (sanitized.includes('<primitive object={material}') && !sanitized.includes('const material = createVisualizerMaterial')) {
+          const insertPoint = sanitized.indexOf('return (');
+          if (insertPoint !== -1) {
+            sanitized = sanitized.slice(0, insertPoint) + 'const material = createVisualizerMaterial();\n\n  ' + sanitized.slice(insertPoint);
+          }
+        }
+        
+        return sanitized;
+      };
+
+      visualizerCode = allowSanitize(visualizerCode);
 
       // Generate name and emoji
       const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));

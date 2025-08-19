@@ -35,6 +35,11 @@ const transformJSXCode = (code: string): string => {
   transformed = transformed.replace(/^import\s+.*$/gm, '');
   transformed = transformed.replace(/^export\s+.*$/gm, '');
 
+  // Legacy compatibility: Fix old store access patterns
+  transformed = transformed.replace(/useStudioStore\(\([^)]*\)\s*=>\s*[^)]*\.sensitivity\)/g, 'useStudioStore((state) => state.audioSensitivity)');
+  transformed = transformed.replace(/sensitivity\s*\*\s*/g, 'audioSensitivity.frequency * ');
+  transformed = transformed.replace(/\bsensitivity\b(?!\s*[:=])/g, 'audioSensitivity.frequency');
+
   // Remove TypeScript generics and param types often present in templates
   transformed = transformed.replace(/useRef<[^>]+>\(/g, 'useRef(');
   transformed = transformed.replace(/useMemo<[^>]+>\(/g, 'useMemo(');
@@ -67,7 +72,9 @@ const transformJSXCode = (code: string): string => {
   const allowed = new Set([
     'group','mesh','instancedMesh',
     'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry','torusKnotGeometry','dodecahedronGeometry','icosahedronGeometry',
-    'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight','line','lineSegments','points','pointsMaterial'
+    'octahedronGeometry','tetrahedronGeometry','ringGeometry','tubeGeometry','latheGeometry','extrudeGeometry','shapeGeometry',
+    'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight','line','lineSegments','points','pointsMaterial',
+    'bufferGeometry','bufferAttribute'
   ]);
   transformed = transformed
     .replace(/<([a-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs} />`)
