@@ -2,6 +2,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 // Enhanced geometry detection with word boundaries
 const detectGeometry = (prompt: string): string => {
   const normalizedPrompt = prompt.toLowerCase();
@@ -316,8 +321,16 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return new Response('Method not allowed', { 
+      status: 405, 
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -464,7 +477,7 @@ Requirements:
         message: 'Visualizer generated successfully'
       }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -477,7 +490,7 @@ Requirements:
         error: error.message || 'Failed to generate visualizer'
       }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       }
     );

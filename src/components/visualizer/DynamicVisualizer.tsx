@@ -11,30 +11,42 @@ interface DynamicVisualizerProps {
   scaleFactor?: number;
 }
 
-// Enhanced sanitization function for all-white materials
-const sanitizeJSXCode = (code: string): string => {
-  let sanitized = code;
+// Enhanced sanitization and transformation function
+const transformJSXCode = (code: string): string => {
+  let transformed = code;
   
-  // Remove any color specifications
-  sanitized = sanitized.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
-  sanitized = sanitized.replace(/\bcolor\s*=\s*{[^}]*}/g, '');
+  // Remove imports and exports to make code executable
+  transformed = transformed.replace(/^import\s+.*$/gm, '');
+  transformed = transformed.replace(/^export\s+.*$/gm, '');
+  
+  // Transform export default function to return function
+  const exportMatch = transformed.match(/export\s+default\s+function\s+(\w+)/);
+  if (exportMatch) {
+    const functionName = exportMatch[1];
+    transformed = transformed.replace(/export\s+default\s+function\s+\w+/, `function ${functionName}`);
+    transformed = transformed + `\nreturn ${functionName};`;
+  }
+  
+  // Remove any color specifications to enforce all-white materials
+  transformed = transformed.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
+  transformed = transformed.replace(/\bcolor\s*=\s*{[^}]*}/g, '');
   
   // Replace material components with createVisualizerMaterial
-  sanitized = sanitized.replace(/<meshStandardMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  sanitized = sanitized.replace(/<meshBasicMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  sanitized = sanitized.replace(/<meshPhongMaterial[^>]*\/?>/g, '<primitive object={material} />');
-  sanitized = sanitized.replace(/<meshLambertMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshStandardMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshBasicMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshPhongMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  transformed = transformed.replace(/<meshLambertMaterial[^>]*\/?>/g, '<primitive object={material} />');
   
   // Ensure createVisualizerMaterial is properly used
-  if (!sanitized.includes('createVisualizerMaterial')) {
+  if (!transformed.includes('createVisualizerMaterial')) {
     const materialDeclaration = 'const material = createVisualizerMaterial();';
-    const insertIndex = sanitized.indexOf('return (');
+    const insertIndex = transformed.indexOf('return (');
     if (insertIndex !== -1) {
-      sanitized = sanitized.slice(0, insertIndex) + materialDeclaration + '\n  \n  ' + sanitized.slice(insertIndex);
+      transformed = transformed.slice(0, insertIndex) + materialDeclaration + '\n  \n  ' + transformed.slice(insertIndex);
     }
   }
   
-  return sanitized;
+  return transformed;
 };
 
 const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({ 
@@ -46,9 +58,9 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   
   const VisualizerComponent = useMemo(() => {
     try {
-      const sanitizedCode = sanitizeJSXCode(jsxCode);
+      const transformedCode = transformJSXCode(jsxCode);
       
-      // Create the component function from the sanitized JSX code
+      // Create the component function from the transformed JSX code
       const componentFunction = new Function(
         'React',
         'useRef',
@@ -56,7 +68,8 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         'useFrame',
         'useStudioStore',
         'createVisualizerMaterial',
-        `${sanitizedCode}; return arguments[5].default || arguments[5];`
+        'THREE',
+        transformedCode
       );
       
       // Import necessary dependencies
@@ -72,7 +85,8 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         useMemo,
         useFrame,
         useStudioStore,
-        createVisualizerMaterial
+        createVisualizerMaterial,
+        THREE
       );
     } catch (error) {
       console.error('Error creating dynamic visualizer:', error);

@@ -36,12 +36,14 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
           .select('jsx_code, name')
           .eq('id', visualizerId)
           .or(`user_id.eq.${user.id},is_public.eq.true`)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
         if (!data) {
-          throw new Error('Custom visualizer not found');
+          setError('Visualizer not found or access denied');
+          setIsLoading(false);
+          return;
         }
 
         setCode(data.jsx_code || '');
