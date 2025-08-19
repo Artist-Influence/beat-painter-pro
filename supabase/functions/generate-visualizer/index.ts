@@ -781,6 +781,29 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
 
   } catch (error) {
     console.error('Generation error:', error);
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      hasSupabaseKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      hasOpenAIKey: !!Deno.env.get('OPENAI_API_KEY')
+    });
+    
+    // Always return the generated code even if DB save failed
+    if (finalCode && finalName) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error.message || 'Failed to save visualizer to database',
+          code: finalCode,
+          name: finalName,
+          emoji: finalEmoji || '🌟'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, // 200 because we have usable code
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,

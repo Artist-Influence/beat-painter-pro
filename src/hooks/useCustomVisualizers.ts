@@ -173,9 +173,28 @@ export function useCustomVisualizers() {
       return data.visualizer;
     } catch (error) {
       console.error('Error generating visualizer:', error);
+      
+      // Check if we got preview code even though save failed
+      if (error.code && error.name) {
+        toast({
+          title: "Saved Preview Only",
+          description: `Generated "${error.name}" but couldn't save to database. ${error.error || 'Database error'}`,
+          variant: "default",
+        });
+        return {
+          id: `preview-${Date.now()}`,
+          name: error.name,
+          jsx_code: error.code,
+          preview_emoji: error.emoji || '🌟',
+          isPreview: true
+        };
+      }
+      
+      // Show specific error message from the function
+      const errorMessage = error.message || error.error || "Failed to generate custom visualizer. Please try again.";
       toast({
         title: "Generation Failed",
-        description: "Failed to generate custom visualizer. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       return null;

@@ -30,6 +30,8 @@ export function CustomVisualizerGenerator({
   const [imagePreview, setImagePreview] = useState<string>('');
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableStyles = Object.keys(visualizerRegistry);
@@ -82,9 +84,18 @@ export function CustomVisualizerGenerator({
       mixStyles: selectedStyles.length > 0 ? selectedStyles : undefined,
     });
 
-    if (result && onSuccess) {
-      onSuccess(result);
-      onClose();
+    if (result) {
+      // Show preview code for immediate testing
+      if (result.jsx_code) {
+        setPreviewCode(result.jsx_code);
+        setPreviewName(result.name || "Generated Visualizer");
+      }
+      
+      // If it's a full saved visualizer, close and notify parent
+      if (!result.isPreview && onSuccess) {
+        onSuccess(result);
+        onClose();
+      }
     }
   };
 
@@ -269,6 +280,32 @@ export function CustomVisualizerGenerator({
               <Progress value={progress} className="h-2" />
               <p className="text-xs text-white/60">
                 This may take 30-60 seconds. AI is analyzing your prompt and creating the perfect visualizer.
+              </p>
+            </motion.div>
+          )}
+
+          {previewCode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-3 p-4 bg-green-600/20 rounded-lg border border-green-500/30"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-white font-medium">Live Preview: {previewName}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onClose}
+                  className="border-green-500/30 text-green-200 hover:bg-green-500/20"
+                >
+                  Use This Preview
+                </Button>
+              </div>
+              <p className="text-xs text-white/70">
+                Visualizer generated successfully! Click "Use This Preview" to start using it, or wait for database sync.
               </p>
             </motion.div>
           )}

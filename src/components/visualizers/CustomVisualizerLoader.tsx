@@ -20,8 +20,8 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
 
   useEffect(() => {
     const loadCustomVisualizer = async () => {
-      if (!visualizerId || !user) {
-        setError('Invalid visualizer or user not authenticated');
+      if (!visualizerId) {
+        setError('Invalid visualizer ID');
         setIsLoading(false);
         return;
       }
@@ -30,33 +30,42 @@ export function CustomVisualizerLoader({ visualizerKey, ...props }: CustomVisual
         setIsLoading(true);
         setError(null);
 
-        // Fetch the custom visualizer code from Supabase
-        const { data, error } = await supabase
+        // Try to fetch the visualizer (RLS will handle permissions)
+        const { data, error: fetchError } = await supabase
           .from('custom_visualizers')
           .select('jsx_code, name')
           .eq('id', visualizerId)
-          .or(`user_id.eq.${user.id},is_public.eq.true`)
-          .maybeSingle();
+          .or(`user_id.eq.${user?.id || 'none'},is_public.eq.true`)
+          .single();
 
-        if (error) throw error;
-
-        if (!data) {
-          setError('Visualizer not found or access denied');
+        if (fetchError) {
+          if (fetchError.code === 'PGRST116') {
+            setError(!user ? 'Sign in to view this visualizer' : 'Visualizer not found or no access');
+          } else {
+            setError('Failed to load visualizer');
+          }
+          console.error('Error loading custom visualizer:', fetchError);
           setIsLoading(false);
           return;
         }
 
-        setCode(data.jsx_code || '');
+        if (!data?.jsx_code) {
+          setError('Visualizer has no code');
+          setIsLoading(false);
+          return;
+        }
+
+        setCode(data.jsx_code);
       } catch (err) {
         console.error('Error loading custom visualizer:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load custom visualizer');
+        setError('Failed to load visualizer');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadCustomVisualizer();
-  }, [visualizerId, user]);
+  }, [visualizerId, user?.id]);
 
   if (isLoading) {
     return (
