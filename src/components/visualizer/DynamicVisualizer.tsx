@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
+import VisualizerErrorBoundary from './VisualizerErrorBoundary';
 
 interface DynamicVisualizerProps {
   jsxCode: string;
@@ -31,11 +32,18 @@ const transformJSXCode = (code: string): string => {
   transformed = transformed.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
   transformed = transformed.replace(/\bcolor\s*=\s*{[^}]*}/g, '');
   
+  // Fix THREE.js references - ensure they use proper R3F syntax
+  transformed = transformed.replace(/THREE\./g, '');
+  transformed = transformed.replace(/new\s+(Box|Sphere|Cylinder|Cone|Plane|Torus)Geometry/g, '$1Geometry');
+  
   // Replace material components with createVisualizerMaterial
   transformed = transformed.replace(/<meshStandardMaterial[^>]*\/?>/g, '<primitive object={material} />');
   transformed = transformed.replace(/<meshBasicMaterial[^>]*\/?>/g, '<primitive object={material} />');
   transformed = transformed.replace(/<meshPhongMaterial[^>]*\/?>/g, '<primitive object={material} />');
   transformed = transformed.replace(/<meshLambertMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  
+  // Fix geometry references to use proper R3F syntax
+  transformed = transformed.replace(/<(\w+)Geometry\s+args=\{([^}]+)\}\s*\/>/g, '<$1Geometry args={$2} />');
   
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
@@ -91,7 +99,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
     } catch (error) {
       console.error('Error creating dynamic visualizer:', error);
       
-      // Fallback component with all-white material
+      // Fallback component with all-white material and error boundary
       return ({ audioData }: { audioData: number[] }) => {
         const meshRef = React.useRef<THREE.Mesh>(null);
         const { useFrame } = require('@react-three/fiber');
@@ -108,48 +116,65 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         const material = createVisualizerMaterial();
         
         return (
-          <mesh ref={meshRef}>
-            <sphereGeometry args={[2, 32, 32]} />
-            <primitive object={material} />
-          </mesh>
+          <group>
+            <mesh ref={meshRef}>
+              <sphereGeometry args={[2, 32, 32]} />
+              <primitive object={material} />
+            </mesh>
+            {/* Error indicator - red wireframe cube */}
+            <mesh position={[0, 4, 0]}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial color="#ff0000" wireframe />
+            </mesh>
+          </group>
         );
       };
     }
   }, [jsxCode]);
 
   return (
-    <div className="w-full h-full">
-      <Canvas
-        camera={{ position: [0, 0, 10], fov: 75 }}
-        gl={{ 
-          antialias: true, 
-          alpha: true,
-          powerPreference: "high-performance"
-        }}
-        style={{ background: backgroundColor }}
-        onCreated={({ gl }) => {
-          gl.setClearColor(backgroundColor);
-        }}
-      >
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={0.8} />
-        <pointLight position={[-10, -10, -10]} intensity={0.3} />
-        
-        <Suspense fallback={null}>
-          <group scale={scaleFactor}>
-            <VisualizerComponent audioData={audioData} />
-          </group>
-        </Suspense>
-        
-        <OrbitControls 
-          enableZoom={true}
-          enablePan={true}
-          enableRotate={true}
-          maxDistance={50}
-          minDistance={2}
-        />
-      </Canvas>
-    </div>
+    <VisualizerErrorBoundary>
+      <div className="w-full h-full">
+        <Canvas
+          camera={{ position: [0, 0, 10], fov: 75 }}
+          gl={{ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: "high-performance"
+          }}
+          style={{ background: backgroundColor }}
+          onCreated={({ gl }) => {
+            gl.setClearColor(backgroundColor);
+          }}
+          onError={(error) => {
+            console.error('Canvas error:', error);
+          }}
+        >
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} intensity={0.8} />
+          <pointLight position={[-10, -10, -10]} intensity={0.3} />
+          
+          <Suspense fallback={
+            <mesh>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial color="#666666" wireframe />
+            </mesh>
+          }>
+            <group scale={scaleFactor}>
+              <VisualizerComponent audioData={audioData} />
+            </group>
+          </Suspense>
+          
+          <OrbitControls 
+            enableZoom={true}
+            enablePan={true}
+            enableRotate={true}
+            maxDistance={50}
+            minDistance={2}
+          />
+        </Canvas>
+      </div>
+    </VisualizerErrorBoundary>
   );
 };
 
