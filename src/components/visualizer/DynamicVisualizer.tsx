@@ -55,10 +55,10 @@ const transformJSXCode = (code: string): string => {
   // Fix THREE.js references
   transformed = transformed.replace(/THREE\./g, '');
 
-  // Replace any capitalized JSX elements (e.g., <Button />) with groups
-  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, '<group$2 />');
-  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)>/g, '<group$2>');
-  transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_]*)>/g, '</group>');
+  // Replace any capitalized JSX elements (e.g., <Button />) and namespaced/dotted ones with groups
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />');
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>');
+  transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
 
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
@@ -90,8 +90,8 @@ const validateJSX = (code: string) => {
       throw new Error('HTML elements are not allowed inside the 3D Canvas');
     }
   }
-  // Guard against leftover capitalized JSX elements (e.g., <Button>)
-  if (/<[A-Z][A-Za-z0-9_]*\b/.test(code)) {
+  // Guard against leftover capitalized JSX elements (e.g., <Button> or <UI.Button>)
+  if (/<[A-Z][A-Za-z0-9_.-]*/.test(code)) {
     throw new Error('Unsupported JSX component inside Canvas');
   }
 };

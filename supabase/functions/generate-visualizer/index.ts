@@ -431,10 +431,10 @@ Requirements:
         .replace(/<mesh(Standard|Basic|Phong|Lambert|Physical)Material[^>]*\/?>(?:<\/mesh\1Material>)?/g, '<primitive object={material} />')
         // Replace HTML tags not allowed in Canvas
         .replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => m.replace(/(div|span|button|p|img|video|canvas)/i, 'group'))
-        // Replace capitalized JSX elements (e.g., <Button />) with groups
-        .replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, '<group$2 />')
-        .replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)>/g, '<group$2>')
-        .replace(/<\/(?:[A-Z][A-Za-z0-9_]*)>/g, '</group>');
+        // Replace capitalized and dotted JSX elements (e.g., <Button />, <UI.Button>) with groups
+        .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />')
+        .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>')
+        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
 
       // Generate name and emoji
       const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));
