@@ -394,28 +394,97 @@ Requirements:
         throw new Error('OpenAI API key not configured');
       }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-5-2025-08-07',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_completion_tokens: 2000
-        }),
-      });
+      // Try LLM generation, fall back to deterministic local template on failure (e.g., 429)
+      const tryGenerateWithLLM = async (): Promise<string | null> => {
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-5-2025-08-07',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              max_completion_tokens: 2000
+            }),
+          });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+          if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+          const data = await response.json();
+          return data.choices?.[0]?.message?.content || null;
+        } catch (e) {
+          console.error('OpenAI generation failed, using fallback:', e);
+          return null;
+        }
+      };
+
+      let rawCode = await tryGenerateWithLLM();
+      if (!rawCode) {
+        // Fallback: Procedural petal field reacting to audio
+        rawCode = `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+
+export default function FallbackVisualizer({ audioData }: { audioData: number[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const sensitivity = useStudioStore((s) => s.sensitivity);
+  const items = useMemo(() => {
+    const arr: { x:number; y:number; z:number; r:number; fi:number }[] = [];
+    const count = 240;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const r = 6 + (i % 12) * 0.2;
+      arr.push({
+        x: Math.cos(a) * r,
+        z: Math.sin(a) * r,
+        y: Math.sin(i * 0.3) * 1.2,
+        r: Math.random() * Math.PI,
+        fi: Math.floor((i / count) * (audioData.length - 1))
+      });
+    }
+    return arr;
+  }, [audioData.length]);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const t = clock.getElapsedTime();
+    groupRef.current.children.forEach((child, i) => {
+      const it = items[i];
+      if (!it) return;
+      const f = audioData[it.fi] || 0;
+      child.rotation.y = it.r + Math.sin(t + i * 0.02) * 0.5;
+      child.rotation.x = Math.sin(t * 0.5 + i * 0.03) * (0.2 + f * sensitivity * 0.8);
+      child.position.y = it.y + Math.sin(t + i * 0.05) * (0.2 + f * sensitivity * 1.2);
+      (child as any).scale.setScalar(0.8 + f * sensitivity * 0.6);
+    });
+  });
+
+  const material = createVisualizerMaterial();
+  return (
+    <group ref={groupRef}>
+      {items.map((p, i) => (
+        <mesh key={i} position={[p.x, p.y, p.z]} rotation={[0, p.r, 0]}>
+          <planeGeometry args={[0.6, 1.2, 1, 1]} />
+          <primitive object={material} />
+        </mesh>
+      ))}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
+        <planeGeometry args={[40, 40, 1, 1]} />
+        <primitive object={material} />
+      </mesh>
+    </group>
+  );
+}
+`;
       }
 
-      const data = await response.json();
-      visualizerCode = data.choices[0]?.message?.content || '';
+      visualizerCode = rawCode;
 
       // Sanitize and normalize the generated code
       const allowSanitize = (code: string) => {
@@ -442,9 +511,8 @@ Requirements:
         .replace(/```[a-z]*\n?/gi, '')
         .replace(/```/g, '')
         .trim()
-        // Remove imports/exports
+        // Remove imports (keep exports so client can detect default export)
         .replace(/^import\s+.*$/gm, '')
-        .replace(/^export\s+.*$/gm, '')
         // Enforce white materials
         .replace(/color\s*[:=]\s*["'][^"']*["']/g, '')
         .replace(/<mesh(Standard|Basic|Phong|Lambert|Physical)Material[^>]*\/?>(?:<\/mesh\1Material>)?/g, '<primitive object={material} />')
