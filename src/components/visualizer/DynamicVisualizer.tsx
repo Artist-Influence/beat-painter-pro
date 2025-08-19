@@ -19,17 +19,23 @@ const transformJSXCode = (code: string): string => {
   // Strip code fences if present
   transformed = transformed.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '');
 
-  // Remove imports and exports to make code executable
-  transformed = transformed.replace(/^import\s+.*$/gm, '');
-  transformed = transformed.replace(/^export\s+.*$/gm, '');
-
-  // Transform `export default function Name` to named function and return it
-  const exportMatch = transformed.match(/export\s+default\s+function\s+(\w+)/);
-  if (exportMatch) {
-    const functionName = exportMatch[1];
+  // Handle export default BEFORE stripping export lines
+  const exportFuncMatch = transformed.match(/export\s+default\s+function\s+(\w+)/);
+  if (exportFuncMatch) {
+    const functionName = exportFuncMatch[1];
     transformed = transformed.replace(/export\s+default\s+function\s+\w+/, `function ${functionName}`);
     transformed = transformed + `\nreturn ${functionName};`;
+  } else {
+    const exportRefMatch = transformed.match(/export\s+default\s+([A-Za-z_$][\w$]*)/);
+    if (exportRefMatch) {
+      const refName = exportRefMatch[1];
+      transformed = transformed + `\nreturn ${refName};`;
+    }
   }
+
+  // Now remove imports and exports to make code executable
+  transformed = transformed.replace(/^import\s+.*$/gm, '');
+  transformed = transformed.replace(/^export\s+.*$/gm, '');
 
   // Remove TypeScript generics and param types often present in templates
   transformed = transformed.replace(/useRef<[^>]+>\(/g, 'useRef(');
@@ -59,20 +65,6 @@ const transformJSXCode = (code: string): string => {
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />');
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>');
   transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
-  // Replace any non-allowed tags with <group> to ensure Canvas-safe JSX
-  const allowed = new Set([
-    'group','mesh','instancedMesh',
-    'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry',
-    'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight',
-    'line','lineSegments'
-  ]);
-  transformed = transformed
-    .replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs} />`)
-    .replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs}>`)
-    .replace(/<\/(?:[A-Za-z][A-Za-z0-9_.-]*)>/g, (m) => {
-      const name = m.slice(2, -1);
-      return allowed.has(name) ? m : '</group>';
-    });
 
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
@@ -144,7 +136,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       const useRef = React.useRef;
       const localUseMemo = React.useMemo;
       
-      return componentFunction(
+      const result = componentFunction(
         React,
         useRef,
         localUseMemo,
@@ -153,6 +145,13 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         createVisualizerMaterial,
         THREE
       );
+
+      if (typeof result !== 'function') {
+        throw new Error('Invalid visualizer component output');
+      }
+
+      return result as React.FC<{ audioData: number[] }>;
+
     } catch (error) {
       console.error('Error creating dynamic visualizer:', error);
       
