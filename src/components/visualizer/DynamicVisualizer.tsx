@@ -1,9 +1,7 @@
 import React, { Suspense, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
-import VisualizerErrorBoundary from './VisualizerErrorBoundary';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 interface DynamicVisualizerProps {
@@ -58,13 +56,26 @@ const transformJSXCode = (code: string): string => {
     return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
   });
 
-  // Fix THREE.js references
-  transformed = transformed.replace(/THREE\./g, '');
+  // Preserve THREE namespace references (no replacements)
 
   // Replace any capitalized JSX elements (e.g., <Button />) and namespaced/dotted ones with groups
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />');
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>');
   transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+
+  // Replace any non-allowed lowercase tags with <group> to ensure Canvas-safe JSX
+  const allowed = new Set([
+    'group','mesh','instancedMesh',
+    'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry','torusKnotGeometry','dodecahedronGeometry','icosahedronGeometry',
+    'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight','line','lineSegments','points','pointsMaterial'
+  ]);
+  transformed = transformed
+    .replace(/<([a-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs} />`)
+    .replace(/<([a-z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs}>`)
+    .replace(/<\/(?:[a-z][A-Za-z0-9_.-]*)>/g, (m) => {
+      const nm = m.slice(2, -1);
+      return allowed.has(nm) ? m : '</group>';
+    });
 
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {
@@ -95,10 +106,6 @@ const validateJSX = (code: string) => {
     if (new RegExp(`<\\/?${tag}\\b`, 'i').test(code)) {
       throw new Error('HTML elements are not allowed inside the 3D Canvas');
     }
-  }
-  // Guard against leftover capitalized JSX elements (e.g., <Button> or <UI.Button>)
-  if (/<[A-Z][A-Za-z0-9_.-]*/.test(code)) {
-    throw new Error('Unsupported JSX component inside Canvas');
   }
 };
 
@@ -197,48 +204,16 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   }, [jsxCode]);
 
   return (
-    <VisualizerErrorBoundary>
-      <div className="w-full h-full">
-        <Canvas
-          camera={{ position: [0, 0, 10], fov: 75 }}
-          gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance"
-          }}
-          style={{ background: backgroundColor }}
-          onCreated={({ gl }) => {
-            gl.setClearColor(backgroundColor);
-          }}
-          onError={(error) => {
-            console.error('Canvas error:', error);
-          }}
-        >
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} intensity={0.8} />
-          <pointLight position={[-10, -10, -10]} intensity={0.3} />
-          
-          <Suspense fallback={
-            <mesh>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color="#666666" wireframe />
-            </mesh>
-          }>
-            <group scale={scaleFactor}>
-              <VisualizerComponent audioData={audioData} />
-            </group>
-          </Suspense>
-          
-          <OrbitControls 
-            enableZoom={true}
-            enablePan={true}
-            enableRotate={true}
-            maxDistance={50}
-            minDistance={2}
-          />
-        </Canvas>
-      </div>
-    </VisualizerErrorBoundary>
+    <Suspense fallback={
+      <mesh>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial color="#666666" wireframe />
+      </mesh>
+    }>
+      <group scale={scaleFactor}>
+        <VisualizerComponent audioData={audioData} />
+      </group>
+    </Suspense>
   );
 };
 

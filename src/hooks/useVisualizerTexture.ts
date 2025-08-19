@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-interface VisualizerTextureData {
+export interface VisualizerTextureData {
   texture: THREE.Texture | null;
   colors: {
     primary: string;
@@ -71,8 +71,8 @@ export const useVisualizerTexture = () => {
 };
 
 export const createVisualizerMaterial = (
-  baseColor: string,
-  textureData: VisualizerTextureData,
+  baseColor?: string,
+  textureData?: VisualizerTextureData,
   options: {
     emissive?: string;
     emissiveIntensity?: number;
@@ -84,17 +84,41 @@ export const createVisualizerMaterial = (
     basic?: boolean;
   } = {}
 ) => {
+  // Defaults for backward compatibility
+  const defaultColors = (window as any).extractedColors || {
+    primary: '#ffffff',
+    secondary: '#cccccc',
+    accent: '#ffffff',
+    isNeon: false,
+    isMetallic: false,
+  };
+  const effectiveBase = baseColor || '#ffffff';
+  const effectiveTextureData: VisualizerTextureData = textureData || {
+    texture: (window as any).appliedTexture
+      ? new THREE.TextureLoader().load((window as any).appliedTexture)
+      : null,
+    colors: defaultColors,
+    textureVersion: 0,
+  };
+
+  if (effectiveTextureData.texture) {
+    effectiveTextureData.texture.wrapS = THREE.RepeatWrapping;
+    effectiveTextureData.texture.wrapT = THREE.RepeatWrapping;
+    effectiveTextureData.texture.colorSpace = THREE.SRGBColorSpace;
+    effectiveTextureData.texture.needsUpdate = true;
+  }
+
   // Use MeshBasicMaterial for pure-white, lighting-independent mapping when requested
   const material: any = options.basic
     ? new THREE.MeshBasicMaterial({
-        color: new THREE.Color(baseColor),
+        color: new THREE.Color(effectiveBase),
         wireframe: options.wireframe || false,
         opacity: options.opacity ?? 1,
         transparent: options.transparent ?? false,
       })
     : new THREE.MeshStandardMaterial({
-        color: new THREE.Color(baseColor),
-        emissive: new THREE.Color(options.emissive || baseColor),
+        color: new THREE.Color(effectiveBase),
+        emissive: new THREE.Color(options.emissive || effectiveBase),
         emissiveIntensity: options.emissiveIntensity || 0.3,
         metalness: options.metalness ?? 0.1,
         roughness: options.roughness ?? 0.9,
@@ -104,20 +128,20 @@ export const createVisualizerMaterial = (
       });
 
   // Apply texture if available
-  if (textureData.texture) {
+  if (effectiveTextureData.texture) {
     if (!options.basic && options.wireframe) {
       // For wireframe materials, we'll use emissive map to show texture
-      (material as any).emissiveMap = textureData.texture;
+      (material as any).emissiveMap = effectiveTextureData.texture;
       (material as any).emissiveIntensity = Math.max(options.emissiveIntensity || 0.3, 0.8);
     } else {
-      (material as any).map = textureData.texture;
-      if (!options.basic) (material as any).emissiveMap = textureData.texture;
+      (material as any).map = effectiveTextureData.texture;
+      if (!options.basic) (material as any).emissiveMap = effectiveTextureData.texture;
     }
     material.needsUpdate = true;
   }
 
   // Force material update when texture version changes
-  (material as any).userData = { textureVersion: textureData.textureVersion };
+  (material as any).userData = { textureVersion: effectiveTextureData.textureVersion };
 
   return material;
 };
