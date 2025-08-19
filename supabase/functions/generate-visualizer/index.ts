@@ -7,6 +7,117 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Enhanced prompt processing with GPT
+async function enhancePrompt(originalPrompt: string, referenceImage?: string): Promise<{
+  enhancedPrompt: string;
+  complexity: 'simple' | 'complex';
+  category: string;
+  objectCount: number;
+}> {
+  if (!openAIApiKey) {
+    return {
+      enhancedPrompt: originalPrompt,
+      complexity: 'simple',
+      category: 'unknown',
+      objectCount: 1
+    };
+  }
+
+  try {
+    let systemPrompt = `You are a 3D visualizer specialist. Transform simple prompts into detailed, complex multi-object descriptions for audio-reactive visualizers.
+
+CRITICAL REQUIREMENTS:
+- ALL objects must stay centered using orbital/spherical/bounded movement patterns
+- Generate MULTIPLE objects (50-300+) for most concepts  
+- Specify exact positioning that keeps everything in view
+- Include audio reactivity details
+- Add idle animation behaviors for when no audio is playing
+
+Transform these patterns:
+- "asteroids" → "dense field of 200+ irregularly shaped rocky asteroids in various sizes (0.05-0.3 scale), distributed in a spherical formation around center, each with unique rotation speeds and orbital paths, staying within 2.5 unit radius"
+- "flowers" → "expansive meadow of 150+ mixed flowers (roses, daisies, tulips) with varied stem heights, individual petal animations, gentle swaying, positioned in circular field pattern"
+- "particles" → "swarm of 400+ small luminous spheres in orbital cloud formation, individual frequency mapping, size variation, opacity pulsing"
+
+ALWAYS specify:
+1. Object count (50-300+)
+2. Size variations
+3. Centered distribution pattern (spherical, circular, grid)
+4. Bounded movement (orbital, contained, radius-limited)
+5. Individual audio reactivity
+6. Idle behavior when no audio
+
+Respond with JSON:
+{
+  "enhancedPrompt": "detailed description...",
+  "complexity": "simple" | "complex", 
+  "category": "space" | "nature" | "abstract" | "geometric",
+  "objectCount": number
+}`;
+
+    // Add image analysis if provided
+    if (referenceImage) {
+      systemPrompt += `
+
+REFERENCE IMAGE PROVIDED: Analyze the image and extract:
+- Number of objects/elements visible
+- Spatial arrangement and density
+- Shape complexity and variations  
+- Movement implications
+- Color scheme and lighting
+Incorporate these details into the enhanced prompt.`;
+    }
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { 
+        role: 'user', 
+        content: referenceImage 
+          ? `Enhance this prompt with reference to the provided image: "${originalPrompt}"`
+          : `Enhance this prompt: "${originalPrompt}"`
+      }
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-2025-04-14',
+        messages,
+        max_completion_tokens: 800,
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (response.ok && data.choices?.[0]?.message?.content) {
+      try {
+        const result = JSON.parse(data.choices[0].message.content);
+        return {
+          enhancedPrompt: result.enhancedPrompt || originalPrompt,
+          complexity: result.complexity || 'complex',
+          category: result.category || 'unknown',
+          objectCount: result.objectCount || 100
+        };
+      } catch (e) {
+        console.log('Failed to parse GPT response, using fallback');
+      }
+    }
+  } catch (error) {
+    console.error('Prompt enhancement failed:', error);
+  }
+
+  // Fallback enhancement
+  return {
+    enhancedPrompt: originalPrompt,
+    complexity: originalPrompt.length > 20 ? 'complex' : 'simple',
+    category: 'unknown',
+    objectCount: 50
+  };
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -63,6 +174,7 @@ function getAdvancedVisualizer(prompt: string): string {
   const isGrid = p.includes('grid') || p.includes('matrix') || p.includes('lattice') || p.includes('mesh') || p.includes('network');
   const isOrganic = p.includes('organic') || p.includes('fluid') || p.includes('wave') || p.includes('blob') || p.includes('tentacle') || p.includes('neural');
   const isCrystal = p.includes('crystal') || p.includes('diamond') || p.includes('gem') || p.includes('prism') || p.includes('facet');
+  const isSpace = p.includes('asteroid') || p.includes('meteor') || p.includes('space') || p.includes('comet') || p.includes('rock') || p.includes('falling') || p.includes('flying');
 
   // 1) Advanced Flower Field - Complex multi-component with full audio integration
   if (isFloral) {
@@ -424,6 +536,169 @@ function getAdvancedVisualizer(prompt: string): string {
 };`;
   }
 
+  // 4) Advanced Asteroid Field - Multiple irregular rocks with orbital motion
+  if (isSpace) {
+    return `return function CustomVisualizer(props) {
+  const { audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 } } = props;
+  const groupRef = React.useRef(null);
+  const trailsRef = React.useRef([]);
+  
+  const audioAnalysis = React.useMemo(() => {
+    const freq = audioData.frequency || Array(256).fill(0);
+    const bass = Math.min(freq.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255, 1);
+    const mids = Math.min(freq.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    const highs = Math.min(freq.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255, 1);
+    return { bass, mids, highs, beat: audioData.beatStrength, hasAudio: bass + mids + highs > 0.01 };
+  }, [audioData]);
+
+  // Generate diverse asteroid field
+  const asteroidData = React.useMemo(() => {
+    const asteroids = [];
+    let seed = ${Math.floor(Math.random() * 99999)};
+    function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+    
+    const count = 180;
+    for (let i = 0; i < count; i++) {
+      // Spherical distribution to keep centered
+      const r = 1.2 + rnd() * 1.8;
+      const theta = rnd() * Math.PI * 2;
+      const phi = Math.acos(2 * rnd() - 1);
+      
+      asteroids.push({
+        x: r * Math.sin(phi) * Math.cos(theta),
+        y: r * Math.cos(phi),
+        z: r * Math.sin(phi) * Math.sin(theta),
+        size: 0.03 + rnd() * 0.15,
+        rotX: rnd() * Math.PI * 2,
+        rotY: rnd() * Math.PI * 2,
+        rotZ: rnd() * Math.PI * 2,
+        speedX: (rnd() - 0.5) * 0.4,
+        speedY: (rnd() - 0.5) * 0.4,
+        speedZ: (rnd() - 0.5) * 0.4,
+        orbitSpeed: 0.1 + rnd() * 0.3,
+        orbitRadius: r,
+        orbitPhase: rnd() * Math.PI * 2,
+        audioIndex: i % 64,
+        geometry: Math.floor(rnd() * 4) // 0-3 for different shapes
+      });
+    }
+    return asteroids;
+  }, []);
+
+  ReactThreeFiber.useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    if (groupRef.current) {
+      if (!audioAnalysis.hasAudio) {
+        // Gentle field rotation when idle
+        groupRef.current.rotation.x = Math.sin(t * 0.15) * 0.1;
+        groupRef.current.rotation.y = t * 0.08;
+        groupRef.current.rotation.z = Math.sin(t * 0.25) * 0.05;
+      } else {
+        // Audio-reactive field movement
+        groupRef.current.rotation.x = audioAnalysis.bass * 0.4 + Math.sin(t * 0.3) * 0.2;
+        groupRef.current.rotation.y = t * (0.1 + audioAnalysis.mids * 0.2);
+        groupRef.current.rotation.z = audioAnalysis.highs * 0.3;
+      }
+    }
+  });
+
+  const asteroids = asteroidData.map((asteroid, i) => {
+    const freqBin = Math.floor((asteroid.audioIndex / 64) * 255);
+    const localIntensity = audioData.frequency ? (audioData.frequency[freqBin] || 0) / 255 : 0;
+    
+    // Create different geometry types for variety
+    let geometry;
+    switch(asteroid.geometry) {
+      case 0: 
+        geometry = React.createElement('icosahedronGeometry', { args: [1, Math.floor(localIntensity * 2)] });
+        break;
+      case 1:
+        geometry = React.createElement('dodecahedronGeometry', { args: [1, Math.floor(localIntensity * 2)] });
+        break;
+      case 2:
+        geometry = React.createElement('octahedronGeometry', { args: [1, Math.floor(localIntensity * 2)] });
+        break;
+      default:
+        geometry = React.createElement('sphereGeometry', { args: [1, 8 + Math.floor(localIntensity * 8), 6 + Math.floor(localIntensity * 6)] });
+    }
+    
+    return React.createElement('mesh', {
+      key: i,
+      position: [
+        asteroid.x + Math.sin(asteroid.orbitPhase + Date.now() * 0.001 * asteroid.orbitSpeed) * 0.3,
+        asteroid.y + Math.cos(asteroid.orbitPhase * 1.3) * 0.2,
+        asteroid.z + Math.sin(asteroid.orbitPhase * 0.7) * 0.25
+      ],
+      rotation: [
+        asteroid.rotX + localIntensity * 2,
+        asteroid.rotY + localIntensity * 3,
+        asteroid.rotZ + audioAnalysis.beat * 0.5
+      ],
+      scale: [
+        asteroid.size * (1 + audioAnalysis.bass * 0.3),
+        asteroid.size * (1 + audioAnalysis.bass * 0.3),
+        asteroid.size * (1 + audioAnalysis.bass * 0.3)
+      ]
+    },
+      geometry,
+      React.createElement('meshStandardMaterial', {
+        color: '#ffffff',
+        metalness: 0.3 + localIntensity * 0.4,
+        roughness: 0.8 - localIntensity * 0.3,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.02 + localIntensity * 0.15 + audioAnalysis.beat * 0.1
+      })
+    );
+  });
+
+  // Add debris particles for extra detail
+  const debris = Array(80).fill(null).map((_, i) => {
+    const angle = (i / 80) * Math.PI * 2;
+    const radius = 2.5 + Math.sin(angle * 3) * 0.8;
+    const height = (Math.random() - 0.5) * 1.5;
+    
+    return React.createElement('mesh', {
+      key: 'debris' + i,
+      position: [
+        Math.cos(angle) * radius + Math.sin(Date.now() * 0.002 + i) * 0.1,
+        height + audioAnalysis.highs * 0.2,
+        Math.sin(angle) * radius + Math.cos(Date.now() * 0.0015 + i) * 0.1
+      ],
+      scale: [
+        0.008 + audioAnalysis.beat * 0.01,
+        0.008 + audioAnalysis.beat * 0.01,
+        0.008 + audioAnalysis.beat * 0.01
+      ]
+    },
+      React.createElement('tetrahedronGeometry', { args: [1] }),
+      React.createElement('meshStandardMaterial', {
+        color: '#ffffff',
+        metalness: 0.6,
+        roughness: 0.4,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.1 + audioAnalysis.highs * 0.3,
+        transparent: true,
+        opacity: 0.4 + audioAnalysis.beat * 0.4
+      })
+    );
+  });
+
+  return React.createElement('group', { ref: groupRef },
+    React.createElement('ambientLight', { intensity: 0.2 }),
+    React.createElement('directionalLight', { position: [10, 10, 5], intensity: 0.7 }),
+    React.createElement('pointLight', { 
+      position: [0, 0, 0], 
+      intensity: 0.8 + audioAnalysis.beat * 1.5,
+      distance: 12,
+      color: '#ffffff'
+    }),
+    ...asteroids,
+    ...debris
+  );
+};`;
+  }
+
   // Default to simple but enhanced template
   return getEnhancedDefaultVisualizer(prompt);
 }
@@ -623,11 +898,24 @@ serve(async (req) => {
       });
     }
 
-    // Prefer advanced template if prompt indicates plurality/fields/swarms
+    // STEP 1: Enhance the prompt with GPT for complexity analysis
+    console.log('[generator] Original prompt:', prompt);
+    const enhancement = await enhancePrompt(prompt, referenceImage);
+    console.log('[generator] Enhanced prompt:', enhancement.enhancedPrompt);
+    console.log('[generator] Complexity:', enhancement.complexity, 'Objects:', enhancement.objectCount);
+
+    // STEP 2: Generate visualizer based on enhanced understanding
     let cleanedCode = '';
-    if (isComplexPrompt(prompt)) {
-      cleanedCode = getAdvancedVisualizer(prompt);
-      console.log('[generator] Using advanced template for prompt:', prompt);
+    
+    // Use enhanced analysis to determine template
+    const shouldUseAdvanced = enhancement.complexity === 'complex' || 
+                             enhancement.objectCount > 20 || 
+                             isComplexPrompt(prompt) ||
+                             enhancement.category === 'space'; // Force asteroid template for space prompts
+
+    if (shouldUseAdvanced) {
+      cleanedCode = getAdvancedVisualizer(enhancement.enhancedPrompt || prompt);
+      console.log('[generator] Using advanced template for enhanced prompt');
     } else if (openAIApiKey) {
       try {
         // Use a VERY specific prompt that produces working code
