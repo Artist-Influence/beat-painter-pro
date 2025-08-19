@@ -1,178 +1,141 @@
-import React, { useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { generateLocalVisualizer } from '@/components/studio/LocalVisualizerGenerator';
-import { transform as sucraseTransform } from 'sucrase';
+
+import React, { Suspense, useMemo } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { useStudioStore } from '@/stores/studioStore';
 
 interface DynamicVisualizerProps {
-  code: string;
-  audioData: any;
-  backgroundColor?: string;
-  zoomLevel?: number;
+  jsxCode: string;
+  audioData: number[];
+  scaleFactor?: number;
 }
 
-export function DynamicVisualizer({ 
-  code, 
-  audioData, 
-  backgroundColor = '#000000',
-  zoomLevel = 1 
-}: DynamicVisualizerProps) {
-  const [Component, setComponent] = useState<any>(null);
-  const [error, setError] = useState<string>('');
-
-  useEffect(() => {
-    console.log('Loading custom visualizer with code:', code);
-
-    const sanitize = (src: string) => {
-      try {
-        if (!src) return '';
-        // Strip code fences and export/imports first
-        let c = String(src)
-          .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, ''))
-          .replace(/export\s+default\s+/g, '')
-          .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
-          .trim();
-
-        // Enforce all-white materials for proper style mapping
-        c = c
-          .replace(/color:\s*['"][^'"]*['"]/g, "color: '#ffffff'")
-          .replace(/color:\s*0x[0-9a-fA-F]+/g, "color: '#ffffff'")
-          .replace(/color:\s*['"](#[0-9a-fA-F]+|rgb\([^)]+\)|hsl\([^)]+\))['"]/g, "color: '#ffffff'");
-
-        // Transform TS/TSX to plain JS using Sucrase
-        c = sucraseTransform(c, { transforms: ['typescript', 'jsx'] }).code;
-
-        // Ensure we return a function from the factory
-        if (!/^return\s/.test(c)) {
-          if (/function\s+CustomVisualizer\b/.test(c)) {
-            c += '\nreturn CustomVisualizer;';
-          } else if (/^function\s+\w+/.test(c)) {
-            c += '\nreturn (typeof CustomVisualizer !== "undefined" ? CustomVisualizer : null);';
-          } else if (/^\(/.test(c) || /=>/.test(c)) {
-            c = 'return (' + c + ');';
-          } else if (!c.startsWith('return')) {
-            // As a last resort, wrap it so we can "return" whatever it defines
-            c = 'return (function(){' + c + '})();';
-          }
-        }
-        return c;
-      } catch (e) {
-        console.error('Sanitization/transform failed:', e, '\nSource:', src);
-        return '';
-      }
-    };
-
-    const compile = (src: string) => {
-      const factory = new Function('React', 'ReactThreeFiber', 'THREE', src);
-      return factory(React, { useFrame }, THREE);
-    };
-
-    try {
-      const cleanCode = sanitize(code);
-      console.log('Sanitized code to execute:', cleanCode);
-      const GeneratedComponent: any = compile(cleanCode);
-
-      if (typeof GeneratedComponent !== 'function') {
-        throw new Error('Generated code did not return a function');
-      }
-
-      const SafeComponent = (props: any) => {
-        try {
-          return <GeneratedComponent {...props} />;
-        } catch (err) {
-          console.error('Runtime error in custom visualizer:', err);
-          return (
-            <>
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <mesh>
-                <boxGeometry args={[1, 1, 1]} />
-                <meshStandardMaterial color="#ffffff" wireframe />
-              </mesh>
-            </>
-          );
-        }
-      };
-
-      setComponent(() => SafeComponent);
-      setError('');
-    } catch (err) {
-      console.error('Error creating component, falling back to local template:', err);
-
-      try {
-        const fallbackCode = generateLocalVisualizer('icosahedron');
-        const cleanFallback = sanitize(fallbackCode);
-        const FallbackComponent: any = compile(cleanFallback);
-        if (typeof FallbackComponent === 'function') {
-          setComponent(() => FallbackComponent);
-          setError('');
-          return;
-        }
-        throw new Error('Local fallback did not return a function');
-      } catch (fallbackErr) {
-        console.error('Local fallback failed:', fallbackErr);
-        setError(fallbackErr instanceof Error ? fallbackErr.message : 'Unknown error');
-        setComponent(() => FallbackVisualizer);
-      }
-    }
-  }, [code]);
-
-  if (error) {
-    console.error('Rendering fallback due to error:', error);
-    return <FallbackVisualizer audioData={audioData} />;
-  }
-
-  if (!Component) {
-    return <LoadingVisualizer />;
-  }
-
-  // Don't scale - the generated visualizers already have proper sizing
-  return (
-    <Component 
-      audioData={audioData}
-      backgroundColor={backgroundColor}
-      zoomLevel={zoomLevel}
-    />
-  );
-}
-
-// Fallback visualizer (white wireframe cube)
-function FallbackVisualizer({ audioData }: any) {
-  const meshRef = React.useRef<THREE.Mesh>(null);
+// Enhanced sanitization function for all-white materials
+const sanitizeJSXCode = (code: string): string => {
+  let sanitized = code;
   
-  useFrame(({ clock }) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x = clock.getElapsedTime() * 0.5;
-      meshRef.current.rotation.y = clock.getElapsedTime() * 0.3;
+  // Remove any color specifications
+  sanitized = sanitized.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
+  sanitized = sanitized.replace(/\bcolor\s*=\s*{[^}]*}/g, '');
+  
+  // Replace material components with createVisualizerMaterial
+  sanitized = sanitized.replace(/<meshStandardMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  sanitized = sanitized.replace(/<meshBasicMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  sanitized = sanitized.replace(/<meshPhongMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  sanitized = sanitized.replace(/<meshLambertMaterial[^>]*\/?>/g, '<primitive object={material} />');
+  
+  // Ensure createVisualizerMaterial is properly used
+  if (!sanitized.includes('createVisualizerMaterial')) {
+    const materialDeclaration = 'const material = createVisualizerMaterial();';
+    const insertIndex = sanitized.indexOf('return (');
+    if (insertIndex !== -1) {
+      sanitized = sanitized.slice(0, insertIndex) + materialDeclaration + '\n  \n  ' + sanitized.slice(insertIndex);
     }
-  });
+  }
+  
+  return sanitized;
+};
+
+const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({ 
+  jsxCode, 
+  audioData, 
+  scaleFactor = 1 
+}) => {
+  const backgroundColor = useStudioStore((state) => state.backgroundColor);
+  
+  const VisualizerComponent = useMemo(() => {
+    try {
+      const sanitizedCode = sanitizeJSXCode(jsxCode);
+      
+      // Create the component function from the sanitized JSX code
+      const componentFunction = new Function(
+        'React',
+        'useRef',
+        'useMemo',
+        'useFrame',
+        'useStudioStore',
+        'createVisualizerMaterial',
+        `${sanitizedCode}; return arguments[5].default || arguments[5];`
+      );
+      
+      // Import necessary dependencies
+      const useRef = React.useRef;
+      const useMemo = React.useMemo;
+      const { useFrame } = require('@react-three/fiber');
+      const { useStudioStore } = require('@/stores/studioStore');
+      const { createVisualizerMaterial } = require('@/lib/visualizerUtils');
+      
+      return componentFunction(
+        React,
+        useRef,
+        useMemo,
+        useFrame,
+        useStudioStore,
+        createVisualizerMaterial
+      );
+    } catch (error) {
+      console.error('Error creating dynamic visualizer:', error);
+      
+      // Fallback component with all-white material
+      return ({ audioData }: { audioData: number[] }) => {
+        const meshRef = React.useRef<THREE.Mesh>(null);
+        const { useFrame } = require('@react-three/fiber');
+        const { createVisualizerMaterial } = require('@/lib/visualizerUtils');
+        
+        useFrame(() => {
+          if (meshRef.current && audioData.length > 0) {
+            const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
+            meshRef.current.scale.setScalar(1 + avgFreq * 0.5);
+            meshRef.current.rotation.y += 0.01;
+          }
+        });
+        
+        const material = createVisualizerMaterial();
+        
+        return (
+          <mesh ref={meshRef}>
+            <sphereGeometry args={[2, 32, 32]} />
+            <primitive object={material} />
+          </mesh>
+        );
+      };
+    }
+  }, [jsxCode]);
 
   return (
-    <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
-      <mesh ref={meshRef}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial 
-          color="#ffffff" 
-          wireframe 
-          emissive="#ffffff"
-          emissiveIntensity={0.1}
+    <div className="w-full h-full">
+      <Canvas
+        camera={{ position: [0, 0, 10], fov: 75 }}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance"
+        }}
+        style={{ background: backgroundColor }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(backgroundColor);
+        }}
+      >
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={0.8} />
+        <pointLight position={[-10, -10, -10]} intensity={0.3} />
+        
+        <Suspense fallback={null}>
+          <group scale={scaleFactor}>
+            <VisualizerComponent audioData={audioData} />
+          </group>
+        </Suspense>
+        
+        <OrbitControls 
+          enableZoom={true}
+          enablePan={true}
+          enableRotate={true}
+          maxDistance={50}
+          minDistance={2}
         />
-      </mesh>
-    </>
+      </Canvas>
+    </div>
   );
-}
+};
 
-// Loading state
-function LoadingVisualizer() {
-  return (
-    <>
-      <ambientLight intensity={0.3} />
-      <mesh>
-        <sphereGeometry args={[0.5, 32, 32]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
-      </mesh>
-    </>
-  );
-}
+export default DynamicVisualizer;
