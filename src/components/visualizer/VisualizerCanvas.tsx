@@ -18,17 +18,19 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
   
-  const { Visualizer, scale } = useMemo(() => {
+  const { Visualizer, scale, initialCode } = useMemo(() => {
     if (isCustomVisualizer(selected)) {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
       return {
         Visualizer: CustomVisualizerLoader,
-        scale: customViz?.scale_factor || 0.25
+        scale: customViz?.scale_factor || 0.25,
+        initialCode: customViz?.jsx_code
       };
     } else {
       return {
         Visualizer: visualizerRegistry[selected as keyof typeof visualizerRegistry],
-        scale: VISUALIZER_SCALES[selected] ?? 0.25
+        scale: VISUALIZER_SCALES[selected] ?? 0.25,
+        initialCode: undefined
       };
     }
   }, [selected, customVisualizers]);
@@ -152,7 +154,10 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
                   key={styleVersion} 
                   audioData={audioData} 
                   backgroundColor={backgroundColor}
-                  {...(isCustomVisualizer(selected) ? { visualizerKey: selected } : {})}
+                  {...(isCustomVisualizer(selected) ? { 
+                    visualizerKey: selected,
+                    initialCode: initialCode
+                  } : {})}
                 />
               )}
             </Suspense>

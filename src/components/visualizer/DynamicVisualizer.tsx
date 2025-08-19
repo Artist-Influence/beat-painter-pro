@@ -123,6 +123,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   scaleFactor = 1 
 }) => {
   const backgroundColor = useStudioStore((state) => state.backgroundColor);
+  const lastGoodCodeRef = React.useRef<string>('');
   
   const VisualizerComponent = useMemo(() => {
     try {
@@ -172,12 +173,57 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         throw new Error('Invalid visualizer component output');
       }
 
+      // Store as last good code on successful compilation
+      lastGoodCodeRef.current = jsxCode;
       return result as React.FC<{ audioData: number[] }>;
 
     } catch (error) {
-      console.error('Error creating dynamic visualizer:', error);
+      console.warn('DynamicVisualizer compilation failed, attempting to use last good code:', error);
       
-      // Fallback component with all-white material and error indicator
+      // Try to use last good code if available
+      if (lastGoodCodeRef.current && lastGoodCodeRef.current !== jsxCode) {
+        try {
+          const transformedCode = transformJSXCode(lastGoodCodeRef.current);
+          validateJSX(transformedCode);
+
+          const { code: compiledCode } = sucraseTransform(transformedCode, { 
+            transforms: ['typescript', 'jsx'] 
+          });
+          
+          const componentFunction = new Function(
+            'React',
+            'useRef',
+            'useMemo',
+            'useFrame',
+            'useStudioStore',
+            'createVisualizerMaterial',
+            'THREE',
+            compiledCode
+          );
+          
+          const useRef = React.useRef;
+          const localUseMemo = React.useMemo;
+          
+          const result = componentFunction(
+            React,
+            useRef,
+            localUseMemo,
+            useFrame,
+            useStudioStore,
+            createVisualizerMaterial,
+            THREE
+          );
+
+          if (typeof result === 'function') {
+            console.log('Successfully recovered using last good code');
+            return result as React.FC<{ audioData: number[] }>;
+          }
+        } catch (recoveryError) {
+          console.error('Recovery attempt also failed:', recoveryError);
+        }
+      }
+      
+      // Final fallback component
       return ({ audioData }: { audioData: number[] }) => {
         const meshRef = React.useRef<THREE.Mesh>(null);
         
@@ -206,11 +252,6 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
             <mesh ref={meshRef}>
               <sphereGeometry args={[2, 32, 32]} />
               <primitive object={material} />
-            </mesh>
-            {/* Error indicator - red wireframe cube */}
-            <mesh position={[0, 4, 0]}>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color="#ff0000" wireframe />
             </mesh>
           </group>
         );
