@@ -59,6 +59,20 @@ const transformJSXCode = (code: string): string => {
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />');
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>');
   transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+  // Replace any non-allowed tags with <group> to ensure Canvas-safe JSX
+  const allowed = new Set([
+    'group','mesh','instancedMesh',
+    'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry',
+    'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight',
+    'line','lineSegments'
+  ]);
+  transformed = transformed
+    .replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs} />`)
+    .replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => allowed.has(name) ? m : `<group${attrs}>`)
+    .replace(/<\/(?:[A-Za-z][A-Za-z0-9_.-]*)>/g, (m) => {
+      const name = m.slice(2, -1);
+      return allowed.has(name) ? m : '</group>';
+    });
 
   // Ensure createVisualizerMaterial is properly used
   if (!transformed.includes('createVisualizerMaterial')) {

@@ -418,7 +418,26 @@ Requirements:
       visualizerCode = data.choices[0]?.message?.content || '';
 
       // Sanitize and normalize the generated code
-      visualizerCode = visualizerCode
+      const allowSanitize = (code: string) => {
+        const allow = [
+          'group','mesh','instancedMesh',
+          'boxGeometry','sphereGeometry','cylinderGeometry','coneGeometry','torusGeometry','planeGeometry',
+          'primitive','ambientLight','pointLight','directionalLight','spotLight','hemisphereLight',
+          'line','lineSegments'
+        ];
+        // Replace self-closing
+        code = code.replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => allow.includes(name) ? m : `<group${attrs} />`);
+        // Replace open tags
+        code = code.replace(/<([A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => allow.includes(name) ? m : `<group${attrs}>`);
+        // Replace closing tags
+        code = code.replace(/<\/(?:[A-Za-z][A-Za-z0-9_.-]*)>/g, (m) => {
+          const nm = m.slice(2, -1);
+          return allow.includes(nm) ? m : '</group>';
+        });
+        return code;
+      };
+
+      visualizerCode = allowSanitize(visualizerCode
         // Strip Markdown fences and trim
         .replace(/```[a-z]*\n?/gi, '')
         .replace(/```/g, '')
@@ -434,7 +453,8 @@ Requirements:
         // Replace capitalized and dotted JSX elements (e.g., <Button />, <UI.Button>) with groups
         .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />')
         .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>')
-        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>')
+      );
 
       // Generate name and emoji
       const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));
