@@ -417,12 +417,18 @@ Requirements:
 
       const data = await response.json();
       visualizerCode = data.choices[0]?.message?.content || '';
+
+      // Strip Markdown fences and trim
+      visualizerCode = visualizerCode.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
       
       // Ensure all-white materials in generated code
       visualizerCode = visualizerCode.replace(/color\s*[:=]\s*["'][^"']*["']/g, '');
-      visualizerCode = visualizerCode.replace(/<meshStandardMaterial[^>]*>/g, '<primitive object={material} />');
-      visualizerCode = visualizerCode.replace(/<meshBasicMaterial[^>]*>/g, '<primitive object={material} />');
-      
+      visualizerCode = visualizerCode.replace(/<meshStandardMaterial[^>]*\/?>(?:<\/meshStandardMaterial>)?/g, '<primitive object={material} />');
+      visualizerCode = visualizerCode.replace(/<meshBasicMaterial[^>]*\/?>(?:<\/meshBasicMaterial>)?/g, '<primitive object={material} />');
+      visualizerCode = visualizerCode.replace(/<meshPhongMaterial[^>]*\/?>(?:<\/meshPhongMaterial>)?/g, '<primitive object={material} />');
+      visualizerCode = visualizerCode.replace(/<meshLambertMaterial[^>]*\/?>(?:<\/meshLambertMaterial>)?/g, '<primitive object={material} />');
+      visualizerCode = visualizerCode.replace(/<meshPhysicalMaterial[^>]*\/?>(?:<\/meshPhysicalMaterial>)?/g, '<primitive object={material} />');
+
       // Generate name and emoji
       const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));
       visualizerName = words.join(' ') + ' Visualizer';

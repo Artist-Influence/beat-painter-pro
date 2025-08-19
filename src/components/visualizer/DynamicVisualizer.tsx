@@ -1,10 +1,11 @@
 
 import React, { Suspense, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
 import VisualizerErrorBoundary from './VisualizerErrorBoundary';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
 interface DynamicVisualizerProps {
   jsxCode: string;
@@ -67,6 +68,13 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   const VisualizerComponent = useMemo(() => {
     try {
       const transformedCode = transformJSXCode(jsxCode);
+      validateJSX(transformedCode);
+
+      // Helpful dev logging
+      if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'development') {
+        // eslint-disable-next-line no-console
+        console.debug('DynamicVisualizer transformed code:', transformedCode);
+      }
       
       // Create the component function from the transformed JSX code
       const componentFunction = new Function(
@@ -80,17 +88,14 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         transformedCode
       );
       
-      // Import necessary dependencies
+      // Provide necessary dependencies
       const useRef = React.useRef;
-      const useMemo = React.useMemo;
-      const { useFrame } = require('@react-three/fiber');
-      const { useStudioStore } = require('@/stores/studioStore');
-      const { createVisualizerMaterial } = require('@/lib/visualizerUtils');
+      const localUseMemo = React.useMemo;
       
       return componentFunction(
         React,
         useRef,
-        useMemo,
+        localUseMemo,
         useFrame,
         useStudioStore,
         createVisualizerMaterial,
@@ -99,8 +104,37 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
     } catch (error) {
       console.error('Error creating dynamic visualizer:', error);
       
-      // Fallback component with all-white material and error boundary
+      // Fallback component with all-white material and error indicator
       return ({ audioData }: { audioData: number[] }) => {
+        const meshRef = React.useRef<THREE.Mesh>(null);
+        
+        useFrame(() => {
+          if (meshRef.current && audioData.length > 0) {
+            const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
+            meshRef.current.scale.setScalar(1 + avgFreq * 0.5);
+            meshRef.current.rotation.y += 0.01;
+          }
+        });
+        
+        const material = createVisualizerMaterial();
+        
+        return (
+          <group>
+            <mesh ref={meshRef}>
+              <sphereGeometry args={[2, 32, 32]} />
+              <primitive object={material} />
+            </mesh>
+            {/* Error indicator - red wireframe cube */}
+            <mesh position={[0, 4, 0]}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial color="#ff0000" wireframe />
+            </mesh>
+          </group>
+        );
+      };
+    }
+  }, [jsxCode]);
+
         const meshRef = React.useRef<THREE.Mesh>(null);
         const { useFrame } = require('@react-three/fiber');
         const { createVisualizerMaterial } = require('@/lib/visualizerUtils');
