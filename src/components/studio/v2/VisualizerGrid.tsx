@@ -54,29 +54,29 @@ export function VisualizerGrid() {
         {/* Custom Visualizers Section */}
         {(customVisualizers.length > 0 || !isLoading) && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-white/80 text-sm font-medium">My Custom Visualizers</h3>
-                {userRole === 'admin' && (
-                  <Badge variant="secondary" className="bg-yellow-600/30 text-yellow-200 text-xs">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Admin
-                  </Badge>
-                )}
-                {customVisualizers.length > 0 && (
-                  <Badge variant="secondary" className="bg-purple-600/30 text-purple-200 text-xs">
-                    {customVisualizers.length}
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {userRole !== 'admin' && (
-                  <span className="text-xs text-white/50 whitespace-nowrap">
-                    {quotaRemaining}/5 left
-                  </span>
-                )}
-                <div className="flex gap-1">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white/80 text-sm font-medium">My Custom Visualizers</h3>
+                  {userRole === 'admin' && (
+                    <Badge variant="secondary" className="bg-yellow-600/30 text-yellow-200 text-xs">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Admin
+                    </Badge>
+                  )}
+                  {customVisualizers.length > 0 && (
+                    <Badge variant="secondary" className="bg-purple-600/30 text-purple-200 text-xs">
+                      {customVisualizers.length}
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {userRole !== 'admin' && (
+                    <span className="text-xs text-white/50 whitespace-nowrap">
+                      {quotaRemaining}/5 left
+                    </span>
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -85,15 +85,18 @@ export function VisualizerGrid() {
                   >
                     <RefreshCcw className="w-3 h-3" />
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowGenerator(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
-                  >
-                    <Wand2 className="w-3 h-3 mr-1" />
-                    Generate
-                  </Button>
                 </div>
+              </div>
+              
+              <div className="flex justify-center">
+                <Button
+                  size="sm"
+                  onClick={() => setShowGenerator(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-4 text-xs"
+                >
+                  <Wand2 className="w-3 h-3 mr-1" />
+                  Generate New Visualizer
+                </Button>
               </div>
             </div>
             

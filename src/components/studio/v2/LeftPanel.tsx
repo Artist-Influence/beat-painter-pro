@@ -41,8 +41,7 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="absolute left-0 top-24 bottom-24 z-30"
           >
-            <div className="ml-20 w-80 h-full bg-black/60 backdrop-blur-2xl rounded-r-2xl border border-white/10 border-l-0 flex flex-col">
-              <div className="flex-1 overflow-y-auto p-4">
+            <div className="ml-20 w-80 h-full bg-black/60 backdrop-blur-2xl rounded-r-2xl border border-white/10 border-l-0 p-4">
               {/* Visualizer Grid */}
               {activePanel === 'visualizers' && (
                 <VisualizerGrid />
@@ -55,7 +54,6 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
                   <StyleSelector />
                 </div>
               )}
-              </div>
             </div>
           </motion.div>
         )}
