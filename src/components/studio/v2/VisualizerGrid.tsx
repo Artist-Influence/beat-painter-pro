@@ -54,7 +54,7 @@ export function VisualizerGrid() {
         {/* Custom Visualizers Section */}
         {(customVisualizers.length > 0 || !isLoading) && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-white/80 text-sm font-medium">My Custom Visualizers</h3>
                 {userRole === 'admin' && (
@@ -69,29 +69,31 @@ export function VisualizerGrid() {
                   </Badge>
                 )}
               </div>
+              
               <div className="flex items-center gap-2">
                 {userRole !== 'admin' && (
-                  <div className="text-xs text-white/50">
-                    {quotaRemaining}/5 remaining
-                  </div>
+                  <span className="text-xs text-white/50 whitespace-nowrap">
+                    {quotaRemaining}/5 left
+                  </span>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={refetch}
-                  className="h-7 px-3 text-xs border-white/20 text-white hover:bg-white/10"
-                >
-                  <RefreshCcw className="w-3 h-3 mr-1" />
-                  Refresh
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowGenerator(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
-                >
-                  <Wand2 className="w-3 h-3 mr-1" />
-                  Generate
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={refetch}
+                    className="h-7 px-2 text-xs bg-white/10 hover:bg-white/20 text-white border-0"
+                  >
+                    <RefreshCcw className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowGenerator(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
+                  >
+                    <Wand2 className="w-3 h-3 mr-1" />
+                    Generate
+                  </Button>
+                </div>
               </div>
             </div>
             
