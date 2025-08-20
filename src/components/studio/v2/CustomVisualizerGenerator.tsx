@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Upload, Wand2, Palette, Loader2, Image, X } from 'lucide-react';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'; // Fixed bundling issue
 import { visualizerRegistry } from '@/components/visualizers';
 
 interface CustomVisualizerGeneratorProps {
