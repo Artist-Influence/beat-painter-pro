@@ -71,8 +71,7 @@ export function VisualizerGrid() {
                 <Button
                   size="sm"
                   onClick={() => setShowGenerator(true)}
-                  disabled={userRole !== 'admin' && quotaRemaining <= 0}
-                  className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs disabled:opacity-50"
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
                 >
                   <Wand2 className="w-3 h-3 mr-1" />
                   Generate
