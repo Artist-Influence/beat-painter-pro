@@ -81,6 +81,7 @@ export function CustomVisualizerGenerator({
       }
     }
 
+    console.log('Generating visualizer with prompt:', finalPrompt);
     const result = await generateVisualizer({
       prompt: finalPrompt,
       referenceImage: referenceImage || undefined,
@@ -88,22 +89,16 @@ export function CustomVisualizerGenerator({
     });
 
     if (result) {
-      // Show preview code for immediate testing
-      if (result.jsx_code) {
-        setPreviewCode(result.jsx_code);
-        setPreviewName(result.name || "Generated Visualizer");
-        setPreviewViz(result);
-      }
+      console.log('Generated visualizer result:', result);
       
-      // Auto-select the visualizer immediately for both saved and preview
+      // Auto-select the visualizer immediately and close dialog
       if (onSuccess) {
+        console.log('Calling onSuccess with result:', result);
         onSuccess(result);
       }
       
-      // Close dialog only for saved visualizers, keep open for previews to show "Use This Preview" button
-      if (!result.isPreview) {
-        onClose();
-      }
+      // Always close dialog after generation
+      onClose();
     }
   };
 
@@ -292,35 +287,6 @@ export function CustomVisualizerGenerator({
             </motion.div>
           )}
 
-          {previewCode && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-3 p-4 bg-green-600/20 rounded-lg border border-green-500/30"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-white font-medium">Live Preview: {previewName}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (previewViz && onSuccess) onSuccess(previewViz);
-                    onClose();
-                  }}
-                  disabled={!previewViz}
-                  className="border-green-500/30 text-green-200 hover:bg-green-500/20"
-                >
-                  Use This Preview
-                </Button>
-              </div>
-              <p className="text-xs text-white/70">
-                Visualizer generated successfully! Click "Use This Preview" to start using it, or wait for database sync.
-              </p>
-            </motion.div>
-          )}
         </div>
 
         <div className="flex justify-between items-center pt-4 border-t border-white/20">
@@ -333,11 +299,6 @@ export function CustomVisualizerGenerator({
             Cancel
           </Button>
           
-          {(!user || (userRole !== 'admin' && quotaRemaining <= 0)) && (
-            <div className="text-xs text-yellow-400 bg-yellow-400/10 px-3 py-2 rounded border border-yellow-400/20">
-              💡 {!user ? "Not signed in" : "Over quota"} - we'll generate a preview you can use right away!
-            </div>
-          )}
           
           <Button
             onClick={handleGenerate}

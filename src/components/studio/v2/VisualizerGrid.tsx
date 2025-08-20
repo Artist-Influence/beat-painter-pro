@@ -36,8 +36,11 @@ export function VisualizerGrid() {
   ];
 
   const handleCustomVisualizerSuccess = (visualizer: any) => {
+    console.log('VisualizerGrid handleCustomVisualizerSuccess called with:', visualizer);
     // Select the new visualizer immediately - real-time subscription will handle list update
-    setSelected(`custom_${visualizer.id}` as VisualizerKey);
+    const visualizerKey = `custom_${visualizer.id}` as VisualizerKey;
+    console.log('Setting selected visualizer to:', visualizerKey);
+    setSelected(visualizerKey);
     setShowGenerator(false);
   };
 

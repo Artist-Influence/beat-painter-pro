@@ -146,15 +146,21 @@ export function useCustomVisualizers() {
   };
 
   const deleteVisualizer = async (id: string) => {
+    console.log('Deleting visualizer:', id);
+    
     // Handle preview visualizers (local only)
     if (id.startsWith('preview-')) {
-      // Remove from store immediately 
-      useCustomVisualizersStore.getState().removeVisualizer(id);
+      console.log('Deleting preview visualizer');
+      
+      // Get current store instance and remove visualizer
+      const store = useCustomVisualizersStore.getState();
+      store.removeVisualizer(id);
       
       // Clean up global preview storage
       const W = window as any;
       if (W.__PREVIEW_VISUALIZERS__?.[id]) {
         delete W.__PREVIEW_VISUALIZERS__[id];
+        console.log('Cleaned up preview storage for', id);
       }
       
       toast({
@@ -165,10 +171,17 @@ export function useCustomVisualizers() {
     }
 
     // Handle saved visualizers (database)
-    if (!user) return;
+    if (!user) {
+      console.log('No user, cannot delete saved visualizer');
+      return;
+    }
 
+    console.log('Deleting saved visualizer from database');
+    
     // Optimistically remove from UI immediately
-    useCustomVisualizersStore.getState().removeVisualizer(id);
+    const store = useCustomVisualizersStore.getState();
+    const originalVisualizers = [...store.visualizers];
+    store.removeVisualizer(id);
 
     try {
       const { error } = await supabase
@@ -178,11 +191,13 @@ export function useCustomVisualizers() {
         .eq('user_id', user.id);
 
       if (error) {
-        // Re-add to store if deletion failed
-        fetchVisualizers(user.id);
+        console.error('Delete error:', error);
+        // Restore original visualizers on error
+        store.setVisualizers(originalVisualizers);
         throw error;
       }
 
+      console.log('Successfully deleted from database');
       toast({
         title: "Deleted",
         description: "Custom visualizer has been deleted",
