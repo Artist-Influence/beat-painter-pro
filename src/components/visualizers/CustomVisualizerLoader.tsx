@@ -153,7 +153,14 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
         </mesh>
       </group>
     }>
-      <DynamicVisualizer jsxCode={code} audioData={props.audioData.frequency} />
+      <DynamicVisualizer 
+        jsxCode={code} 
+        audioData={props.audioData}
+        backgroundColor={props.backgroundColor}
+        zoomLevel={props.zoomLevel}
+        width={props.width}
+        height={props.height}
+      />
     </VisualizerErrorBoundary>
   );
 }

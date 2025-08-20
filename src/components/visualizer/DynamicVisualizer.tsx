@@ -7,8 +7,16 @@ import { transform as sucraseTransform } from 'sucrase';
 
 interface DynamicVisualizerProps {
   jsxCode: string;
-  audioData: number[];
+  audioData: {
+    frequency: number[];
+    amplitude: number;
+    beatStrength: number;
+  };
   scaleFactor?: number;
+  backgroundColor?: string;
+  zoomLevel?: number;
+  width?: number;
+  height?: number;
 }
 
 // Enhanced sanitization and transformation function
@@ -120,9 +128,14 @@ const validateJSX = (code: string) => {
 const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({ 
   jsxCode, 
   audioData, 
-  scaleFactor = 1 
+  scaleFactor = 1,
+  backgroundColor: propBackgroundColor,
+  zoomLevel = 1,
+  width = 1080,
+  height = 1080
 }) => {
-  const backgroundColor = useStudioStore((state) => state.backgroundColor);
+  const storeBackgroundColor = useStudioStore((state) => state.backgroundColor);
+  const backgroundColor = propBackgroundColor || storeBackgroundColor;
   const lastGoodCodeRef = React.useRef<string>('');
   
   const VisualizerComponent = useMemo(() => {
@@ -175,7 +188,13 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
 
       // Store as last good code on successful compilation
       lastGoodCodeRef.current = jsxCode;
-      return result as React.FC<{ audioData: number[] }>;
+      return result as React.FC<{ 
+        audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
+        backgroundColor?: string;
+        zoomLevel?: number;
+        width?: number;
+        height?: number;
+      }>;
 
     } catch (error) {
       console.warn('DynamicVisualizer compilation failed, attempting to use last good code:', error);
@@ -216,7 +235,13 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
 
           if (typeof result === 'function') {
             console.log('Successfully recovered using last good code');
-            return result as React.FC<{ audioData: number[] }>;
+            return result as React.FC<{ 
+              audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
+              backgroundColor?: string;
+              zoomLevel?: number;
+              width?: number;
+              height?: number;
+            }>;
           }
         } catch (recoveryError) {
           console.error('Recovery attempt also failed:', recoveryError);
@@ -224,12 +249,18 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       }
       
       // Final fallback component
-      return ({ audioData }: { audioData: number[] }) => {
+      return ({ audioData }: { 
+        audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
+        backgroundColor?: string;
+        zoomLevel?: number;
+        width?: number;
+        height?: number;
+      }) => {
         const meshRef = React.useRef<THREE.Mesh>(null);
         
         useFrame(() => {
-          if (meshRef.current && audioData.length > 0) {
-            const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
+          if (meshRef.current && audioData.frequency.length > 0) {
+            const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
             meshRef.current.scale.setScalar(1 + avgFreq * 0.5);
             meshRef.current.rotation.y += 0.01;
           }
@@ -267,7 +298,13 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       </mesh>
     }>
       <group scale={scaleFactor}>
-        <VisualizerComponent audioData={audioData} />
+        <VisualizerComponent 
+          audioData={audioData}
+          backgroundColor={backgroundColor}
+          zoomLevel={zoomLevel}
+          width={width}
+          height={height}
+        />
       </group>
     </Suspense>
   );
