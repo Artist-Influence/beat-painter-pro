@@ -20,6 +20,14 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
   const [isLoading, setIsLoading] = useState(!initialCode);
   const requestIdRef = useRef(0);
 
+  console.log('CustomVisualizerLoader - Debug:', { 
+    visualizerKey, 
+    hasInitialCode: !!initialCode, 
+    codeLength: code.length,
+    isLoading,
+    error
+  });
+
   const visualizerId = useMemo(() => {
     return visualizerKey ? visualizerKey.replace('custom_', '') : '';
   }, [visualizerKey]);
@@ -31,11 +39,13 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
   };
 
   useEffect(() => {
-    // If we have initial code, use it and don't fetch
+    // ALWAYS prioritize initialCode if provided
     if (initialCode) {
+      console.log('CustomVisualizerLoader - Using initialCode:', initialCode.slice(0, 100) + '...');
       setCode(initialCode);
       sessionCodeCache.set(visualizerId, initialCode);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -123,10 +133,11 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
   }, [visualizerId, user?.id, initialCode]);
 
   if (isLoading) {
+    console.log('CustomVisualizerLoader - Showing loading state');
     return (
-      <group scale={0.25}>
+      <group scale={1}>
         <mesh>
-          <boxGeometry args={[1, 1, 1]} />
+          <boxGeometry args={[4, 4, 4]} />
           <meshBasicMaterial color="#666666" wireframe />
         </mesh>
       </group>
@@ -134,15 +145,18 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
   }
 
   if (error || !code) {
+    console.log('CustomVisualizerLoader - Showing error state:', { error, hasCode: !!code });
     return (
-      <group scale={0.25}>
+      <group scale={1}>
         <mesh>
-          <boxGeometry args={[2, 2, 2]} />
+          <boxGeometry args={[4, 4, 4]} />
           <meshBasicMaterial color="#ff0000" wireframe />
         </mesh>
       </group>
     );
   }
+
+  console.log('CustomVisualizerLoader - Rendering DynamicVisualizer with code length:', code.length);
 
   return (
     <VisualizerErrorBoundary fallback={

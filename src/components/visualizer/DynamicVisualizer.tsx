@@ -148,7 +148,9 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         transforms: ['typescript', 'jsx'] 
       });
 
-      // Helpful dev logging
+      // Enhanced dev logging
+      console.log('✅ DynamicVisualizer - Compilation SUCCESS');
+      console.log('DynamicVisualizer - Code length:', jsxCode.length);
       if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'development') {
         // eslint-disable-next-line no-console
         console.debug('DynamicVisualizer transformed code:', transformedCode.slice(0, 200) + '...');
@@ -197,7 +199,8 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       }>;
 
     } catch (error) {
-      console.warn('DynamicVisualizer compilation failed, attempting to use last good code:', error);
+      console.error('❌ DynamicVisualizer - Compilation FAILED:', error);
+      console.error('Failed code preview:', jsxCode.slice(0, 300) + '...');
       
       // Try to use last good code if available
       if (lastGoodCodeRef.current && lastGoodCodeRef.current !== jsxCode) {
