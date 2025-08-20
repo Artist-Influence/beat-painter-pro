@@ -4,7 +4,7 @@ import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 import { transform as sucraseTransform } from 'sucrase';
-
+import { toast } from '@/components/ui/use-toast';
 interface DynamicVisualizerProps {
   jsxCode: string;
   audioData: {
@@ -72,10 +72,51 @@ const transformJSXCode = (code: string): string => {
 
   // Preserve THREE namespace references (no replacements)
 
-  // Replace any capitalized JSX elements (e.g., <Button />) and namespaced/dotted ones with groups
-  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />');
-  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>');
-  transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+  // Identify locally defined PascalCase components to avoid replacing them
+  const definedComponents = new Set<string>();
+  const addDefined = (name: string) => {
+    if (/^[A-Z][A-Za-z0-9_]*$/.test(name)) definedComponents.add(name);
+  };
+  // function Component() {}
+  (transformed.match(/function\s+([A-Z][A-Za-z0-9_]*)\s*\(/g) || []).forEach((m) => {
+    const nm = m.match(/function\s+([A-Z][A-Za-z0-9_]*)/);
+    if (nm) addDefined(nm[1]);
+  });
+  // const Component = () => {} OR function
+  (transformed.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()/g) || []).forEach((m) => {
+    const nm = m.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)/);
+    if (nm) addDefined(nm[1]);
+  });
+  // class Component extends ...
+  (transformed.match(/class\s+([A-Z][A-Za-z0-9_]*)\s+extends\s+/g) || []).forEach((m) => {
+    const nm = m.match(/class\s+([A-Z][A-Za-z0-9_]*)/);
+    if (nm) addDefined(nm[1]);
+  });
+  // React.forwardRef
+  (transformed.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)\s*=\s*React\.(?:forwardRef|memo)\s*\(/g) || []).forEach((m) => {
+    const nm = m.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)/);
+    if (nm) addDefined(nm[1]);
+  });
+
+  console.log('DynamicVisualizer - Preserving local components:', Array.from(definedComponents));
+
+  // Replace capitalized JSX elements only if NOT locally defined; always replace dotted/namespaced
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, (m, name, attrs) => {
+    return definedComponents.has(name) ? m : `<group${attrs} />`;
+  });
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)>/g, (m, name, attrs) => {
+    return definedComponents.has(name) ? m : `<group${attrs}>`;
+  });
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, (m, name, attrs) => {
+    return name.includes('.') || name.includes('-') ? `<group${attrs} />` : m;
+  });
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, (m, name, attrs) => {
+    return name.includes('.') || name.includes('-') ? `<group${attrs}>` : m;
+  });
+  transformed = transformed.replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, (m) => {
+    const nm = m.slice(2, -1);
+    return (definedComponents.has(nm) && !nm.includes('.') && !nm.includes('-')) ? m : '</group>';
+  });
 
   // Replace any non-allowed lowercase tags with <group> to ensure Canvas-safe JSX
   const allowed = new Set([
@@ -167,6 +208,34 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       validateJSX(transformedCode);
       console.log('✅ DynamicVisualizer - Validation passed');
 
+      // Quick geometry presence check to avoid invisible scenes
+      const hasGeometry = /<\s*(mesh|instancedMesh|points|line|primitive)\b|Geometry\b/.test(transformedCode);
+      if (!hasGeometry) {
+        console.warn('⚠️ DynamicVisualizer - No visible geometry detected. Showing safety fallback.');
+        try { toast({ title: 'No visible geometry', description: 'Your visualizer had no Canvas-safe objects. Showing a visible fallback.' }); } catch {}
+        return ({ audioData }: { 
+          audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
+        }) => {
+          const ringRef = React.useRef<THREE.Mesh>(null);
+          useFrame(() => {
+            if (ringRef.current && audioData.frequency.length) {
+              const avg = audioData.frequency.reduce((a,b)=>a+b,0)/audioData.frequency.length;
+              ringRef.current.scale.setScalar(1 + avg * 0.8);
+              ringRef.current.rotation.z += 0.01;
+            }
+          });
+          const material = createVisualizerMaterial('#ffffff', { texture: null, colors: { primary: '#ffffff', secondary: '#ffffff', accent: '#ffffff', isNeon: false, isMetallic: false }, textureVersion: 0 });
+          return (
+            <group>
+              <mesh ref={ringRef} position={[0,0,0]}>
+                <torusGeometry args={[3.2, 0.25, 32, 96]} />
+                <primitive object={material} />
+              </mesh>
+            </group>
+          );
+        };
+      }
+
       // Compile TSX/JSX to plain JavaScript using Sucrase
       const { code: compiledCode } = sucraseTransform(transformedCode, { 
         transforms: ['typescript', 'jsx'] 
@@ -220,16 +289,25 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         height?: number;
       }) => {
         const ResultComponent = result as React.FC<any>;
+        const ringRef = React.useRef<THREE.Mesh>(null);
+        useFrame(() => {
+          if (ringRef.current && audioData.frequency.length) {
+            const avg = audioData.frequency.reduce((a,b)=>a+b,0)/audioData.frequency.length;
+            ringRef.current.scale.setScalar(1 + avg * 0.6);
+            ringRef.current.rotation.z += 0.01;
+          }
+        });
+        const material = createVisualizerMaterial('#ffffff', { texture: null, colors: { primary: '#ffffff', secondary: '#ffffff', accent: '#ffffff', isNeon: false, isMetallic: false }, textureVersion: 0 });
         
         return (
           <group>
-            {/* Safety net - Always visible fallback behind the main component */}
-            <mesh position={[0, 0, -20]} scale={0.1}>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color="#00ff00" wireframe opacity={0.2} transparent />
+            {/* Safety net - visible, audio-reactive ring */}
+            <mesh ref={ringRef} position={[0, 0, 0]}>
+              <torusGeometry args={[3, 0.22, 32, 96]} />
+              <primitive object={material} />
             </mesh>
             
-            {/* Main generated component - centered and scaled appropriately */}
+            {/* Main generated component */}
             <group position={[0, 0, 0]} scale={1}>
               <ResultComponent 
                 audioData={audioData}
