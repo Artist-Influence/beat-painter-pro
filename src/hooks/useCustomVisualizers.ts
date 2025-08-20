@@ -43,46 +43,73 @@ export function useCustomVisualizers() {
     referenceImage?: string;
     mixStyles?: string[];
   }) => {
-    // Determine if we should save or just preview
-    const previewOnly = !user || (userRole !== 'admin' && visualizerCount >= 5);
+    // Require user to be signed in - no more preview mode
+    if (!user) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to generate custom visualizers",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    // Check quota for non-admin users
+    if (userRole !== 'admin' && visualizerCount >= 5) {
+      toast({
+        title: "Quota Exceeded",
+        description: "You've reached your limit of 5 custom visualizers. Delete some to create new ones.",
+        variant: "destructive",
+      });
+      return null;
+    }
 
     setGenerating(true);
     try {
-      // Try edge function first (with or without userId)
+      console.log('🚀 Generating visualizer with prompt:', params.prompt);
+      
+      // Always try to save to database first
       const { data, error } = await supabase.functions.invoke('generate-visualizer', {
         body: {
           prompt: params.prompt,
           referenceImage: params.referenceImage,
           mixStyles: params.mixStyles,
-          userId: previewOnly ? undefined : user?.id,
+          userId: user.id,
         },
       });
 
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Edge function failed');
+      }
+
       // Success path: saved to DB and returned visualizer
       if (data?.success && data?.visualizer) {
+        console.log('✅ Visualizer saved successfully:', data.visualizer.name);
+        
         toast({
           title: "Visualizer Generated!",
           description: `${data.visualizer.name} has been created`,
         });
 
+        // Immediately add to store and select it
         addVisualizer(data.visualizer);
         setVisualizerCount(visualizerCount + 1);
+        
         // Background refresh
         setTimeout(() => {
-          if (user) {
-            checkUserRole(user.id);
-          }
+          checkUserRole(user.id);
         }, 100);
+        
         return data.visualizer;
       }
 
-      // Preview-only path: function returned usable code but couldn't save
+      // If we got code but it wasn't saved, try local fallback
       if (data?.code && data?.name) {
-        return createPreviewVisualizer(data.code, data.name, data.emoji || '🌟', previewOnly);
+        console.log('⚠️ Got code but not saved, creating preview');
+        return createPreviewVisualizer(data.code, data.name, data.emoji || '🌟', false);
       }
 
-      // Edge function failed, try local fallback
-      throw new Error(data?.error || error?.message || 'Edge function failed');
+      throw new Error(data?.error || 'No visualizer data returned');
       
     } catch (error: any) {
       console.error('Edge function failed, using local fallback:', error);

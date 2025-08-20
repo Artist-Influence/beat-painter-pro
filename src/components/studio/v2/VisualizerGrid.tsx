@@ -35,12 +35,15 @@ export function VisualizerGrid() {
     { id: 'FluidBloomVisualizer', name: 'Fluid Bloom', preview: '🌊', description: 'Organic flowing shapes' },
   ];
 
-  const handleCustomVisualizerSuccess = (visualizer: any) => {
-    console.log('VisualizerGrid handleCustomVisualizerSuccess called with:', visualizer);
-    // Select the new visualizer immediately - real-time subscription will handle list update
-    const visualizerKey = `custom_${visualizer.id}` as VisualizerKey;
-    console.log('Setting selected visualizer to:', visualizerKey);
+  const handleCustomVisualizerSuccess = (newVisualizer: any) => {
+    console.log('✅ VisualizerGrid - Custom visualizer generated:', newVisualizer);
+    
+    // Immediately select the new visualizer to show it
+    const visualizerKey = `custom_${newVisualizer.id}` as VisualizerKey;
+    console.log('🎯 VisualizerGrid - Selecting new visualizer:', visualizerKey);
     setSelected(visualizerKey);
+    
+    // Close the generator
     setShowGenerator(false);
   };
 

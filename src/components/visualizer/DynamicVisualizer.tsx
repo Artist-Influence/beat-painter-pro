@@ -139,24 +139,41 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   const lastGoodCodeRef = React.useRef<string>('');
   
   const VisualizerComponent = useMemo(() => {
+    console.log('🔄 DynamicVisualizer - Starting render with code length:', jsxCode.length);
+    console.log('DynamicVisualizer - First 200 chars:', jsxCode.slice(0, 200));
+    
+    if (!jsxCode.trim()) {
+      console.log('❌ DynamicVisualizer - Empty code, showing fallback');
+      return ({ audioData }: { 
+        audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
+        backgroundColor?: string;
+        zoomLevel?: number;
+        width?: number;
+        height?: number;
+      }) => (
+        <group>
+          <mesh>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshBasicMaterial color="#444444" wireframe />
+          </mesh>
+        </group>
+      );
+    }
+
     try {
       const transformedCode = transformJSXCode(jsxCode);
+      console.log('🔄 DynamicVisualizer - Code transformed, length:', transformedCode.length);
+      
       validateJSX(transformedCode);
+      console.log('✅ DynamicVisualizer - Validation passed');
 
       // Compile TSX/JSX to plain JavaScript using Sucrase
       const { code: compiledCode } = sucraseTransform(transformedCode, { 
         transforms: ['typescript', 'jsx'] 
       });
 
-      // Enhanced dev logging
       console.log('✅ DynamicVisualizer - Compilation SUCCESS');
-      console.log('DynamicVisualizer - Code length:', jsxCode.length);
-      if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'development') {
-        // eslint-disable-next-line no-console
-        console.debug('DynamicVisualizer transformed code:', transformedCode.slice(0, 200) + '...');
-        // eslint-disable-next-line no-console
-        console.debug('DynamicVisualizer compiled code:', compiledCode.slice(0, 200) + '...');
-      }
+      console.log('DynamicVisualizer - Compiled code length:', compiledCode.length);
       
       // Create the component function from the compiled JavaScript code
       const componentFunction = new Function(
@@ -185,18 +202,46 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       );
 
       if (typeof result !== 'function') {
+        console.error('❌ DynamicVisualizer - Result is not a function:', typeof result);
         throw new Error('Invalid visualizer component output');
       }
 
+      console.log('✅ DynamicVisualizer - Component created successfully');
+      
       // Store as last good code on successful compilation
       lastGoodCodeRef.current = jsxCode;
-      return result as React.FC<{ 
+      
+      // Return a wrapper that includes a safety net
+      return ({ audioData, backgroundColor, zoomLevel, width, height }: { 
         audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
         backgroundColor?: string;
         zoomLevel?: number;
         width?: number;
         height?: number;
-      }>;
+      }) => {
+        const ResultComponent = result as React.FC<any>;
+        
+        return (
+          <group>
+            {/* Safety net - Always visible fallback behind the main component */}
+            <mesh position={[0, 0, -20]} scale={0.1}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial color="#00ff00" wireframe opacity={0.2} transparent />
+            </mesh>
+            
+            {/* Main generated component - centered and scaled appropriately */}
+            <group position={[0, 0, 0]} scale={1}>
+              <ResultComponent 
+                audioData={audioData}
+                backgroundColor={backgroundColor}
+                zoomLevel={zoomLevel}
+                width={width}
+                height={height}
+              />
+            </group>
+          </group>
+        );
+      };
 
     } catch (error) {
       console.error('❌ DynamicVisualizer - Compilation FAILED:', error);
@@ -205,6 +250,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       // Try to use last good code if available
       if (lastGoodCodeRef.current && lastGoodCodeRef.current !== jsxCode) {
         try {
+          console.log('🔄 DynamicVisualizer - Attempting recovery with last good code');
           const transformedCode = transformJSXCode(lastGoodCodeRef.current);
           validateJSX(transformedCode);
 
@@ -237,7 +283,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
           );
 
           if (typeof result === 'function') {
-            console.log('Successfully recovered using last good code');
+            console.log('✅ DynamicVisualizer - Successfully recovered using last good code');
             return result as React.FC<{ 
               audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
               backgroundColor?: string;
@@ -247,11 +293,12 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
             }>;
           }
         } catch (recoveryError) {
-          console.error('Recovery attempt also failed:', recoveryError);
+          console.error('❌ DynamicVisualizer - Recovery attempt also failed:', recoveryError);
         }
       }
       
-      // Final fallback component
+      // Final fallback component - Large and visible
+      console.log('🔄 DynamicVisualizer - Using final fallback component');
       return ({ audioData }: { 
         audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
         backgroundColor?: string;
@@ -284,7 +331,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         return (
           <group>
             <mesh ref={meshRef}>
-              <sphereGeometry args={[2, 32, 32]} />
+              <sphereGeometry args={[4, 32, 32]} />
               <primitive object={material} />
             </mesh>
           </group>
