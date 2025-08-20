@@ -725,16 +725,17 @@ serve(async (req) => {
   let finalEmoji: string | null = null;
 
   try {
-    const { prompt, userId } = await req.json();
+    const { prompt, referenceImage, mixStyles, userId } = await req.json();
     
-    if (!prompt || !userId) {
+    if (!prompt && !referenceImage && !mixStyles?.length) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        JSON.stringify({ success: false, error: 'Prompt, reference image, or mix styles required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generating visualizer for prompt:', prompt);
+    const isPreviewOnly = !userId;
+    console.log('Generating visualizer for prompt:', prompt, 'userId:', userId, 'isPreviewOnly:', isPreviewOnly);
     
     // Check for semantic templates first
     const semanticTemplate = getSemanticTemplate(prompt);
@@ -939,7 +940,25 @@ export default function FallbackVisualizer({ audioData }: { audioData: { frequen
       finalEmoji = previewEmoji;
     }
 
-    // Store in database
+    // Store in database or return preview if preview-only
+    if (isPreviewOnly) {
+      // Preview mode: return code without saving to database
+      console.log('Returning preview-only response');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          code: visualizerCode,
+          name: visualizerName,
+          emoji: previewEmoji || '🌟'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, // 200 because we have usable code
+        }
+      );
+    }
+
+    // Store in database for authenticated users
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     

@@ -123,39 +123,20 @@ export function useCustomVisualizers() {
     referenceImage?: string;
     mixStyles?: string[];
   }) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to generate custom visualizers",
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    // Check quota for non-admin users
-    if (userRole !== 'admin' && visualizerCount >= 5) {
-      toast({
-        title: "Quota Exceeded",
-        description: `You've reached the limit of 5 custom visualizers. Delete some to create new ones, or contact an admin for more.`,
-        variant: "destructive",
-      });
-      return null;
-    }
+    // Determine if we should save or just preview
+    const previewOnly = !user || (userRole !== 'admin' && visualizerCount >= 5);
 
     setIsGenerating(true);
     try {
+      // Try edge function first (with or without userId)
       const { data, error } = await supabase.functions.invoke('generate-visualizer', {
         body: {
           prompt: params.prompt,
           referenceImage: params.referenceImage,
           mixStyles: params.mixStyles,
-          userId: user.id,
+          userId: previewOnly ? undefined : user?.id,
         },
       });
-
-      if (error) {
-        throw error;
-      }
 
       // Success path: saved to DB and returned visualizer
       if (data?.success && data?.visualizer) {
@@ -176,48 +157,71 @@ export function useCustomVisualizers() {
 
       // Preview-only path: function returned usable code but couldn't save
       if (data?.code && data?.name) {
-        const previewId = `preview-${Date.now()}`;
-        const emoji = data.emoji || '🌟';
-        // Register preview code globally for the loader
-        const W = window as any;
-        W.__PREVIEW_VISUALIZERS__ = W.__PREVIEW_VISUALIZERS__ || {};
-        W.__PREVIEW_VISUALIZERS__[previewId] = data.code as string;
-
-        const previewViz: any = {
-          id: previewId,
-          user_id: user.id,
-          name: data.name,
-          jsx_code: data.code,
-          preview_emoji: emoji,
-          is_public: false,
-          scale_factor: 1.0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          isPreview: true,
-        };
-
-        // Add to list so it appears in the grid immediately
-        setCustomVisualizers(prev => [previewViz, ...prev]);
-
-        toast({
-          title: "Preview Ready",
-          description: `Generated "${data.name}". Using in-memory preview (not saved).`,
-        });
-        return previewViz;
+        return createPreviewVisualizer(data.code, data.name, data.emoji || '🌟', previewOnly);
       }
 
-      // Otherwise, show specific error if present
-      const errorMessage = data?.error || 'Failed to generate custom visualizer. Please try again.';
-      toast({ title: 'Generation Failed', description: errorMessage, variant: 'destructive' });
-      return null;
+      // Edge function failed, try local fallback
+      throw new Error(data?.error || error?.message || 'Edge function failed');
+      
     } catch (error: any) {
-      console.error('Error generating visualizer:', error);
-      const message = error?.message || 'Failed to generate custom visualizer. Please try again.';
-      toast({ title: 'Generation Failed', description: message, variant: 'destructive' });
-      return null;
+      console.error('Edge function failed, using local fallback:', error);
+      
+      // Import and use local generator as fallback
+      try {
+        const { generateLocalVisualizer } = await import('@/components/studio/LocalVisualizerGenerator');
+        const localCode = generateLocalVisualizer(params.prompt);
+        const localName = `Local: ${params.prompt.slice(0, 30)}${params.prompt.length > 30 ? '...' : ''}`;
+        
+        return createPreviewVisualizer(localCode, localName, '🔧', true);
+      } catch (localError) {
+        console.error('Local fallback also failed:', localError);
+        toast({ 
+          title: 'Generation Failed', 
+          description: 'Both cloud and local generation failed. Please try again.', 
+          variant: 'destructive' 
+        });
+        return null;
+      }
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Helper function to create preview visualizers
+  const createPreviewVisualizer = (code: string, name: string, emoji: string, isLocalFallback: boolean) => {
+    const previewId = `preview-${Date.now()}`;
+    
+    // Register preview code globally for the loader
+    const W = window as any;
+    W.__PREVIEW_VISUALIZERS__ = W.__PREVIEW_VISUALIZERS__ || {};
+    W.__PREVIEW_VISUALIZERS__[previewId] = code;
+
+    const previewViz: any = {
+      id: previewId,
+      user_id: user?.id || 'anonymous',
+      name: name,
+      jsx_code: code,
+      preview_emoji: emoji,
+      is_public: false,
+      scale_factor: 1.0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      isPreview: true,
+    };
+
+    // Add to list so it appears in the grid immediately
+    setCustomVisualizers(prev => [previewViz, ...prev]);
+
+    const description = isLocalFallback 
+      ? `Generated "${name}" using local fallback (preview only).`
+      : `Generated "${name}" as preview ${!user ? '(not signed in)' : '(over quota)'}.`;
+      
+    toast({
+      title: isLocalFallback ? "Local Preview Ready" : "Preview Ready",
+      description,
+    });
+    
+    return previewViz;
   };
 
   const deleteVisualizer = async (id: string) => {

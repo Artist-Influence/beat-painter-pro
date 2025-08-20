@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Upload, Wand2, Palette, Loader2, Image, X } from 'lucide-react';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
+import { useAuth } from '@/hooks/useAuth';
 import { visualizerRegistry } from '@/components/visualizers';
 
 interface CustomVisualizerGeneratorProps {
@@ -22,6 +23,7 @@ export function CustomVisualizerGenerator({
   onClose, 
   onSuccess 
 }: CustomVisualizerGeneratorProps) {
+  const { user } = useAuth();
   const { generateVisualizer, isGenerating, userRole, quotaRemaining } = useCustomVisualizers();
   const [activeTab, setActiveTab] = useState('prompt');
   const [prompt, setPrompt] = useState('');
@@ -326,6 +328,12 @@ export function CustomVisualizerGenerator({
           >
             Cancel
           </Button>
+          
+          {(!user || (userRole !== 'admin' && quotaRemaining <= 0)) && (
+            <div className="text-xs text-yellow-400 bg-yellow-400/10 px-3 py-2 rounded border border-yellow-400/20">
+              💡 {!user ? "Not signed in" : "Over quota"} - we'll generate a preview you can use right away!
+            </div>
+          )}
           
           <Button
             onClick={handleGenerate}
