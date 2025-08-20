@@ -6,7 +6,7 @@ import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { CustomVisualizerGenerator } from './CustomVisualizerGenerator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, Trash2, Crown, Star } from 'lucide-react';
+import { Wand2, Trash2, Crown, Star, RefreshCcw } from 'lucide-react';
 
 export function VisualizerGrid() {
   const { selected, setSelected } = useStudioStore();
@@ -16,7 +16,8 @@ export function VisualizerGrid() {
     deleteVisualizer,
     promoteToStandard,
     userRole,
-    quotaRemaining 
+    quotaRemaining,
+    refetch,
   } = useCustomVisualizers();
   const [showGenerator, setShowGenerator] = useState(false);
 
@@ -74,6 +75,15 @@ export function VisualizerGrid() {
                     {quotaRemaining}/5 remaining
                   </div>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={refetch}
+                  className="h-7 px-3 text-xs border-white/20 text-white hover:bg-white/10"
+                >
+                  <RefreshCcw className="w-3 h-3 mr-1" />
+                  Refresh
+                </Button>
                 <Button
                   size="sm"
                   onClick={() => setShowGenerator(true)}

@@ -91,14 +91,22 @@ export function useCustomVisualizers() {
           description: `${data.visualizer.name} has been created`,
         });
 
+        // Make code instantly available to the loader without waiting for DB fetch
+        const W = window as any;
+        W.__PREVIEW_VISUALIZERS__ = W.__PREVIEW_VISUALIZERS__ || {};
+        if (data.visualizer?.id && data.visualizer?.jsx_code) {
+          W.__PREVIEW_VISUALIZERS__[data.visualizer.id] = data.visualizer.jsx_code;
+        }
+
         // Immediately add to store and select it
         addVisualizer(data.visualizer);
         setVisualizerCount(visualizerCount + 1);
         
-        // Background refresh
+        // Background refresh to keep store in sync (count/role and list)
         setTimeout(() => {
           checkUserRole(user.id);
-        }, 100);
+          fetchVisualizers(user.id);
+        }, 50);
         
         return data.visualizer;
       }
