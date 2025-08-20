@@ -45,7 +45,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
-export default function AirplaneFleetVisualizer({ audioData }: { audioData: number[] }) {
+export default function AirplaneFleetVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
@@ -61,27 +61,27 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: numb
         z: Math.sin(angle) * radius,
         rotation: [Math.random() * 0.3, angle, Math.random() * 0.2],
         scale: 0.8 + Math.random() * 0.4,
-        freqIndex: Math.floor((i / 80) * (audioData.length - 1))
+        freqIndex: Math.floor((i / 80) * (audioData.frequency.length - 1))
       });
     }
     return planes;
-  }, [audioData.length]);
+  }, [audioData.frequency.length]);
   
   useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.length) return;
+    if (!groupRef.current || !audioData.frequency.length) return;
     
     const time = clock.getElapsedTime();
-    const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
+    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
     
     airplanes.forEach((plane, i) => {
-      const freq = audioData[plane.freqIndex] || 0;
+      const freq = audioData.frequency[plane.freqIndex] || 0;
       const child = groupRef.current.children[i];
       if (child) {
         // Banking motion based on audio
         child.rotation.z = Math.sin(time + i * 0.2) * 0.3 + freq * audioSensitivity.frequency * 0.5;
         child.rotation.y = time * 0.1 + i * 0.05;
-        child.position.y = plane.y + Math.sin(time + i * 0.3) * 2 + freq * audioSensitivity.frequency * 3;
-        child.scale.setScalar(plane.scale + freq * audioSensitivity.frequency * 0.3);
+        child.position.y = plane.y + Math.sin(time + i * 0.3) * 2 + freq * audioSensitivity.frequency * 3 + audioData.beatStrength * 2;
+        child.scale.setScalar(plane.scale + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.2);
       }
     });
   });
@@ -131,7 +131,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
-export default function FlowerPetalsVisualizer({ audioData }: { audioData: number[] }) {
+export default function FlowerPetalsVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
@@ -151,7 +151,7 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: numbe
         id: f,
         center: [flowerX, flowerY, flowerZ],
         petals: [] as any[],
-        freqIndex: Math.floor((f / flowerCount) * (audioData.length - 1))
+        freqIndex: Math.floor((f / flowerCount) * (audioData.frequency.length - 1))
       };
       
       for (let p = 0; p < petalsPerFlower; p++) {
@@ -176,16 +176,16 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: numbe
       flowerArray.push(flower);
     }
     return flowerArray;
-  }, [audioData.length]);
+  }, [audioData.frequency.length]);
   
   useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.length) return;
+    if (!groupRef.current || !audioData.frequency.length) return;
     
     const time = clock.getElapsedTime();
     
     flowers.forEach((flower, flowerIndex) => {
-      const freq = audioData[flower.freqIndex] || 0;
-      const bassResponse = freq * audioSensitivity.frequency;
+      const freq = audioData.frequency[flower.freqIndex] || 0;
+      const bassResponse = freq * audioSensitivity.frequency + audioData.beatStrength;
       
       // Wind field calculations
       const windX = Math.sin(time * 0.6 + flowerIndex * 0.3) * 0.4;
@@ -331,7 +331,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
-export default function AppleWithBiteVisualizer({ audioData }: { audioData: number[] }) {
+export default function AppleWithBiteVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
@@ -359,27 +359,27 @@ export default function AppleWithBiteVisualizer({ audioData }: { audioData: numb
               x: x * 0.2,
               y: y * 0.2,
               z: z * 0.2,
-              freqIndex: Math.floor(((x + resolution) / (resolution * 2)) * (audioData.length - 1))
+              freqIndex: Math.floor(((x + resolution) / (resolution * 2)) * (audioData.frequency.length - 1))
             });
           }
         }
       }
     }
     return cubes;
-  }, [audioData.length]);
+  }, [audioData.frequency.length]);
   
   useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.length) return;
+    if (!groupRef.current || !audioData.frequency.length) return;
     
     const time = clock.getElapsedTime();
     
     groupRef.current.children.forEach((child, i) => {
       if (i < voxels.length) {
         const voxel = voxels[i];
-        const freq = audioData[voxel.freqIndex] || 0;
+        const freq = audioData.frequency[voxel.freqIndex] || 0;
         
-        child.position.y = voxel.y + Math.sin(time + i * 0.1) * 0.1 + freq * audioSensitivity.frequency * 0.5;
-        child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.3);
+        child.position.y = voxel.y + Math.sin(time + i * 0.1) * 0.1 + freq * audioSensitivity.frequency * 0.5 + audioData.beatStrength * 0.3;
+        child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.1);
       }
     });
   });
@@ -416,7 +416,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
-export default function MedievalShieldVisualizer({ audioData }: { audioData: number[] }) {
+export default function MedievalShieldVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
@@ -429,7 +429,7 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
         type: 'segment',
         angle,
         radius: 3,
-        freqIndex: Math.floor((i / 12) * (audioData.length - 1))
+        freqIndex: Math.floor((i / 12) * (audioData.frequency.length - 1))
       });
     }
     // Concentric rings
@@ -440,32 +440,32 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
           type: 'ring',
           angle,
           radius: r * 1.2,
-          freqIndex: Math.floor(((i + r * 10) / (8 * r + 40)) * (audioData.length - 1))
+          freqIndex: Math.floor(((i + r * 10) / (8 * r + 40)) * (audioData.frequency.length - 1))
         });
       }
     }
     return parts;
-  }, [audioData.length]);
+  }, [audioData.frequency.length]);
   
   useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.length) return;
+    if (!groupRef.current || !audioData.frequency.length) return;
     
     const time = clock.getElapsedTime();
-    const avgFreq = audioData.reduce((a, b) => a + b, 0) / audioData.length;
+    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
     
     // Rotate entire shield
-    groupRef.current.rotation.z = time * 0.1 + avgFreq * audioSensitivity.frequency * 0.5;
+    groupRef.current.rotation.z = time * 0.1 + avgFreq * audioSensitivity.frequency * 0.5 + audioData.beatStrength * 0.3;
     
     groupRef.current.children.forEach((child, i) => {
       if (i < segments.length) {
         const segment = segments[i];
-        const freq = audioData[segment.freqIndex] || 0;
+        const freq = audioData.frequency[segment.freqIndex] || 0;
         
         if (segment.type === 'segment') {
-          child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.4);
-          child.position.z = freq * audioSensitivity.frequency * 1;
+          child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.4 + audioData.amplitude * 0.2);
+          child.position.z = freq * audioSensitivity.frequency * 1 + audioData.beatStrength * 0.5;
         } else {
-          child.scale.setScalar(0.8 + freq * audioSensitivity.frequency * 0.3);
+          child.scale.setScalar(0.8 + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.1);
         }
       }
     });
@@ -511,6 +511,192 @@ export default function MedievalShieldVisualizer({ audioData }: { audioData: num
         <torusGeometry args={[4, 0.1, 8, 32]} />
         <primitive object={material} />
       </mesh>
+    </group>
+  );
+}`
+    };
+  }
+  
+  // Robot army template - creates marching robots reacting to beat
+  if (/\b(robot|robots?|army|march|android|mech|cyborg)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Robot Army March",
+      emoji: "🤖",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+
+export default function RobotArmyVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const robots = useMemo(() => {
+    const robotArray = [];
+    const rows = 8;
+    const cols = 10;
+    
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = (col - cols/2) * 3;
+        const z = (row - rows/2) * 4;
+        const y = 0;
+        
+        robotArray.push({
+          id: row * cols + col,
+          position: [x, y, z],
+          marchPhase: (row * cols + col) * 0.1,
+          freqIndex: Math.floor(((row * cols + col) / (rows * cols)) * (audioData.frequency.length - 1)),
+          row,
+          col
+        });
+      }
+    }
+    return robotArray;
+  }, [audioData.frequency.length]);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
+    const time = clock.getElapsedTime();
+    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
+    const marchSpeed = 0.5 + audioData.beatStrength * 2;
+    
+    robots.forEach((robot, robotIndex) => {
+      const robotGroup = groupRef.current?.children[robotIndex];
+      if (!robotGroup) return;
+      
+      const freq = audioData.frequency[robot.freqIndex] || 0;
+      const bassResponse = freq * audioSensitivity.frequency + audioData.beatStrength;
+      
+      // Marching motion synchronized to beat
+      const marchTime = time * marchSpeed + robot.marchPhase;
+      const stepHeight = Math.max(0, Math.sin(marchTime * 4)) * (0.3 + bassResponse);
+      
+      // Robot bouncing to beat
+      robotGroup.position.y = robot.position[1] + stepHeight + bassResponse * 0.5;
+      robotGroup.position.x = robot.position[0] + Math.sin(marchTime) * 0.1;
+      robotGroup.position.z = robot.position[2] + Math.sin(marchTime * 2) * 0.05;
+      
+      // Robot scaling with audio
+      robotGroup.scale.setScalar(1 + bassResponse * 0.2);
+      
+      // Robot head rotation looking around
+      const headChild = robotGroup.children[0]; // Head
+      if (headChild) {
+        headChild.rotation.y = Math.sin(time + robotIndex * 0.1) * 0.3 + bassResponse * 0.2;
+      }
+      
+      // Arms swinging
+      const leftArm = robotGroup.children[3]; // Left arm
+      const rightArm = robotGroup.children[4]; // Right arm
+      if (leftArm) {
+        leftArm.rotation.x = Math.sin(marchTime * 2) * 0.5 + bassResponse * 0.3;
+      }
+      if (rightArm) {
+        rightArm.rotation.x = Math.sin(marchTime * 2 + Math.PI) * 0.5 + bassResponse * 0.3;
+      }
+      
+      // Legs marching
+      const leftLeg = robotGroup.children[5]; // Left leg
+      const rightLeg = robotGroup.children[6]; // Right leg
+      if (leftLeg) {
+        leftLeg.rotation.x = Math.sin(marchTime * 4) * 0.4 + bassResponse * 0.2;
+      }
+      if (rightLeg) {
+        rightLeg.rotation.x = Math.sin(marchTime * 4 + Math.PI) * 0.4 + bassResponse * 0.2;
+      }
+    });
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {robots.map((robot) => (
+        <group key={robot.id} position={robot.position}>
+          {/* Head */}
+          <mesh position={[0, 3, 0]}>
+            <boxGeometry args={[1.2, 1.2, 1.2]} />
+            <primitive object={material} />
+          </mesh>
+          
+          {/* Eyes */}
+          <mesh position={[-0.3, 3.2, 0.6]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+          <mesh position={[0.3, 3.2, 0.6]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+          
+          {/* Body */}
+          <mesh position={[0, 1.5, 0]}>
+            <boxGeometry args={[1.5, 2, 0.8]} />
+            <primitive object={material} />
+          </mesh>
+          
+          {/* Left Arm */}
+          <group position={[-1, 2.2, 0]}>
+            <mesh position={[0, -0.8, 0]}>
+              <boxGeometry args={[0.4, 1.6, 0.4]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[0, -1.8, 0]}>
+              <boxGeometry args={[0.3, 0.8, 0.3]} />
+              <primitive object={material} />
+            </mesh>
+          </group>
+          
+          {/* Right Arm */}
+          <group position={[1, 2.2, 0]}>
+            <mesh position={[0, -0.8, 0]}>
+              <boxGeometry args={[0.4, 1.6, 0.4]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[0, -1.8, 0]}>
+              <boxGeometry args={[0.3, 0.8, 0.3]} />
+              <primitive object={material} />
+            </mesh>
+          </group>
+          
+          {/* Left Leg */}
+          <group position={[-0.4, 0, 0]}>
+            <mesh position={[0, -0.8, 0]}>
+              <boxGeometry args={[0.5, 1.6, 0.5]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[0, -1.8, 0]}>
+              <boxGeometry args={[0.6, 0.3, 0.8]} />
+              <primitive object={material} />
+            </mesh>
+          </group>
+          
+          {/* Right Leg */}
+          <group position={[0.4, 0, 0]}>
+            <mesh position={[0, -0.8, 0]}>
+              <boxGeometry args={[0.5, 1.6, 0.5]} />
+              <primitive object={material} />
+            </mesh>
+            <mesh position={[0, -1.8, 0]}>
+              <boxGeometry args={[0.6, 0.3, 0.8]} />
+              <primitive object={material} />
+            </mesh>
+          </group>
+          
+          {/* Antenna */}
+          <mesh position={[0, 4, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.8, 8]} />
+            <primitive object={material} />
+          </mesh>
+          <mesh position={[0, 4.5, 0]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }`
@@ -643,7 +829,7 @@ import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 
-export default function FallbackVisualizer({ audioData }: { audioData: number[] }) {
+export default function FallbackVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   const items = useMemo(() => {
@@ -657,11 +843,11 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
         z: Math.sin(a) * r,
         y: Math.sin(i * 0.2) * 2,
         r: Math.random() * Math.PI,
-        fi: Math.floor((i / count) * (audioData.length - 1))
+        fi: Math.floor((i / count) * (audioData.frequency.length - 1))
       });
     }
     return arr;
-  }, [audioData.length]);
+  }, [audioData.frequency.length]);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
@@ -669,11 +855,11 @@ export default function FallbackVisualizer({ audioData }: { audioData: number[] 
     groupRef.current.children.forEach((child, i) => {
       const it = items[i];
       if (!it) return;
-      const f = audioData[it.fi] || 0;
-      const response = f * audioSensitivity.frequency;
+      const f = audioData.frequency[it.fi] || 0;
+      const response = f * audioSensitivity.frequency + audioData.beatStrength;
       child.rotation.y = it.r + Math.sin(t + i * 0.03) * 0.4;
       child.rotation.x = Math.sin(t * 0.3 + i * 0.02) * (0.3 + response * 0.5);
-      child.position.y = it.y + Math.sin(t + i * 0.04) * (0.5 + response * 1.5);
+      child.position.y = it.y + Math.sin(t + i * 0.04) * (0.5 + response * 1.5) + audioData.amplitude * 0.3;
       (child as any).scale.setScalar(0.9 + response * 0.6);
     });
   });
