@@ -95,9 +95,13 @@ export function CustomVisualizerGenerator({
         setPreviewViz(result);
       }
       
-      // If it's a full saved visualizer, close and notify parent
-      if (!result.isPreview && onSuccess) {
+      // Auto-select the visualizer immediately for both saved and preview
+      if (onSuccess) {
         onSuccess(result);
+      }
+      
+      // Close dialog only for saved visualizers, keep open for previews to show "Use This Preview" button
+      if (!result.isPreview) {
         onClose();
       }
     }

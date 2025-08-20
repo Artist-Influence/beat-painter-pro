@@ -146,7 +146,29 @@ export function useCustomVisualizers() {
   };
 
   const deleteVisualizer = async (id: string) => {
+    // Handle preview visualizers (local only)
+    if (id.startsWith('preview-')) {
+      // Remove from store immediately 
+      useCustomVisualizersStore.getState().removeVisualizer(id);
+      
+      // Clean up global preview storage
+      const W = window as any;
+      if (W.__PREVIEW_VISUALIZERS__?.[id]) {
+        delete W.__PREVIEW_VISUALIZERS__[id];
+      }
+      
+      toast({
+        title: "Deleted",
+        description: "Preview visualizer removed",
+      });
+      return;
+    }
+
+    // Handle saved visualizers (database)
     if (!user) return;
+
+    // Optimistically remove from UI immediately
+    useCustomVisualizersStore.getState().removeVisualizer(id);
 
     try {
       const { error } = await supabase
@@ -155,7 +177,11 @@ export function useCustomVisualizers() {
         .eq('id', id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        // Re-add to store if deletion failed
+        fetchVisualizers(user.id);
+        throw error;
+      }
 
       toast({
         title: "Deleted",
@@ -163,9 +189,7 @@ export function useCustomVisualizers() {
       });
 
       // Refresh count after deletion
-      if (user) {
-        checkUserRole(user.id);
-      }
+      checkUserRole(user.id);
     } catch (error) {
       console.error('Error deleting visualizer:', error);
       toast({
