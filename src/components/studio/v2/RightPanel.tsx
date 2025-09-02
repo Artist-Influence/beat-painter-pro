@@ -43,17 +43,18 @@ export function RightPanel({ activePanel, setActivePanel }: RightPanelProps) {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed right-16 top-24 bottom-24 w-80 z-40 pointer-events-auto"
           >
-            <div className="h-full bg-black/60 backdrop-blur-2xl rounded-l-2xl border border-white/10 border-r-0 p-6 overflow-y-auto">
-              
-              {/* Audio Response Controls */}
-              {activePanel === 'controls' && (
-                <AudioResponseControls />
-              )}
+            <div className="h-full bg-black/60 backdrop-blur-2xl rounded-l-2xl border border-white/10 border-r-0 flex flex-col">
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Audio Response Controls */}
+                {activePanel === 'controls' && (
+                  <AudioResponseControls />
+                )}
 
-              {/* Upload Section */}
-              {activePanel === 'upload' && (
-                <UploadSection />
-              )}
+                {/* Upload Section */}
+                {activePanel === 'upload' && (
+                  <UploadSection />
+                )}
+              </div>
             </div>
           </motion.div>
         )}
