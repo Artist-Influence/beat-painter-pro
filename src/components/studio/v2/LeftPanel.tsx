@@ -49,9 +49,11 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
 
               {/* Style Selector */}
               {activePanel === 'styles' && (
-                <div className="space-y-3">
+                <div className="h-full flex flex-col">
                   <h3 className="text-white/80 text-sm font-medium mb-3">Visual Styles</h3>
-                  <StyleSelector />
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <StyleSelector />
+                  </div>
                 </div>
               )}
             </div>
