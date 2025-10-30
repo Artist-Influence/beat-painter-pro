@@ -12,7 +12,7 @@ export const useAudioAnalysis = (
   onDataUpdate: (data: AudioData) => void
 ) => {
   const animationFrameRef = useRef<number>();
-  const dataArrayRef = useRef<Uint8Array>();
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer>>();
   const smoothedDataRef = useRef<AudioData>({
     frequency: Array(256).fill(0),
     amplitude: 0,
@@ -33,7 +33,7 @@ export const useAudioAnalysis = (
         return;
       }
 
-      analyser.getByteFrequencyData(dataArrayRef.current as Uint8Array);
+      analyser.getByteFrequencyData(dataArrayRef.current);
       const frequency = Array.from(dataArrayRef.current);
 
       const smoothingFactor = 0.3;
