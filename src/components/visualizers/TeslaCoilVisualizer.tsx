@@ -10,6 +10,7 @@ function TeslaCoil({ audioData }: any) {
   const arcRefs = useRef<THREE.Mesh[]>([]);
   const particlesRef = useRef<THREE.Points>(null);
   const topTerminalRef = useRef<THREE.Mesh>(null);
+  const coilBaseRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -105,55 +106,91 @@ function TeslaCoil({ audioData }: any) {
     const animSpeed = audioSensitivity.animationSpeed;
     const beat = Math.max(beatStrength, bass);
     
-    const lerp = 0.15;
+    const lerp = 0.08;
     smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
     smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
     smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
     smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
+    
+    const isPeakMoment = smoothedBeat.current > 0.7;
     
     if (groupRef.current) {
       groupRef.current.rotation.y = time * 0.1 * animSpeed;
       groupRef.current.scale.setScalar(0.8 + smoothedBass.current * 0.4);
     }
     
-    // Animate electric arcs
+    // Animate electric arcs - SHOOT OUT on bass
     arcRefs.current.forEach((arc, i) => {
       if (arc) {
         const offset = time * 2 * animSpeed + i * 0.5;
-        arc.position.y = Math.sin(offset) * smoothedBass.current * 0.5;
-        arc.visible = smoothedBeat.current > 0.1 || (i % 3 === 0);
+        const bandIndex = Math.floor((i / arcRefs.current.length) * frequency.length);
+        const bandValue = (frequency[bandIndex] || 0) / 255;
+        
+        // Dramatic scale increase and rotation
+        const arcScale = 0.3 + bandValue * 3.5 + (isPeakMoment ? 1.0 : 0);
+        arc.scale.setScalar(arcScale);
+        arc.rotation.z = smoothedBass.current * Math.PI * 0.5;
+        arc.position.y = Math.sin(offset) * smoothedBass.current * 0.8;
+        
+        // Individual arc pulsing
+        const individualPulse = Math.sin(time * 4 * animSpeed + i * 2) * 0.5 + 0.5;
+        arc.visible = smoothedBeat.current > 0.05 || (i % 2 === 0);
         
         if (arc.material) {
-          (arc.material as THREE.MeshBasicMaterial).opacity = 0.3 + smoothedHighs.current * 0.7;
+          (arc.material as THREE.MeshBasicMaterial).opacity = 0.4 + smoothedHighs.current * 0.6 + individualPulse * bandValue * 0.3;
         }
       }
     });
     
-    // Animate spark particles
+    // Animate spark particles - BURST outward on bass
     if (particlesRef.current) {
-      particlesRef.current.rotation.y = time * 0.3 * animSpeed;
-      particlesRef.current.rotation.x = Math.sin(time * animSpeed) * 0.1;
-      particlesRef.current.scale.setScalar(1 + smoothedHighs.current * 0.5);
+      particlesRef.current.rotation.y = time * 0.3 * animSpeed * (1 + smoothedBass.current * 2);
+      particlesRef.current.rotation.x = Math.sin(time * animSpeed) * 0.2;
+      particlesRef.current.scale.setScalar(1 + smoothedHighs.current * 1.2 + (isPeakMoment ? 0.5 : 0));
       
       const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
       for (let i = 0; i < positions.length; i += 3) {
+        const originalX = particles[i];
         const originalY = particles[i + 1];
-        positions[i + 1] = originalY + Math.sin(time * 3 * animSpeed + i) * smoothedBass.current * 0.3;
+        const originalZ = particles[i + 2];
+        
+        // Radial burst on bass peaks
+        const radialBurst = isPeakMoment ? 1.5 : 1.0;
+        const waveMotion = Math.sin(time * 3 * animSpeed + i) * smoothedBass.current * 0.6;
+        
+        positions[i] = originalX * radialBurst + waveMotion;
+        positions[i + 1] = originalY + waveMotion * 0.5;
+        positions[i + 2] = originalZ * radialBurst + waveMotion;
       }
       particlesRef.current.geometry.attributes.position.needsUpdate = true;
     }
 
-    // Pulse top terminal
+    // EXPLODE top terminal on beats
     if (topTerminalRef.current) {
-      const terminalPulse = 1 + smoothedBeat.current * 0.3;
+      const terminalPulse = 1 + smoothedBeat.current * 1.5 + (isPeakMoment ? 0.5 : 0);
       topTerminalRef.current.scale.setScalar(terminalPulse);
+      
+      if (topTerminalRef.current.material) {
+        (topTerminalRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+          (extractedColors?.isNeon ? 0.3 : 0.2) + smoothedBeat.current * 2.0;
+      }
+    }
+    
+    // Coil base vertical stretching
+    if (coilBaseRef.current) {
+      coilBaseRef.current.scale.y = 1 + smoothedBass.current * 0.8;
+      
+      if (coilBaseRef.current.material) {
+        (coilBaseRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+          (extractedColors?.isNeon ? 0.2 : 0.1) + smoothedBeat.current * 2.0;
+      }
     }
   });
 
   return (
     <group ref={groupRef}>
       {/* Central coil structure */}
-      <mesh position={[0, -1.5, 0]}>
+      <mesh ref={coilBaseRef} position={[0, -1.5, 0]}>
         <cylinderGeometry args={[0.5, 0.8, 1, 32]} />
         <meshStandardMaterial 
           color={primaryColor}
@@ -205,7 +242,7 @@ function TeslaCoil({ audioData }: any) {
         </bufferGeometry>
         <pointsMaterial
           color={accentColor}
-          size={0.02}
+          size={0.02 * (1 + smoothedBass.current * 3)}
           transparent
           opacity={0.8}
           sizeAttenuation={true}

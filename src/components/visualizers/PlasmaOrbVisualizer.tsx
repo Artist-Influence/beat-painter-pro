@@ -104,39 +104,45 @@ function PlasmaOrb({ audioData }: any) {
     const animSpeed = audioSensitivity.animationSpeed;
     const beat = Math.max(beatStrength, bass);
     
-    const lerp = 0.15;
+    const lerp = 0.08;
     smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
     smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
     smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
     smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
     
-    // Animate outer orb
+    const isPeakMoment = smoothedBeat.current > 0.7;
+    
+    // Animate outer orb - significant breathing
     if (orbRef.current) {
       orbRef.current.rotation.x = time * 0.1 * animSpeed;
       orbRef.current.rotation.y = time * 0.15 * animSpeed;
       
-      const scale = 1 + smoothedBass.current * 0.3;
+      const scale = 1 + smoothedBass.current * 0.8 + (isPeakMoment ? 0.3 : 0);
       orbRef.current.scale.setScalar(scale);
       
       if (orbRef.current.material) {
-        (orbRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1 + smoothedMids.current * 0.3;
+        const mat = orbRef.current.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = 0.1 + smoothedMids.current * 0.6;
+        mat.opacity = 0.15 + Math.sin(time * 5) * smoothedBeat.current * 0.3;
       }
     }
     
-    // Animate inner core
+    // Animate inner core - INTENSE pulsing
     if (innerCoreRef.current) {
-      innerCoreRef.current.rotation.x = -time * 0.3 * animSpeed;
-      innerCoreRef.current.rotation.y = -time * 0.2 * animSpeed;
+      const rotSpeed = 1 + smoothedBass.current * 3;
+      innerCoreRef.current.rotation.x = -time * 0.3 * animSpeed * rotSpeed;
+      innerCoreRef.current.rotation.y = -time * 0.2 * animSpeed * rotSpeed;
       
-      const coreScale = 0.3 + smoothedHighs.current * 0.2;
+      const coreScale = 0.3 + smoothedBeat.current * 0.9 + (isPeakMoment ? 0.4 : 0);
       innerCoreRef.current.scale.setScalar(coreScale);
       
       if (innerCoreRef.current.material) {
-        (innerCoreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3 + smoothedBeat.current * 0.7;
+        (innerCoreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+          0.3 + smoothedBeat.current * 2.5 + (isPeakMoment ? 1.0 : 0);
       }
     }
     
-    // Animate plasma streams
+    // Animate plasma streams - LANCE outward dramatically
     plasmaStreamsRef.current.forEach((stream, i) => {
       if (stream) {
         const offset = i * 0.3;
@@ -145,22 +151,32 @@ function PlasmaOrb({ audioData }: any) {
         const bandIndex = Math.floor((i / plasmaStreamsRef.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
-        stream.scale.setScalar(0.5 + bandValue * 1.5);
+        // Dramatic extension on frequency bands
+        const baseScale = 0.3 + bandValue * 4.0 + (isPeakMoment ? 1.5 : 0);
+        stream.scale.x = baseScale;
+        stream.scale.z = baseScale;
+        stream.scale.y = baseScale * (1 + bandValue * 2); // Length extends more
+        
+        // Whipping motion at tips
+        const whipAngle = Math.sin(time * 4 * animSpeed + offset) * bandValue * 0.4;
+        stream.rotation.x = whipAngle;
         
         if (stream.material) {
-          (stream.material as THREE.MeshStandardMaterial).opacity = 0.3 + wave * 0.4 + bandValue * 0.3;
+          (stream.material as THREE.MeshStandardMaterial).opacity = 0.4 + wave * 0.3 + bandValue * 0.4;
+          (stream.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3 + bandValue * 1.2;
         }
         
         const pos = streamPositions[i];
-        stream.position.x = pos.x * (1 + Math.sin(time * 2 * animSpeed + offset) * smoothedBass.current * 0.3);
-        stream.position.y = pos.y * (1 + Math.cos(time * 2 * animSpeed + offset) * smoothedBass.current * 0.3);
-        stream.position.z = pos.z * (1 + Math.sin(time * 2 * animSpeed + offset) * smoothedBass.current * 0.3);
+        const positionMultiplier = 1 + Math.sin(time * 2 * animSpeed + offset) * smoothedBass.current * 0.5;
+        stream.position.x = pos.x * positionMultiplier;
+        stream.position.y = pos.y * positionMultiplier;
+        stream.position.z = pos.z * positionMultiplier;
       }
     });
     
-    // Animate particle field
+    // Animate particle field - EXPLODE outward chaotically
     if (fieldLinesRef.current) {
-      fieldLinesRef.current.rotation.y = time * 0.05 * animSpeed;
+      fieldLinesRef.current.rotation.y = time * 0.05 * animSpeed * (1 + smoothedBass.current * 2);
       
       const positions = fieldLinesRef.current.geometry.attributes.position.array as Float32Array;
       const originalPositions = particleField.positions;
@@ -169,10 +185,13 @@ function PlasmaOrb({ audioData }: any) {
         const audioIndex = Math.floor((i / 3 / 1000) * frequency.length);
         const audioValue = (frequency[audioIndex] || 0) / 255;
         
-        const distortion = 1 + audioValue * 0.5;
-        positions[i] = originalPositions[i] * distortion;
-        positions[i + 1] = originalPositions[i + 1] * distortion;
-        positions[i + 2] = originalPositions[i + 2] * distortion;
+        // Chaotic explosion on bass
+        const distortion = 1 + audioValue * 1.5 + smoothedBass.current * 0.8;
+        const chaos = Math.sin(time * 5 * animSpeed + i) * smoothedBeat.current * 0.3;
+        
+        positions[i] = originalPositions[i] * distortion + chaos;
+        positions[i + 1] = originalPositions[i + 1] * distortion + chaos * 0.5;
+        positions[i + 2] = originalPositions[i + 2] * distortion + chaos;
       }
       
       fieldLinesRef.current.geometry.attributes.position.needsUpdate = true;
@@ -244,7 +263,7 @@ function PlasmaOrb({ audioData }: any) {
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.01}
+          size={0.01 * (1 + smoothedBeat.current * 2)}
           transparent
           opacity={0.6}
           vertexColors
