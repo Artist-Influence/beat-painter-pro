@@ -8,7 +8,7 @@ import { useStudioStore } from "@/stores/studioStore";
 function ElectricField({ audioData }: any) {
   const fieldGroupRef = useRef<THREE.Group>(null);
   const chargeRefs = useRef<THREE.Mesh[]>([]);
-  const fieldLineRefs = useRef<THREE.Line[]>([]);
+  const fieldLineRefs = useRef<THREE.Mesh[]>([]);
   const electronCloudRef = useRef<THREE.Points>(null);
   const { audioSensitivity } = useStudioStore();
 
@@ -149,28 +149,14 @@ function ElectricField({ audioData }: any) {
       }
     });
     
-    // Animate field lines
+    // Animate field lines - only opacity, not geometry
     fieldLineRefs.current.forEach((line, i) => {
       if (line) {
-        const positions = line.geometry.attributes.position.array as Float32Array;
-        const originalPoints = fieldLines[i];
-        
-        for (let j = 0; j < originalPoints.length; j++) {
-          const point = originalPoints[j];
-          const waveOffset = Math.sin(time * 3 * animSpeed - j * 0.2) * smoothedBass.current * 0.1;
-          
-          positions[j * 3] = point.x + waveOffset;
-          positions[j * 3 + 1] = point.y;
-          positions[j * 3 + 2] = point.z + waveOffset;
-        }
-        
-        line.geometry.attributes.position.needsUpdate = true;
-        
         const bandIndex = Math.floor((i / fieldLineRefs.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
         if (line.material) {
-          (line.material as THREE.LineBasicMaterial).opacity = 0.2 + bandValue * 0.5;
+          (line.material as THREE.MeshBasicMaterial).opacity = 0.2 + bandValue * 0.5;
         }
       }
     });
@@ -217,23 +203,19 @@ function ElectricField({ audioData }: any) {
       ))}
       
       {/* Field lines */}
-      {fieldLines.map((points, i) => (
-        <line key={i} ref={(el: any) => { if (el) fieldLineRefs.current[i] = el; }}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={points.length}
-              array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
-              itemSize={3}
+      {fieldLines.map((points, i) => {
+        const curve = new THREE.CatmullRomCurve3(points);
+        return (
+          <mesh key={i} ref={(el: any) => { if (el) fieldLineRefs.current[i] = el; }}>
+            <tubeGeometry args={[curve, 30, 0.01, 8, false]} />
+            <meshBasicMaterial
+              color={accentColor}
+              transparent
+              opacity={0.4}
             />
-          </bufferGeometry>
-          <lineBasicMaterial
-            color={accentColor}
-            transparent
-            opacity={0.4}
-          />
-        </line>
-      ))}
+          </mesh>
+        );
+      })}
       
       {/* Electron cloud */}
       <points ref={electronCloudRef}>

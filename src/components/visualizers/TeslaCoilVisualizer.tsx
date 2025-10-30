@@ -7,7 +7,7 @@ import { useStudioStore } from "@/stores/studioStore";
 
 function TeslaCoil({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
-  const arcRefs = useRef<THREE.Line[]>([]);
+  const arcRefs = useRef<THREE.Mesh[]>([]);
   const particlesRef = useRef<THREE.Points>(null);
   const topTerminalRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
@@ -124,7 +124,7 @@ function TeslaCoil({ audioData }: any) {
         arc.visible = smoothedBeat.current > 0.1 || (i % 3 === 0);
         
         if (arc.material) {
-          (arc.material as THREE.LineBasicMaterial).opacity = 0.3 + smoothedHighs.current * 0.7;
+          (arc.material as THREE.MeshBasicMaterial).opacity = 0.3 + smoothedHighs.current * 0.7;
         }
       }
     });
@@ -179,23 +179,19 @@ function TeslaCoil({ audioData }: any) {
       </mesh>
       
       {/* Electric arcs */}
-      {arcPaths.map((points, i) => (
-        <line key={i} ref={(el: any) => { if (el) arcRefs.current[i] = el; }}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={points.length}
-              array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
-              itemSize={3}
+      {arcPaths.map((points, i) => {
+        const curve = new THREE.CatmullRomCurve3(points);
+        return (
+          <mesh key={i} ref={(el: any) => { if (el) arcRefs.current[i] = el; }}>
+            <tubeGeometry args={[curve, 50, 0.015, 8, false]} />
+            <meshBasicMaterial 
+              color={accentColor}
+              transparent 
+              opacity={0.6}
             />
-          </bufferGeometry>
-          <lineBasicMaterial 
-            color={accentColor}
-            transparent 
-            opacity={0.6}
-          />
-        </line>
-      ))}
+          </mesh>
+        );
+      })}
       
       {/* Spark particles */}
       <points ref={particlesRef}>
