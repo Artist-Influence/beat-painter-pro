@@ -33,7 +33,7 @@ export const useAudioAnalysis = (
         return;
       }
 
-      analyser.getByteFrequencyData(dataArrayRef.current);
+      analyser.getByteFrequencyData(dataArrayRef.current as Uint8Array);
       const frequency = Array.from(dataArrayRef.current);
 
       const smoothingFactor = 0.3;

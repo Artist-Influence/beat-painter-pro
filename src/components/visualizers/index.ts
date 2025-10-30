@@ -14,6 +14,9 @@ import DanasEyeVisualizer from "./DanasEyeVisualizer";
 import FluidBloomVisualizer from "./FluidBloomVisualizer";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
+import TeslaCoilVisualizer from "./TeslaCoilVisualizer";
+import PlasmaOrbVisualizer from "./PlasmaOrbVisualizer";
+import ElectricFieldVisualizer from "./ElectricFieldVisualizer";
 import { CustomVisualizerLoader } from "./CustomVisualizerLoader";
 
 export type { VisualizerProps } from "../visualizer";
@@ -35,6 +38,9 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   FluidBloomVisualizer: 0.3,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
+  TeslaCoilVisualizer: 0.35,
+  PlasmaOrbVisualizer: 0.3,
+  ElectricFieldVisualizer: 0.35,
 };
 
 export const visualizerRegistry = {
@@ -54,6 +60,9 @@ export const visualizerRegistry = {
   FluidBloomVisualizer,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
+  TeslaCoilVisualizer,
+  PlasmaOrbVisualizer,
+  ElectricFieldVisualizer,
   CustomVisualizerLoader,
 };
 

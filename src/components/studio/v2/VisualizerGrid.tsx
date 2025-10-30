@@ -34,6 +34,9 @@ export function VisualizerGrid() {
     { id: 'NeonSkylineVisualizer', name: 'Neon Skyline', preview: '🏙️', description: 'Cyberpunk cityscape' },
     { id: 'DanasEyeVisualizer', name: "Dana's Eye", preview: '👁️', description: 'Radial light burst' },
     { id: 'FluidBloomVisualizer', name: 'Fluid Bloom', preview: '🌊', description: 'Organic flowing shapes' },
+    { id: 'TeslaCoilVisualizer', name: 'Tesla Coil', preview: '⚡', description: 'Electric arcs that pulse with audio' },
+    { id: 'PlasmaOrbVisualizer', name: 'Plasma Orb', preview: '🔮', description: 'Electromagnetic particle effects' },
+    { id: 'ElectricFieldVisualizer', name: 'Electric Field', preview: '🧲', description: 'Electric field patterns' },
   ];
 
   const handleCustomVisualizerSuccess = (newVisualizer: any) => {
