@@ -71,7 +71,8 @@ export function CustomVisualizerGenerator({
   const handleGenerate = useCallback(() => {
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed, {
-      baseShape: shapeFilter,
+      // Only pass shape preference when in multiple mode
+      ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
       animationStyle: animationFilter,
       backgroundEffect: backgroundEffectFilter,
       elementCount: layoutMode === 'standalone' ? 1 : elementCount,
@@ -84,7 +85,8 @@ export function CustomVisualizerGenerator({
   useEffect(() => {
     setCurrentParams(prev => {
       const updated = generateRandomParams(prev.seed, {
-        baseShape: shapeFilter,
+        // Only apply shape filter in multiple mode
+        ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
         animationStyle: animationFilter,
         backgroundEffect: backgroundEffectFilter,
         elementCount: layoutMode === 'standalone' ? 1 : elementCount,
@@ -93,6 +95,20 @@ export function CustomVisualizerGenerator({
       return updated;
     });
   }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
+
+  // When switching to standalone, generate a fresh random visualizer with random shape
+  useEffect(() => {
+    if (layoutMode === 'standalone') {
+      const newSeed = generateRandomSeed();
+      const newParams = generateRandomParams(newSeed, {
+        animationStyle: animationFilter,
+        backgroundEffect: backgroundEffectFilter,
+        elementCount: 1,
+        connectionLines: threadingEnabled,
+      });
+      setCurrentParams(newParams);
+    }
+  }, [layoutMode]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -149,22 +165,31 @@ export function CustomVisualizerGenerator({
           <div className="space-y-3">
             <p className="text-xs text-white/50">Customize your visualizer</p>
             
-            {/* Row 1: Shape and Animation */}
+            {/* Row 1: Shape (only for multiple mode) and Animation */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Shape</label>
-                <select 
-                  value={shapeFilter}
-                  onChange={(e) => setShapeFilter(e.target.value as BaseShape)}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  {BASE_SHAPES.map(shape => (
-                    <option key={shape} value={shape}>
-                      {shape.charAt(0).toUpperCase() + shape.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {layoutMode === 'multiple' ? (
+                <div className="space-y-1">
+                  <label className="text-xs text-white/70">Shape</label>
+                  <select 
+                    value={shapeFilter}
+                    onChange={(e) => setShapeFilter(e.target.value as BaseShape)}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
+                  >
+                    {BASE_SHAPES.map(shape => (
+                      <option key={shape} value={shape}>
+                        {shape.charAt(0).toUpperCase() + shape.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-xs text-white/70">Shape</label>
+                  <div className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white/50 text-sm italic">
+                    Auto-generated
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-1">
                 <label className="text-xs text-white/70">Animation</label>
