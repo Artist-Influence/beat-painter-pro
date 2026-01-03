@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RandomVisualizerParams, StandaloneVariant, GeometryType, AnimationStyle } from '@/lib/randomVisualizerGenerator';
 import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
+import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
 
 interface RandomVisualizerTemplateProps {
   params: RandomVisualizerParams;
