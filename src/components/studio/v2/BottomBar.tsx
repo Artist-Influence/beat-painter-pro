@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Volume2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
 
 interface BottomBarProps {
@@ -14,6 +14,8 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const previousVolumeRef = React.useRef(0.75);
 
   const handlePlayPause = () => {
     if (!audioElement) return;
@@ -65,7 +67,26 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
     if (audioElement) {
       audioElement.volume = newVolume;
     }
+    if (newVolume > 0) {
+      setIsMuted(false);
+    }
   };
+
+  const handleToggleMute = () => {
+    if (!audioElement) return;
+    
+    if (isMuted || volume === 0) {
+      const restoreVolume = previousVolumeRef.current > 0 ? previousVolumeRef.current : 0.75;
+      handleVolumeChange(restoreVolume);
+      setIsMuted(false);
+    } else {
+      previousVolumeRef.current = volume;
+      handleVolumeChange(0);
+      setIsMuted(true);
+    }
+  };
+
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   return (
     <>
@@ -159,7 +180,13 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
 
                   {/* Volume */}
                   <div className="flex items-center gap-2">
-                    <Volume2 className="w-4 h-4 text-white/60" />
+                    <button
+                      onClick={handleToggleMute}
+                      className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                      title={isMuted ? "Unmute" : "Mute"}
+                    >
+                      <VolumeIcon className="w-4 h-4 text-white/60" />
+                    </button>
                      <div className="relative w-20">
                        <div className="h-1 bg-white/20 rounded-full">
                          <div 
