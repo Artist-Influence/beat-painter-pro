@@ -79,7 +79,7 @@ export function useCustomVisualizers() {
         preview_emoji: emoji,
         jsx_code: JSON.stringify(params), // Store params in jsx_code for now (backwards compat)
         is_public: false,
-        scale_factor: 1.0,
+        scale_factor: 0.12,
       };
       
       const { data, error } = await supabase

@@ -540,8 +540,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       wireframe: boolean;
     }> = [];
     
-    // Single-element shapes only render 1 element
-    const isSingleElement = ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+    // Single-element shapes only render 1 element - also check if elementCount is explicitly 1
+    const isSingleElement = params.elementCount === 1 || 
+      ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
     const count = isSingleElement ? 1 : params.elementCount;
     const r = seededRandom(params.seed);
     
@@ -939,8 +940,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       }
     }
 
-    // Check if we're using a single-element shape
-    const isSingleElementShape = ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+    // Check if we're using a single-element shape (explicit shapes OR elementCount is 1)
+    const isSingleElementShape = params.elementCount === 1 || 
+      ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
 
     // Animate individual meshes - style-specific behavior
     meshRefs.current.forEach((mesh, i) => {
@@ -971,12 +973,13 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
             break;
             
           case 'pulsar':
-            // Pulsing star with rhythmic beats
-            const pulsarBeat = Math.sin(t * 4);
-            const pulsarPop = pulsarBeat > 0.6 ? 1.4 : 1;
+            // Smooth pulsing star - no jumps
+            const pulsarWave = Math.sin(t * 3);
+            const pulsarScale = 1 + pulsarWave * 0.25 + bass * 0.35;
             mesh.rotation.y = t * 1.5;
             mesh.rotation.x = Math.sin(t * 0.8) * 0.4;
-            mesh.scale.setScalar(baseScale * pulsarPop * intensity);
+            mesh.rotation.z = Math.cos(t * 0.5) * 0.2;
+            mesh.scale.setScalar(baseScale * pulsarScale * intensity);
             break;
             
           case 'vortexCore':
@@ -994,6 +997,16 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
             mesh.scale.x = baseScale * (1 + eyePulse * 0.4 * intensity);
             mesh.scale.y = baseScale * (1 + eyePulse * 0.4 * intensity);
             mesh.scale.z = baseScale * (0.5 + bass * 0.5);
+            break;
+            
+          default:
+            // Generic intense animation for any shape in standalone mode
+            mesh.rotation.x = t * 0.6 + Math.sin(t * 2) * 0.4;
+            mesh.rotation.y = t * 0.8 + Math.cos(t * 1.5) * 0.4;
+            mesh.rotation.z = Math.sin(t * 0.7) * 0.3;
+            mesh.scale.x = baseScale * (1 + Math.sin(t * 2.5) * 0.25 * intensity);
+            mesh.scale.y = baseScale * (1 + Math.cos(t * 2.2) * 0.25 * intensity);
+            mesh.scale.z = baseScale * (1 + Math.sin(t * 1.8) * 0.25 * intensity);
             break;
         }
         return; // Skip normal animation processing for single elements
