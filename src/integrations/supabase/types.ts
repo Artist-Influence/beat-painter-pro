@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       custom_visualizers: {
         Row: {
+          config: Json | null
           created_at: string
           created_today: number | null
           description: string | null
@@ -30,6 +31,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          config?: Json | null
           created_at?: string
           created_today?: number | null
           description?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          config?: Json | null
           created_at?: string
           created_today?: number | null
           description?: string | null

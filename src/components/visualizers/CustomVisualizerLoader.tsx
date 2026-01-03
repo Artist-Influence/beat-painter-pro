@@ -2,57 +2,63 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { VisualizerProps } from '../visualizer';
+import { RandomVisualizerTemplate } from './RandomVisualizerTemplate';
+import type { RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
+
+// Legacy imports for backwards compatibility with old visualizers
 import DynamicVisualizer from '../visualizer/DynamicVisualizer';
 import VisualizerErrorBoundary from '../visualizer/VisualizerErrorBoundary';
 
 interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
-  initialCode?: string; // Pre-loaded JSX code to prevent fetch
+  initialCode?: string; // Legacy: Pre-loaded JSX code
+  initialConfig?: RandomVisualizerParams; // New: Pre-loaded config
 }
 
 // Session-based cache to prevent flickering
-const sessionCodeCache = new Map<string, string>();
+const sessionCache = new Map<string, { config?: RandomVisualizerParams; code?: string }>();
 
-export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }: CustomVisualizerLoaderProps) {
+export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConfig, ...props }: CustomVisualizerLoaderProps) {
   const { user } = useAuth();
-  const [code, setCode] = useState<string>(initialCode || '');
+  const [config, setConfig] = useState<RandomVisualizerParams | null>(initialConfig || null);
+  const [legacyCode, setLegacyCode] = useState<string>(initialCode || '');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(!initialCode);
+  const [isLoading, setIsLoading] = useState(!initialConfig && !initialCode);
   const requestIdRef = useRef(0);
-
-  console.log('CustomVisualizerLoader - Debug:', { 
-    visualizerKey, 
-    hasInitialCode: !!initialCode, 
-    codeLength: code.length,
-    isLoading,
-    error
-  });
 
   const visualizerId = useMemo(() => {
     return visualizerKey ? visualizerKey.replace('custom_', '') : '';
   }, [visualizerKey]);
 
-  // Check if visualizerId is a valid UUID
   const isValidUUID = (id: string) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(id);
   };
 
   useEffect(() => {
-    // ALWAYS prioritize initialCode if provided
-    if (initialCode) {
-      console.log('CustomVisualizerLoader - Using initialCode:', initialCode.slice(0, 100) + '...');
-      setCode(initialCode);
-      sessionCodeCache.set(visualizerId, initialCode);
+    // Prioritize initialConfig (new system)
+    if (initialConfig) {
+      setConfig(initialConfig);
+      sessionCache.set(visualizerId, { config: initialConfig });
       setIsLoading(false);
       setError(null);
       return;
     }
 
-    // Check session cache first
-    const cachedCode = sessionCodeCache.get(visualizerId);
-    if (cachedCode) {
-      setCode(cachedCode);
+    // Fallback to initialCode (legacy system)
+    if (initialCode) {
+      setLegacyCode(initialCode);
+      sessionCache.set(visualizerId, { code: initialCode });
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    // Check session cache
+    const cached = sessionCache.get(visualizerId);
+    if (cached) {
+      if (cached.config) setConfig(cached.config);
+      if (cached.code) setLegacyCode(cached.code);
       setIsLoading(false);
       return;
     }
@@ -70,35 +76,32 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
         setIsLoading(true);
         setError(null);
 
-        // 1) Check for in-memory preview visualizer first
+        // Check for in-memory preview visualizer (legacy)
         const W = window as any;
         const previewMap = W.__PREVIEW_VISUALIZERS__ || {};
-        if (previewMap && previewMap[visualizerId]) {
-          // Ignore if this is an outdated request
+        if (previewMap[visualizerId]) {
           if (currentRequestId !== requestIdRef.current) return;
           
           const previewCode = previewMap[visualizerId];
-          setCode(previewCode);
-          sessionCodeCache.set(visualizerId, previewCode);
+          setLegacyCode(previewCode);
+          sessionCache.set(visualizerId, { code: previewCode });
           setIsLoading(false);
           return;
         }
 
-        // 2) Only fetch from Supabase if visualizerId is a valid UUID
         if (!isValidUUID(visualizerId)) {
           setError('Invalid visualizer format');
           setIsLoading(false);
           return;
         }
 
-        // Fetch from Supabase (RLS will handle permissions)
+        // Fetch from Supabase
         const { data, error: fetchError } = await supabase
           .from('custom_visualizers')
           .select('jsx_code, name')
           .eq('id', visualizerId)
           .maybeSingle();
 
-        // Ignore if this is an outdated request
         if (currentRequestId !== requestIdRef.current) return;
 
         if (fetchError) {
@@ -108,18 +111,33 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
           return;
         }
 
-        if (!data?.jsx_code) {
+        if (!data) {
           setError(!user ? 'Sign in to view this visualizer' : 'Visualizer not found or no access');
           setIsLoading(false);
           return;
         }
 
-        setCode(data.jsx_code);
-        sessionCodeCache.set(visualizerId, data.jsx_code);
+        // Try to parse jsx_code as config JSON (new system) or use as code (legacy)
+        if (data.jsx_code) {
+          try {
+            // New system: jsx_code contains JSON config
+            const parsed = JSON.parse(data.jsx_code);
+            if (parsed.seed !== undefined && parsed.baseShape) {
+              setConfig(parsed as RandomVisualizerParams);
+              sessionCache.set(visualizerId, { config: parsed });
+            } else {
+              throw new Error('Not a config object');
+            }
+          } catch {
+            // Legacy system: jsx_code contains actual JSX
+            setLegacyCode(data.jsx_code);
+            sessionCache.set(visualizerId, { code: data.jsx_code });
+          }
+        } else {
+          setError('No visualizer data found');
+        }
       } catch (err) {
-        // Ignore if this is an outdated request
         if (currentRequestId !== requestIdRef.current) return;
-        
         console.error('Error loading custom visualizer:', err);
         setError('Failed to load visualizer');
       } finally {
@@ -130,10 +148,9 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
     };
 
     loadCustomVisualizer();
-  }, [visualizerId, user?.id, initialCode]);
+  }, [visualizerId, user?.id, initialCode, initialConfig]);
 
   if (isLoading) {
-    console.log('CustomVisualizerLoader - Showing loading state');
     return (
       <group scale={1}>
         <mesh>
@@ -144,8 +161,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
     );
   }
 
-  if (error || !code) {
-    console.log('CustomVisualizerLoader - Showing error state:', { error, hasCode: !!code });
+  if (error) {
     return (
       <group scale={1}>
         <mesh>
@@ -156,25 +172,46 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, ...props }:
     );
   }
 
-  console.log('CustomVisualizerLoader - Rendering DynamicVisualizer with code length:', code.length);
-
-  return (
-    <VisualizerErrorBoundary fallback={
-      <group scale={0.25}>
-        <mesh>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshBasicMaterial color="#ff0000" wireframe />
-        </mesh>
-      </group>
-    }>
-      <DynamicVisualizer 
-        jsxCode={code} 
+  // New system: render from config params
+  if (config) {
+    return (
+      <RandomVisualizerTemplate 
+        params={config} 
         audioData={props.audioData}
-        backgroundColor={props.backgroundColor}
-        zoomLevel={props.zoomLevel}
-        width={props.width}
-        height={props.height}
       />
-    </VisualizerErrorBoundary>
+    );
+  }
+
+  // Legacy system: render from JSX code
+  if (legacyCode) {
+    return (
+      <VisualizerErrorBoundary fallback={
+        <group scale={0.25}>
+          <mesh>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshBasicMaterial color="#ff0000" wireframe />
+          </mesh>
+        </group>
+      }>
+        <DynamicVisualizer 
+          jsxCode={legacyCode} 
+          audioData={props.audioData}
+          backgroundColor={props.backgroundColor}
+          zoomLevel={props.zoomLevel}
+          width={props.width}
+          height={props.height}
+        />
+      </VisualizerErrorBoundary>
+    );
+  }
+
+  // No data
+  return (
+    <group scale={1}>
+      <mesh>
+        <boxGeometry args={[4, 4, 4]} />
+        <meshBasicMaterial color="#ff0000" wireframe />
+      </mesh>
+    </group>
   );
 }
