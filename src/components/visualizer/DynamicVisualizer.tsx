@@ -4,7 +4,7 @@ import { useStudioStore } from '@/stores/studioStore';
 import * as THREE from 'three';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
 import { transform as sucraseTransform } from 'sucrase';
-import { toast } from '@/components/ui/use-toast';
+
 interface DynamicVisualizerProps {
   jsxCode: string;
   audioData: {
@@ -70,8 +70,6 @@ const transformJSXCode = (code: string): string => {
     return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
   });
 
-  // Preserve THREE namespace references (no replacements)
-
   // Identify locally defined PascalCase components to avoid replacing them
   const definedComponents = new Set<string>();
   const addDefined = (name: string) => {
@@ -97,8 +95,6 @@ const transformJSXCode = (code: string): string => {
     const nm = m.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)/);
     if (nm) addDefined(nm[1]);
   });
-
-  console.log('DynamicVisualizer - Preserving local components:', Array.from(definedComponents));
 
   // Replace capitalized JSX elements only if NOT locally defined; always replace dotted/namespaced
   transformed = transformed.replace(/<([A-Z][A-Za-z0-9_]*)\b([^>]*)\/>/g, (m, name, attrs) => {
@@ -169,7 +165,7 @@ const validateJSX = (code: string) => {
 const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({ 
   jsxCode, 
   audioData, 
-  scaleFactor = 1,
+  scaleFactor = 0.25, // Default to 0.25 to match standard visualizer scales
   backgroundColor: propBackgroundColor,
   zoomLevel = 1,
   width = 1080,
@@ -181,16 +177,11 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   
   const VisualizerComponent = useMemo(() => {
     console.log('🔄 DynamicVisualizer - Starting render with code length:', jsxCode.length);
-    console.log('DynamicVisualizer - First 200 chars:', jsxCode.slice(0, 200));
     
     if (!jsxCode.trim()) {
       console.log('❌ DynamicVisualizer - Empty code, showing fallback');
       return ({ audioData }: { 
         audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
-        backgroundColor?: string;
-        zoomLevel?: number;
-        width?: number;
-        height?: number;
       }) => (
         <group>
           <mesh>
@@ -211,8 +202,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       // Quick geometry presence check to avoid invisible scenes
       const hasGeometry = /<\s*(mesh|instancedMesh|points|line|primitive)\b|Geometry\b/.test(transformedCode);
       if (!hasGeometry) {
-        console.warn('⚠️ DynamicVisualizer - No visible geometry detected. Showing safety fallback.');
-        try { toast({ title: 'No visible geometry', description: 'Your visualizer had no Canvas-safe objects. Showing a visible fallback.' }); } catch {}
+        console.warn('⚠️ DynamicVisualizer - No visible geometry detected. Showing fallback.');
         return ({ audioData }: { 
           audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
         }) => {
@@ -228,7 +218,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
           return (
             <group>
               <mesh ref={ringRef} position={[0,0,0]}>
-                <torusGeometry args={[3.2, 0.25, 32, 96]} />
+                <torusGeometry args={[4, 0.3, 32, 96]} />
                 <primitive object={material} />
               </mesh>
             </group>
@@ -242,7 +232,6 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       });
 
       console.log('✅ DynamicVisualizer - Compilation SUCCESS');
-      console.log('DynamicVisualizer - Compiled code length:', compiledCode.length);
       
       // Create the component function from the compiled JavaScript code
       const componentFunction = new Function(
@@ -280,46 +269,14 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
       // Store as last good code on successful compilation
       lastGoodCodeRef.current = jsxCode;
       
-      // Return a wrapper that includes a safety net
-      return ({ audioData, backgroundColor, zoomLevel, width, height }: { 
+      // Return the component directly without the intrusive safety net
+      return result as React.FC<{ 
         audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
         backgroundColor?: string;
         zoomLevel?: number;
         width?: number;
         height?: number;
-      }) => {
-        const ResultComponent = result as React.FC<any>;
-        const ringRef = React.useRef<THREE.Mesh>(null);
-        useFrame(() => {
-          if (ringRef.current && audioData.frequency.length) {
-            const avg = audioData.frequency.reduce((a,b)=>a+b,0)/audioData.frequency.length;
-            ringRef.current.scale.setScalar(1 + avg * 0.6);
-            ringRef.current.rotation.z += 0.01;
-          }
-        });
-        const material = createVisualizerMaterial('#ffffff', { texture: null, colors: { primary: '#ffffff', secondary: '#ffffff', accent: '#ffffff', isNeon: false, isMetallic: false }, textureVersion: 0 });
-        
-        return (
-          <group>
-            {/* Safety net - visible, audio-reactive ring */}
-            <mesh ref={ringRef} position={[0, 0, 0]}>
-              <torusGeometry args={[3, 0.22, 32, 96]} />
-              <primitive object={material} />
-            </mesh>
-            
-            {/* Main generated component */}
-            <group position={[0, 0, 0]} scale={1}>
-              <ResultComponent 
-                audioData={audioData}
-                backgroundColor={backgroundColor}
-                zoomLevel={zoomLevel}
-                width={width}
-                height={height}
-              />
-            </group>
-          </group>
-        );
-      };
+      }>;
 
     } catch (error) {
       console.error('❌ DynamicVisualizer - Compilation FAILED:', error);
@@ -375,14 +332,10 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         }
       }
       
-      // Final fallback component - Large and visible
+      // Final fallback component - Audio reactive sphere
       console.log('🔄 DynamicVisualizer - Using final fallback component');
       return ({ audioData }: { 
         audioData: { frequency: number[]; amplitude: number; beatStrength: number; };
-        backgroundColor?: string;
-        zoomLevel?: number;
-        width?: number;
-        height?: number;
       }) => {
         const meshRef = React.useRef<THREE.Mesh>(null);
         
@@ -409,7 +362,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         return (
           <group>
             <mesh ref={meshRef}>
-              <sphereGeometry args={[4, 32, 32]} />
+              <sphereGeometry args={[5, 32, 32]} />
               <primitive object={material} />
             </mesh>
           </group>
