@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 import { useStudioStore } from "@/stores/studioStore";
 
 function ElectricField({ audioData }: any) {
@@ -12,46 +13,17 @@ function ElectricField({ audioData }: any) {
   const electronCloudRef = useRef<THREE.Points>(null);
   const conductorRingRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
+  const textureData = useVisualizerTexture();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const amplitude = safeAudioData.amplitude || 0;
   const beatStrength = safeAudioData.beatStrength || 0;
 
-  const extractedColors = (window as any).extractedColors;
-  
-  const texture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-  
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const secondaryColor = extractedColors?.secondary || '#ffffff';
-  const accentColor = extractedColors?.accent || '#ffffff';
-
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  const primaryColor = textureData?.colors?.primary || '#ffffff';
+  const secondaryColor = textureData?.colors?.secondary || '#ffffff';
+  const accentColor = textureData?.colors?.accent || '#ffffff';
+  const isNeon = textureData?.colors?.isNeon || false;
+  const isMetallic = textureData?.colors?.isMetallic || false;
 
   // Generate field line paths between charges
   const fieldLines = useMemo(() => {
@@ -117,99 +89,114 @@ function ElectricField({ audioData }: any) {
   useFrame((state) => {
     const time = state.clock.elapsedTime;
     const animSpeed = audioSensitivity.animationSpeed;
-    const beat = Math.max(beatStrength, bass);
     
-    const lerp = 0.08;
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
-    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
-    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
+    // Calculate frequency bands per-frame
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const rawBeat = Math.max(beatStrength, rawBass);
+    
+    const lerp = 0.12;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, rawBass, lerp);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, rawMids, lerp);
+    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, rawHighs, lerp);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, rawBeat, lerp);
     
     const isPeakMoment = smoothedBeat.current > 0.7;
     
     // Rotate entire field
     if (fieldGroupRef.current) {
-      fieldGroupRef.current.rotation.y = time * 0.1 * animSpeed;
-      fieldGroupRef.current.scale.setScalar(0.7 + smoothedBass.current * 0.5);
+      fieldGroupRef.current.rotation.y = time * 0.15 * animSpeed;
+      fieldGroupRef.current.scale.setScalar(0.7 + smoothedBass.current * 0.7 + (isPeakMoment ? 0.3 : 0));
     }
     
-    // Animate charges - VIOLENT vibration
+    // Animate charges - VIOLENT vibration (1.5x oscillation, 1.2x position)
     chargeRefs.current.forEach((charge, i) => {
       if (charge) {
         const pos = chargePositions[i];
         const chargeType = pos.charge;
         
-        // Violent oscillation
-        const oscillation = Math.sin(time * 2 * animSpeed + i) * smoothedMids.current * 0.8;
+        // Violent oscillation - 1.5x
+        const oscillation = Math.sin(time * 3 * animSpeed + i) * smoothedMids.current * 1.5;
         charge.position.x = pos.x + oscillation * chargeType;
-        charge.position.y = pos.y + Math.cos(time * 1.5 * animSpeed + i) * smoothedBass.current * 0.6;
+        charge.position.y = pos.y + Math.cos(time * 2 * animSpeed + i) * smoothedBass.current * 1.2;
         
         // Arc between charges
-        const arcMotion = Math.sin(time * 3 * animSpeed) * smoothedBeat.current * 0.3;
+        const arcMotion = Math.sin(time * 4 * animSpeed) * smoothedBeat.current * 0.5;
         charge.position.z = pos.z + arcMotion;
         
-        // Dramatic scale variation
+        // Dramatic scale variation - 1.5x beat, 1.0x freq
         const freqResponse = chargeType > 0 ? smoothedHighs.current : smoothedMids.current;
-        const pulseScale = 0.3 + smoothedBeat.current * 0.7 + freqResponse * 0.4 + (isPeakMoment ? 0.3 : 0);
+        const pulseScale = 0.2 + smoothedBeat.current * 1.5 + freqResponse * 1.0 + (isPeakMoment ? 0.5 : 0);
         charge.scale.setScalar(pulseScale);
         
         if (charge.material) {
           (charge.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-            0.2 + smoothedBeat.current * 1.8 + (isPeakMoment ? 0.8 : 0);
+            0.3 + smoothedBeat.current * 3.0 + (isPeakMoment ? 1.5 : 0);
         }
       }
     });
     
-    // Animate field lines - pulse with energy and thickness
+    // Animate field lines - pulse with energy and thickness (1.5x thickness)
     fieldLineRefs.current.forEach((line, i) => {
       if (line) {
         const bandIndex = Math.floor((i / fieldLineRefs.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
-        // Thickness pulse
-        const thicknessPulse = 1 + bandValue * 0.5 + (isPeakMoment ? 0.3 : 0);
+        // Thickness pulse - 1.5x
+        const thicknessPulse = 1 + bandValue * 1.5 + smoothedBeat.current * 0.8 + (isPeakMoment ? 0.5 : 0);
         line.scale.x = thicknessPulse;
         line.scale.z = thicknessPulse;
         
         // Wave propagation
-        const wave = Math.sin(time * 4 * animSpeed - i * 0.3) * 0.5 + 0.5;
+        const wave = Math.sin(time * 5 * animSpeed - i * 0.3) * 0.5 + 0.5;
         
         if (line.material) {
           (line.material as THREE.MeshBasicMaterial).opacity = 
-            0.2 + bandValue * 0.8 + wave * smoothedBeat.current * 0.4;
+            0.3 + bandValue * 1.0 + wave * smoothedBeat.current * 0.5;
         }
       }
     });
     
-    // Animate electron cloud - MORE chaotic swarming
+    // Animate electron cloud - MORE chaotic swarming (1.5x drift, 1.0x highs, 2.5x scale)
     if (electronCloudRef.current) {
-      const orbitSpeed = 1 + smoothedBass.current * 2;
-      electronCloudRef.current.rotation.x = time * 0.2 * animSpeed * orbitSpeed;
-      electronCloudRef.current.rotation.z = -time * 0.15 * animSpeed * orbitSpeed;
+      const orbitSpeed = 1 + smoothedBass.current * 3;
+      electronCloudRef.current.rotation.x = time * 0.3 * animSpeed * orbitSpeed;
+      electronCloudRef.current.rotation.z = -time * 0.2 * animSpeed * orbitSpeed;
       
       const positions = electronCloudRef.current.geometry.attributes.position.array as Float32Array;
       const originalPositions = electronPositions;
       
       for (let i = 0; i < positions.length; i += 3) {
-        const drift = Math.sin(time * 2 * animSpeed + i) * smoothedBeat.current * 0.6;
-        const chaos = Math.cos(time * 4 * animSpeed + i * 0.1) * smoothedBass.current * 0.4;
+        const drift = Math.sin(time * 3 * animSpeed + i) * smoothedBeat.current * 1.5;
+        const chaos = Math.cos(time * 5 * animSpeed + i * 0.1) * smoothedBass.current * 0.8;
         
         positions[i] = originalPositions[i] + drift + chaos;
-        positions[i + 1] = originalPositions[i + 1] + Math.sin(time * 3 * animSpeed + i) * smoothedHighs.current * 0.4;
+        positions[i + 1] = originalPositions[i + 1] + Math.sin(time * 4 * animSpeed + i) * smoothedHighs.current * 1.0;
         positions[i + 2] = originalPositions[i + 2] + drift - chaos;
       }
       
       electronCloudRef.current.geometry.attributes.position.needsUpdate = true;
-      electronCloudRef.current.scale.setScalar(1 + smoothedHighs.current * 1.0 + (isPeakMoment ? 0.5 : 0));
+      electronCloudRef.current.scale.setScalar(1 + smoothedHighs.current * 2.5 + smoothedBass.current * 1.0 + (isPeakMoment ? 0.8 : 0));
+      
+      // Update particle size
+      if (electronCloudRef.current.material) {
+        (electronCloudRef.current.material as THREE.PointsMaterial).size = 0.02 * (1 + smoothedHighs.current * 4);
+      }
     }
     
-    // Central conductor ring - intense glow
+    // Central conductor ring - intense glow (2.0x emissive, 0.5x scale)
     if (conductorRingRef.current) {
       if (conductorRingRef.current.material) {
         (conductorRingRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-          0.1 + smoothedBass.current * 0.8 + (isPeakMoment ? 0.5 : 0);
+          0.2 + smoothedBass.current * 2.0 + (isPeakMoment ? 1.0 : 0);
       }
-      conductorRingRef.current.scale.setScalar(1 + smoothedBass.current * 0.3);
+      conductorRingRef.current.scale.setScalar(1 + smoothedBass.current * 0.5 + smoothedMids.current * 0.3);
     }
   });
 
@@ -225,11 +212,11 @@ function ElectricField({ audioData }: any) {
           <sphereGeometry args={[0.3, 32, 32]} />
           <meshStandardMaterial
             color={i % 2 === 0 ? primaryColor : secondaryColor}
-            metalness={extractedColors?.isMetallic ? 0.9 : 0.8}
-            roughness={extractedColors?.isMetallic ? 0.1 : 0.2}
-            emissive={extractedColors?.isNeon ? (i % 2 === 0 ? primaryColor : secondaryColor) : accentColor}
-            emissiveIntensity={0.3}
-            map={texture || undefined}
+            metalness={isMetallic ? 0.9 : 0.8}
+            roughness={isMetallic ? 0.1 : 0.2}
+            emissive={isNeon ? (i % 2 === 0 ? primaryColor : secondaryColor) : accentColor}
+            emissiveIntensity={0.5}
+            map={textureData?.texture || undefined}
           />
         </mesh>
       ))}
@@ -239,11 +226,11 @@ function ElectricField({ audioData }: any) {
         const curve = new THREE.CatmullRomCurve3(points);
         return (
           <mesh key={i} ref={(el: any) => { if (el) fieldLineRefs.current[i] = el; }}>
-            <tubeGeometry args={[curve, 30, 0.01, 8, false]} />
+            <tubeGeometry args={[curve, 30, 0.015, 8, false]} />
             <meshBasicMaterial
               color={accentColor}
               transparent
-              opacity={0.4}
+              opacity={0.5}
             />
           </mesh>
         );
@@ -261,23 +248,23 @@ function ElectricField({ audioData }: any) {
         </bufferGeometry>
         <pointsMaterial
           color={accentColor}
-          size={0.015 * (1 + smoothedHighs.current * 2)}
+          size={0.02}
           transparent
-          opacity={0.5}
+          opacity={0.6}
           sizeAttenuation={true}
         />
       </points>
       
       {/* Central conductor ring */}
       <mesh ref={conductorRingRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.5, 0.05, 16, 100]} />
+        <torusGeometry args={[1.5, 0.06, 16, 100]} />
         <meshStandardMaterial
           color={primaryColor}
-          metalness={extractedColors?.isMetallic ? 0.98 : 0.95}
-          roughness={extractedColors?.isMetallic ? 0.02 : 0.05}
-          emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
-          emissiveIntensity={0.1}
-          map={texture || undefined}
+          metalness={isMetallic ? 0.98 : 0.95}
+          roughness={isMetallic ? 0.02 : 0.05}
+          emissive={isNeon ? primaryColor : secondaryColor}
+          emissiveIntensity={0.2}
+          map={textureData?.texture || undefined}
         />
       </mesh>
     </group>
@@ -299,7 +286,7 @@ export default function ElectricFieldVisualizer({
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, -5, -5]} intensity={0.5} />
-      <pointLight position={[0, 0, 0]} intensity={0.5} />
+      <pointLight position={[0, 0, 0]} intensity={0.6} />
       <Environment preset="city" />
       <ElectricField audioData={audioData} />
       <group>

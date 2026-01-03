@@ -280,18 +280,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_visualizer_quota: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      check_visualizer_quota: { Args: { _user_id: string }; Returns: boolean }
       get_daily_visualizer_count: {
         Args: { _user_id: string }
         Returns: number
       }
-      get_visualizer_count: {
-        Args: { _user_id: string }
-        Returns: number
-      }
+      get_visualizer_count: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
