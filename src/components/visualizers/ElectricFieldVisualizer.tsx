@@ -25,7 +25,7 @@ function ElectricField({ audioData }: any) {
   const isNeon = textureData?.colors?.isNeon || false;
   const isMetallic = textureData?.colors?.isMetallic || false;
 
-  // Generate field line paths between charges
+  // Generate field line paths between charges - smaller dimensions
   const fieldLines = useMemo(() => {
     const lines = [];
     const lineCount = 24;
@@ -37,14 +37,14 @@ function ElectricField({ audioData }: any) {
       
       for (let j = 0; j <= stepsPerLine; j++) {
         const t = j / stepsPerLine;
-        const radius = 0.5 + t * 1.5;
+        const radius = 0.3 + t * 1.0;
         
         const x = Math.cos(angle) * radius * (1 - t * 0.3);
         const y = Math.sin(angle) * radius * (1 - t * 0.3);
-        const z = (t - 0.5) * 3;
+        const z = (t - 0.5) * 2;
         
-        const waveX = x + Math.sin(t * Math.PI * 2) * 0.1;
-        const waveY = y + Math.cos(t * Math.PI * 2) * 0.1;
+        const waveX = x + Math.sin(t * Math.PI * 2) * 0.07;
+        const waveY = y + Math.cos(t * Math.PI * 2) * 0.07;
         
         points.push(new THREE.Vector3(waveX, z, waveY));
       }
@@ -55,13 +55,13 @@ function ElectricField({ audioData }: any) {
     return lines;
   }, []);
   
-  // Electron cloud particles
+  // Electron cloud particles - smaller radius
   const electronPositions = useMemo(() => {
     const positions = new Float32Array(500 * 3);
     
     for (let i = 0; i < 500; i++) {
-      const majorRadius = 1.5;
-      const minorRadius = 0.5;
+      const majorRadius = 1.0;
+      const minorRadius = 0.35;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.random() * Math.PI * 2;
       
@@ -73,12 +73,12 @@ function ElectricField({ audioData }: any) {
     return positions;
   }, []);
   
-  // Charge positions
+  // Charge positions - smaller distances
   const chargePositions = [
-    { x: 0, y: 2, z: 0, charge: 1 },
-    { x: 0, y: -2, z: 0, charge: -1 },
-    { x: 1.5, y: 0, z: 0, charge: 1 },
-    { x: -1.5, y: 0, z: 0, charge: -1 },
+    { x: 0, y: 1.3, z: 0, charge: 1 },
+    { x: 0, y: -1.3, z: 0, charge: -1 },
+    { x: 1.0, y: 0, z: 0, charge: 1 },
+    { x: -1.0, y: 0, z: 0, charge: -1 },
   ];
 
   const smoothedBass = useRef(0);
@@ -202,14 +202,14 @@ function ElectricField({ audioData }: any) {
 
   return (
     <group ref={fieldGroupRef}>
-      {/* Electric charges */}
+      {/* Electric charges - smaller */}
       {chargePositions.map((pos, i) => (
         <mesh
           key={i}
           ref={el => { if (el) chargeRefs.current[i] = el; }}
           position={[pos.x, pos.y, pos.z]}
         >
-          <sphereGeometry args={[0.3, 32, 32]} />
+          <sphereGeometry args={[0.2, 32, 32]} />
           <meshStandardMaterial
             color={i % 2 === 0 ? primaryColor : secondaryColor}
             metalness={isMetallic ? 0.9 : 0.8}
@@ -221,16 +221,20 @@ function ElectricField({ audioData }: any) {
         </mesh>
       ))}
       
-      {/* Field lines */}
+      {/* Field lines - with texture overlay */}
       {fieldLines.map((points, i) => {
         const curve = new THREE.CatmullRomCurve3(points);
         return (
           <mesh key={i} ref={(el: any) => { if (el) fieldLineRefs.current[i] = el; }}>
-            <tubeGeometry args={[curve, 30, 0.015, 8, false]} />
-            <meshBasicMaterial
+            <tubeGeometry args={[curve, 30, 0.01, 8, false]} />
+            <meshStandardMaterial
               color={accentColor}
               transparent
               opacity={0.5}
+              emissive={accentColor}
+              emissiveIntensity={0.3}
+              map={textureData?.texture || undefined}
+              emissiveMap={textureData?.texture || undefined}
             />
           </mesh>
         );
@@ -248,16 +252,17 @@ function ElectricField({ audioData }: any) {
         </bufferGeometry>
         <pointsMaterial
           color={accentColor}
-          size={0.02}
+          size={0.015}
           transparent
           opacity={0.6}
           sizeAttenuation={true}
+          map={textureData?.texture || undefined}
         />
       </points>
       
-      {/* Central conductor ring */}
+      {/* Central conductor ring - smaller */}
       <mesh ref={conductorRingRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.5, 0.06, 16, 100]} />
+        <torusGeometry args={[1.0, 0.04, 16, 100]} />
         <meshStandardMaterial
           color={primaryColor}
           metalness={isMetallic ? 0.98 : 0.95}

@@ -133,13 +133,13 @@ function FluidParticles({ audioData, textureData, smoothedValues }) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
-  // Create particle positions
+  // Create particle positions - smaller radius
   const particles = useMemo(() => {
     const particleArray = [];
     for (let i = 0; i < 50; i++) {
       const theta = (i / 50) * Math.PI * 2;
       const phi = Math.acos(1 - 2 * Math.random());
-      const radius = 2 + Math.random() * 4;
+      const radius = 1.0 + Math.random() * 2.0;
       
       const x = radius * Math.sin(phi) * Math.cos(theta);
       const y = radius * Math.sin(phi) * Math.sin(theta);
@@ -147,7 +147,7 @@ function FluidParticles({ audioData, textureData, smoothedValues }) {
       
       particleArray.push({
         position: [x, y, z],
-        baseScale: 0.05 + Math.random() * 0.15,
+        baseScale: 0.03 + Math.random() * 0.08,
         index: i,
         freqIndex: Math.floor((i / 50) * 255)
       });
@@ -237,14 +237,14 @@ export default function FluidBloomVisualizer({
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
   
-  // Create main fluid blobs (restored to normal size)
+  // Create main fluid blobs - smaller base sizes
   const blobs = useMemo(() => {
     return [
-      { position: [0, 0, 0], scale: [1.5, 1.8, 1.2], index: 0 },
-      { position: [-1.2, 0.8, -0.5], scale: [1.0, 1.2, 0.9], index: 1 },
-      { position: [1.5, -0.6, 0.3], scale: [0.8, 1.1, 1.0], index: 2 },
-      { position: [0.2, 1.4, -0.8], scale: [0.9, 0.7, 1.3], index: 3 },
-      { position: [-0.8, -1.1, 0.6], scale: [1.1, 0.9, 0.8], index: 4 },
+      { position: [0, 0, 0], scale: [0.8, 1.0, 0.7], index: 0 },
+      { position: [-0.7, 0.5, -0.3], scale: [0.5, 0.7, 0.5], index: 1 },
+      { position: [0.8, -0.4, 0.2], scale: [0.45, 0.6, 0.55], index: 2 },
+      { position: [0.1, 0.8, -0.5], scale: [0.5, 0.4, 0.7], index: 3 },
+      { position: [-0.5, -0.6, 0.4], scale: [0.6, 0.5, 0.45], index: 4 },
     ];
   }, []);
 
