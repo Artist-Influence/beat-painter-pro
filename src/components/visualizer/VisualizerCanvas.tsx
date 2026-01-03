@@ -75,14 +75,20 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
       sourceMap.set(audioElement, source);
     }
 
-    // Create an analyser for this session and wire the graph: source -> analyser -> destination
+    // Create an analyser for this session and wire the graph: source -> analyser -> gainNode -> destination
     const analyserNode = ctx.createAnalyser();
     analyserNode.fftSize = 2048;
     analyserNode.smoothingTimeConstant = 0.8;
 
-    // Connect our analyser; we only disconnect this analyser in cleanup
+    // Create a GainNode for volume control (after analyser so visualizer stays reactive when muted)
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = W.__GAIN_VALUE__ ?? 0.75; // Restore previous volume or default
+    W.__GAIN_NODE__ = gainNode;
+
+    // Connect our analyser and gain node; we only disconnect these in cleanup
     source.connect(analyserNode);
-    analyserNode.connect(ctx.destination);
+    analyserNode.connect(gainNode);
+    gainNode.connect(ctx.destination);
     setAnalyser(analyserNode);
 
     const onPlay = () => setIsPlaying(true);
