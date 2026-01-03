@@ -184,20 +184,20 @@ export function CustomVisualizerGenerator({
         {/* Action Buttons */}
         <div className="flex justify-between items-center pt-4 border-t border-white/20">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={onClose}
             disabled={isSaving}
-            className="border-white/20 text-white hover:bg-white/10"
+            className="bg-white/10 border border-white/20 text-white hover:bg-white/20"
           >
             Cancel
           </Button>
           
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={handleGenerate}
               disabled={isSaving}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="bg-white/10 border border-white/20 text-white hover:bg-white/20"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Another
