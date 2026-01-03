@@ -41,7 +41,7 @@ const EFFECT_LABELS: Record<BackgroundEffect, string> = {
   none: 'None',
   stars: 'Stars',
   movingLines: 'Moving Lines',
-  grid: 'Grid',
+  energyField: 'Energy Field',
   particles: 'Particles',
   lightRays: 'Light Rays',
   aurora: 'Aurora',

@@ -7,9 +7,9 @@ export function seededRandom(seed: number) {
   };
 }
 
-export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix';
+export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix' | 'membrane' | 'pulsar' | 'vortexCore' | 'cosmicEye';
 export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 'smooth' | 'breathing' | 'explosive';
-export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'grid' | 'particles' | 'lightRays' | 'aurora';
+export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'energyField' | 'particles' | 'lightRays' | 'aurora';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
 
 export interface RandomVisualizerParams {
@@ -30,9 +30,9 @@ export interface RandomVisualizerParams {
   rotationOffset: number;
 }
 
-export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix'];
+export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
 export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
-export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'grid', 'particles', 'lightRays', 'aurora'];
+export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'energyField', 'particles', 'lightRays', 'aurora'];
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
 
 export function generateRandomSeed(): number {
@@ -87,6 +87,10 @@ const SHAPE_NAMES: Record<BaseShape, string[]> = {
   helix: ['DNA', 'Double-Helix', 'Strand', 'Chain'],
   nebula: ['Nebula', 'Cosmos', 'Galaxy', 'Stardust'],
   matrix: ['Matrix', 'Rain', 'Cascade', 'Digital'],
+  membrane: ['Membrane', 'Blob', 'Organism', 'Cell'],
+  pulsar: ['Pulsar', 'Star', 'Nova', 'Core'],
+  vortexCore: ['Vortex', 'Warp', 'Twist', 'Knot'],
+  cosmicEye: ['Eye', 'Oracle', 'Iris', 'Watcher'],
 };
 
 const ANIMATION_ADJECTIVES: Record<AnimationStyle, string[]> = {
@@ -127,6 +131,10 @@ export function paramsToEmoji(params: RandomVisualizerParams): string {
     helix: ['🧬', '🔗', '⛓️', '🧪'],
     nebula: ['🌌', '☁️', '💜', '🌠'],
     matrix: ['🔢', '💚', '📟', '🖥️'],
+    membrane: ['🫧', '🧫', '🦠', '💧'],
+    pulsar: ['💫', '⭐', '🌟', '☀️'],
+    vortexCore: ['🌀', '🌪️', '♾️', '🔄'],
+    cosmicEye: ['👁️', '🔮', '👀', '🌌'],
   };
   
   const random = seededRandom(params.seed + 777);
