@@ -36,12 +36,12 @@ function TeslaCoil({ audioData }: any) {
       
       for (let j = 0; j <= 20; j++) {
         const t = j / 20;
-        const radius = 0.5 + t * 2;
-        const jitter = Math.random() * 0.3;
+        const radius = 0.3 + t * 1.2;
+        const jitter = Math.random() * 0.2;
         
         points.push(new THREE.Vector3(
           Math.cos(angle) * (radius + jitter),
-          -1.5 + t * 3,
+          -1.0 + t * 2,
           Math.sin(angle) * (radius + jitter)
         ));
       }
@@ -53,16 +53,16 @@ function TeslaCoil({ audioData }: any) {
     return paths;
   }, []);
 
-  // Particle positions for spark effects
+  // Particle positions for spark effects - smaller radius
   const particles = useMemo(() => {
     const positions = new Float32Array(300 * 3);
     for (let i = 0; i < 300; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.random() * Math.PI;
-      const r = 0.5 + Math.random() * 2;
+      const r = 0.3 + Math.random() * 1.2;
       
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.cos(phi) - 0.5;
+      positions[i * 3 + 1] = r * Math.cos(phi) - 0.3;
       positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
     }
     return positions;
@@ -182,8 +182,8 @@ function TeslaCoil({ audioData }: any) {
   return (
     <group ref={groupRef}>
       {/* Central coil structure */}
-      <mesh ref={coilBaseRef} position={[0, -1.5, 0]}>
-        <cylinderGeometry args={[0.5, 0.8, 1, 32]} />
+      <mesh ref={coilBaseRef} position={[0, -1.0, 0]}>
+        <cylinderGeometry args={[0.3, 0.5, 0.7, 32]} />
         <meshStandardMaterial 
           color={primaryColor}
           metalness={isMetallic ? 0.95 : 0.9}
@@ -195,8 +195,8 @@ function TeslaCoil({ audioData }: any) {
       </mesh>
       
       {/* Top terminal */}
-      <mesh ref={topTerminalRef} position={[0, 1.5, 0]}>
-        <sphereGeometry args={[0.4, 32, 32]} />
+      <mesh ref={topTerminalRef} position={[0, 1.0, 0]}>
+        <sphereGeometry args={[0.25, 32, 32]} />
         <meshStandardMaterial 
           color={primaryColor}
           metalness={isMetallic ? 0.98 : 0.95}
@@ -207,16 +207,20 @@ function TeslaCoil({ audioData }: any) {
         />
       </mesh>
       
-      {/* Electric arcs */}
+      {/* Electric arcs - with texture overlay support */}
       {arcPaths.map((points, i) => {
         const curve = new THREE.CatmullRomCurve3(points);
         return (
           <mesh key={i} ref={(el: any) => { if (el) arcRefs.current[i] = el; }}>
-            <tubeGeometry args={[curve, 50, 0.02, 8, false]} />
-            <meshBasicMaterial 
+            <tubeGeometry args={[curve, 50, 0.015, 8, false]} />
+            <meshStandardMaterial 
               color={accentColor}
               transparent 
               opacity={0.7}
+              emissive={accentColor}
+              emissiveIntensity={0.5}
+              map={textureData?.texture || undefined}
+              emissiveMap={textureData?.texture || undefined}
             />
           </mesh>
         );
@@ -234,10 +238,11 @@ function TeslaCoil({ audioData }: any) {
         </bufferGeometry>
         <pointsMaterial
           color={accentColor}
-          size={0.03}
+          size={0.02}
           transparent
           opacity={0.9}
           sizeAttenuation={true}
+          map={textureData?.texture || undefined}
         />
       </points>
     </group>

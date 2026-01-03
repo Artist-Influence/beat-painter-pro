@@ -43,13 +43,13 @@ function PlasmaOrb({ audioData }: any) {
     return streams;
   }, []);
   
-  // Particle field for plasma effect
+  // Particle field for plasma effect - smaller radius
   const particleField = useMemo(() => {
     const positions = new Float32Array(1000 * 3);
     const colors = new Float32Array(1000 * 3);
     
     for (let i = 0; i < 1000; i++) {
-      const radius = 0.5 + Math.random() * 1.5;
+      const radius = 0.3 + Math.random() * 0.9;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       
@@ -188,9 +188,9 @@ function PlasmaOrb({ audioData }: any) {
 
   return (
     <group>
-      {/* Outer glass sphere */}
+      {/* Outer glass sphere - smaller */}
       <mesh ref={orbRef}>
-        <sphereGeometry args={[2, 64, 64]} />
+        <sphereGeometry args={[1.2, 64, 64]} />
         <meshStandardMaterial
           color={primaryColor}
           transparent
@@ -203,9 +203,9 @@ function PlasmaOrb({ audioData }: any) {
         />
       </mesh>
       
-      {/* Inner energy core */}
+      {/* Inner energy core - smaller */}
       <mesh ref={innerCoreRef}>
-        <sphereGeometry args={[0.3, 32, 32]} />
+        <sphereGeometry args={[0.2, 32, 32]} />
         <meshStandardMaterial
           color={secondaryColor}
           emissive={isNeon ? secondaryColor : accentColor}
@@ -216,20 +216,22 @@ function PlasmaOrb({ audioData }: any) {
         />
       </mesh>
       
-      {/* Plasma streams */}
+      {/* Plasma streams - smaller with texture overlay */}
       {streamPositions.map((pos, i) => (
         <mesh
           key={i}
           ref={el => { if (el) plasmaStreamsRef.current[i] = el; }}
           position={[pos.x, pos.y, pos.z]}
         >
-          <coneGeometry args={[0.06, 1.8, 8]} />
+          <coneGeometry args={[0.04, 1.0, 8]} />
           <meshStandardMaterial
             color={accentColor}
             transparent
             opacity={0.6}
             emissive={isNeon ? accentColor : primaryColor}
             emissiveIntensity={0.5}
+            map={textureData?.texture || undefined}
+            emissiveMap={textureData?.texture || undefined}
           />
         </mesh>
       ))}

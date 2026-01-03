@@ -34,13 +34,13 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   StroboscopicTunnelVisualizer: 0.3,
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
-  DanasEyeVisualizer: 0.25,
-  FluidBloomVisualizer: 0.3,
+  DanasEyeVisualizer: 0.12,
+  FluidBloomVisualizer: 0.15,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
-  TeslaCoilVisualizer: 0.35,
-  PlasmaOrbVisualizer: 0.3,
-  ElectricFieldVisualizer: 0.35,
+  TeslaCoilVisualizer: 0.18,
+  PlasmaOrbVisualizer: 0.15,
+  ElectricFieldVisualizer: 0.18,
 };
 
 export const visualizerRegistry = {

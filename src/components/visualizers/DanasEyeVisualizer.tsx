@@ -114,7 +114,7 @@ function LightPoint({ position, pointIndex, totalPoints, textureData, rayIndex, 
 
   return (
     <mesh ref={meshRef} position={position} material={material}>
-      <sphereGeometry args={[1, 8, 8]} />
+      <sphereGeometry args={[0.4, 8, 8]} />
     </mesh>
   );
 }
@@ -173,7 +173,7 @@ function CenterCore({ audioData, textureData, smoothedValues }) {
     <group>
       {/* Outer glow */}
       <mesh ref={glowRef}>
-        <sphereGeometry args={[1.2, 16, 16]} />
+        <sphereGeometry args={[0.6, 16, 16]} />
         <meshBasicMaterial 
           color={accentColor}
           transparent 
@@ -183,7 +183,7 @@ function CenterCore({ audioData, textureData, smoothedValues }) {
       
       {/* Core */}
       <mesh ref={meshRef} material={material}>
-        <sphereGeometry args={[1, 16, 16]} />
+        <sphereGeometry args={[0.5, 16, 16]} />
       </mesh>
     </group>
   );
@@ -275,7 +275,7 @@ export default function DanasEyeVisualizer({
           <LightRay
             key={ray.index}
             angle={ray.angle}
-            radius={8}
+            radius={4}
             index={ray.index}
             audioData={audioData}
             textureData={textureData}
