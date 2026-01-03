@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
 import { useStudioStore } from "@/stores/studioStore";
 
 function PlasmaOrb({ audioData }: any) {
@@ -11,46 +12,17 @@ function PlasmaOrb({ audioData }: any) {
   const innerCoreRef = useRef<THREE.Mesh>(null);
   const fieldLinesRef = useRef<THREE.Points>(null);
   const { audioSensitivity } = useStudioStore();
+  const textureData = useVisualizerTexture();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
-  const amplitude = safeAudioData.amplitude || 0;
   const beatStrength = safeAudioData.beatStrength || 0;
 
-  const extractedColors = (window as any).extractedColors;
-  
-  const texture = useMemo(() => {
-    const at = (window as any).appliedTexture;
-    if (!at) return null;
-    if (typeof at === "string") {
-      const tex = new THREE.TextureLoader().load(at);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-    return at as THREE.Texture;
-  }, []);
-  
-  const primaryColor = extractedColors?.primary || '#ffffff';
-  const secondaryColor = extractedColors?.secondary || '#ffffff';
-  const accentColor = extractedColors?.accent || '#ffffff';
-
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  const primaryColor = textureData?.colors?.primary || '#ffffff';
+  const secondaryColor = textureData?.colors?.secondary || '#ffffff';
+  const accentColor = textureData?.colors?.accent || '#ffffff';
+  const isNeon = textureData?.colors?.isNeon || false;
+  const isMetallic = textureData?.colors?.isMetallic || false;
 
   // Generate plasma stream positions
   const streamPositions = useMemo(() => {
@@ -102,81 +74,92 @@ function PlasmaOrb({ audioData }: any) {
   useFrame((state) => {
     const time = state.clock.elapsedTime;
     const animSpeed = audioSensitivity.animationSpeed;
-    const beat = Math.max(beatStrength, bass);
     
-    const lerp = 0.08;
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
-    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
-    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
+    // Calculate frequency bands per-frame
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const rawBeat = Math.max(beatStrength, rawBass);
+    
+    const lerp = 0.12;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, rawBass, lerp);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, rawMids, lerp);
+    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, rawHighs, lerp);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, rawBeat, lerp);
     
     const isPeakMoment = smoothedBeat.current > 0.7;
     
     // Animate outer orb - significant breathing
     if (orbRef.current) {
-      orbRef.current.rotation.x = time * 0.1 * animSpeed;
-      orbRef.current.rotation.y = time * 0.15 * animSpeed;
+      orbRef.current.rotation.x = time * 0.15 * animSpeed;
+      orbRef.current.rotation.y = time * 0.2 * animSpeed;
       
-      const scale = 1 + smoothedBass.current * 0.8 + (isPeakMoment ? 0.3 : 0);
+      const scale = 1 + smoothedBass.current * 1.0 + (isPeakMoment ? 0.5 : 0);
       orbRef.current.scale.setScalar(scale);
       
       if (orbRef.current.material) {
         const mat = orbRef.current.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = 0.1 + smoothedMids.current * 0.6;
-        mat.opacity = 0.15 + Math.sin(time * 5) * smoothedBeat.current * 0.3;
+        mat.emissiveIntensity = 0.2 + smoothedMids.current * 1.0;
+        mat.opacity = 0.2 + Math.sin(time * 6) * smoothedBeat.current * 0.4;
       }
     }
     
     // Animate inner core - INTENSE pulsing
     if (innerCoreRef.current) {
-      const rotSpeed = 1 + smoothedBass.current * 3;
-      innerCoreRef.current.rotation.x = -time * 0.3 * animSpeed * rotSpeed;
-      innerCoreRef.current.rotation.y = -time * 0.2 * animSpeed * rotSpeed;
+      const rotSpeed = 1 + smoothedBass.current * 5;
+      innerCoreRef.current.rotation.x = -time * 0.4 * animSpeed * rotSpeed;
+      innerCoreRef.current.rotation.y = -time * 0.3 * animSpeed * rotSpeed;
       
-      const coreScale = 0.3 + smoothedBeat.current * 0.9 + (isPeakMoment ? 0.4 : 0);
+      const coreScale = 0.2 + smoothedBeat.current * 1.5 + smoothedHighs.current * 0.8 + (isPeakMoment ? 0.6 : 0);
       innerCoreRef.current.scale.setScalar(coreScale);
       
       if (innerCoreRef.current.material) {
         (innerCoreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-          0.3 + smoothedBeat.current * 2.5 + (isPeakMoment ? 1.0 : 0);
+          0.5 + smoothedBeat.current * 5.0 + (isPeakMoment ? 2.0 : 0);
       }
     }
     
-    // Animate plasma streams - LANCE outward dramatically
+    // Animate plasma streams - LANCE outward dramatically (6x multiplier)
     plasmaStreamsRef.current.forEach((stream, i) => {
       if (stream) {
         const offset = i * 0.3;
-        const wave = Math.sin(time * 3 * animSpeed + offset) * 0.5 + 0.5;
+        const wave = Math.sin(time * 4 * animSpeed + offset) * 0.5 + 0.5;
         
         const bandIndex = Math.floor((i / plasmaStreamsRef.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
-        // Dramatic extension on frequency bands
-        const baseScale = 0.3 + bandValue * 4.0 + (isPeakMoment ? 1.5 : 0);
+        // Dramatic extension - 6x multiplier
+        const baseScale = 0.2 + bandValue * 6.0 + smoothedBass.current * 2.0 + (isPeakMoment ? 2.0 : 0);
         stream.scale.x = baseScale;
         stream.scale.z = baseScale;
-        stream.scale.y = baseScale * (1 + bandValue * 2); // Length extends more
+        stream.scale.y = baseScale * (1 + bandValue * 3); // Length extends more
         
-        // Whipping motion at tips
-        const whipAngle = Math.sin(time * 4 * animSpeed + offset) * bandValue * 0.4;
+        // Whipping motion at tips - stronger
+        const whipAngle = Math.sin(time * 5 * animSpeed + offset) * bandValue * 0.8;
         stream.rotation.x = whipAngle;
+        stream.rotation.z = Math.cos(time * 4 * animSpeed + offset) * bandValue * 0.4;
         
         if (stream.material) {
-          (stream.material as THREE.MeshStandardMaterial).opacity = 0.4 + wave * 0.3 + bandValue * 0.4;
-          (stream.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3 + bandValue * 1.2;
+          (stream.material as THREE.MeshStandardMaterial).opacity = 0.5 + wave * 0.4 + bandValue * 0.5;
+          (stream.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + bandValue * 2.0;
         }
         
         const pos = streamPositions[i];
-        const positionMultiplier = 1 + Math.sin(time * 2 * animSpeed + offset) * smoothedBass.current * 0.5;
+        const positionMultiplier = 1 + Math.sin(time * 3 * animSpeed + offset) * smoothedBass.current * 0.8;
         stream.position.x = pos.x * positionMultiplier;
         stream.position.y = pos.y * positionMultiplier;
         stream.position.z = pos.z * positionMultiplier;
       }
     });
     
-    // Animate particle field - EXPLODE outward chaotically
+    // Animate particle field - EXPLODE outward chaotically (3x distortion)
     if (fieldLinesRef.current) {
-      fieldLinesRef.current.rotation.y = time * 0.05 * animSpeed * (1 + smoothedBass.current * 2);
+      fieldLinesRef.current.rotation.y = time * 0.08 * animSpeed * (1 + smoothedBass.current * 3);
       
       const positions = fieldLinesRef.current.geometry.attributes.position.array as Float32Array;
       const originalPositions = particleField.positions;
@@ -185,16 +168,21 @@ function PlasmaOrb({ audioData }: any) {
         const audioIndex = Math.floor((i / 3 / 1000) * frequency.length);
         const audioValue = (frequency[audioIndex] || 0) / 255;
         
-        // Chaotic explosion on bass
-        const distortion = 1 + audioValue * 1.5 + smoothedBass.current * 0.8;
-        const chaos = Math.sin(time * 5 * animSpeed + i) * smoothedBeat.current * 0.3;
+        // Chaotic explosion - 3x distortion
+        const distortion = 1 + audioValue * 3.0 + smoothedBass.current * 1.5;
+        const chaos = Math.sin(time * 6 * animSpeed + i) * smoothedBeat.current * 0.6;
         
         positions[i] = originalPositions[i] * distortion + chaos;
-        positions[i + 1] = originalPositions[i + 1] * distortion + chaos * 0.5;
+        positions[i + 1] = originalPositions[i + 1] * distortion + chaos * 0.7;
         positions[i + 2] = originalPositions[i + 2] * distortion + chaos;
       }
       
       fieldLinesRef.current.geometry.attributes.position.needsUpdate = true;
+      
+      // Update particle size
+      if (fieldLinesRef.current.material) {
+        (fieldLinesRef.current.material as THREE.PointsMaterial).size = 0.015 * (1 + smoothedBeat.current * 4);
+      }
     }
   });
 
@@ -206,12 +194,12 @@ function PlasmaOrb({ audioData }: any) {
         <meshStandardMaterial
           color={primaryColor}
           transparent
-          opacity={0.15}
-          metalness={extractedColors?.isMetallic ? 0.95 : 0.9}
-          roughness={extractedColors?.isMetallic ? 0.05 : 0.1}
-          emissive={extractedColors?.isNeon ? primaryColor : secondaryColor}
-          emissiveIntensity={0.1}
-          map={texture || undefined}
+          opacity={0.2}
+          metalness={isMetallic ? 0.95 : 0.9}
+          roughness={isMetallic ? 0.05 : 0.1}
+          emissive={isNeon ? primaryColor : secondaryColor}
+          emissiveIntensity={0.2}
+          map={textureData?.texture || undefined}
         />
       </mesh>
       
@@ -220,11 +208,11 @@ function PlasmaOrb({ audioData }: any) {
         <sphereGeometry args={[0.3, 32, 32]} />
         <meshStandardMaterial
           color={secondaryColor}
-          emissive={extractedColors?.isNeon ? secondaryColor : accentColor}
-          emissiveIntensity={0.5}
-          metalness={extractedColors?.isMetallic ? 1 : 0.9}
+          emissive={isNeon ? secondaryColor : accentColor}
+          emissiveIntensity={0.8}
+          metalness={isMetallic ? 1 : 0.9}
           roughness={0}
-          map={texture || undefined}
+          map={textureData?.texture || undefined}
         />
       </mesh>
       
@@ -235,13 +223,13 @@ function PlasmaOrb({ audioData }: any) {
           ref={el => { if (el) plasmaStreamsRef.current[i] = el; }}
           position={[pos.x, pos.y, pos.z]}
         >
-          <coneGeometry args={[0.05, 1.5, 8]} />
+          <coneGeometry args={[0.06, 1.8, 8]} />
           <meshStandardMaterial
             color={accentColor}
             transparent
-            opacity={0.5}
-            emissive={extractedColors?.isNeon ? accentColor : primaryColor}
-            emissiveIntensity={0.3}
+            opacity={0.6}
+            emissive={isNeon ? accentColor : primaryColor}
+            emissiveIntensity={0.5}
           />
         </mesh>
       ))}
@@ -263,9 +251,9 @@ function PlasmaOrb({ audioData }: any) {
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.01 * (1 + smoothedBeat.current * 2)}
+          size={0.015}
           transparent
-          opacity={0.6}
+          opacity={0.7}
           vertexColors
           sizeAttenuation={true}
         />
