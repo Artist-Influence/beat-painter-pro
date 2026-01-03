@@ -1,4 +1,4 @@
-import React, { useState, useCallback, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,14 +53,23 @@ export function CustomVisualizerGenerator({
 
   // Generate new random visualizer
   const handleGenerate = useCallback(() => {
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'intensity'>> = {};
+    if (shapeFilter !== 'any') preferences.baseShape = shapeFilter as RandomVisualizerParams['baseShape'];
+    if (animationFilter !== 'any') preferences.animationStyle = animationFilter as RandomVisualizerParams['animationStyle'];
+    if (intensityFilter !== 'any') preferences.intensity = intensityFilter as RandomVisualizerParams['intensity'];
+    
     const newSeed = generateRandomSeed();
-    const preferences: Partial<RandomVisualizerParams> = {};
-    
-    if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
-    if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
-    if (intensityFilter !== 'any') preferences.intensity = intensityFilter;
-    
     setCurrentParams(generateRandomParams(newSeed, preferences));
+  }, [shapeFilter, animationFilter, intensityFilter]);
+
+  // Update preview in real-time when filters change
+  useEffect(() => {
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'intensity'>> = {};
+    if (shapeFilter !== 'any') preferences.baseShape = shapeFilter as RandomVisualizerParams['baseShape'];
+    if (animationFilter !== 'any') preferences.animationStyle = animationFilter as RandomVisualizerParams['animationStyle'];
+    if (intensityFilter !== 'any') preferences.intensity = intensityFilter as RandomVisualizerParams['intensity'];
+    
+    setCurrentParams(prev => generateRandomParams(prev.seed, preferences));
   }, [shapeFilter, animationFilter, intensityFilter]);
 
   // Save current visualizer

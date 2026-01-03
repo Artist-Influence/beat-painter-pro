@@ -18,19 +18,35 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
   
-  const { Visualizer, scale, initialCode } = useMemo(() => {
+  const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
     if (isCustomVisualizer(selected)) {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
+      
+      // Try to parse jsx_code as JSON config (new system)
+      let parsedConfig = null;
+      if (customViz?.jsx_code) {
+        try {
+          const parsed = JSON.parse(customViz.jsx_code);
+          if (parsed.seed !== undefined && parsed.baseShape) {
+            parsedConfig = parsed;
+          }
+        } catch {
+          // Not JSON, treat as legacy code
+        }
+      }
+      
       return {
         Visualizer: CustomVisualizerLoader,
         scale: customViz?.scale_factor || 0.25,
-        initialCode: customViz?.jsx_code
+        initialCode: parsedConfig ? undefined : customViz?.jsx_code,
+        initialConfig: parsedConfig
       };
     } else {
       return {
         Visualizer: visualizerRegistry[selected as keyof typeof visualizerRegistry],
         scale: VISUALIZER_SCALES[selected] ?? 0.25,
-        initialCode: undefined
+        initialCode: undefined,
+        initialConfig: undefined
       };
     }
   }, [selected, customVisualizers]);
@@ -163,7 +179,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
                   zoomLevel={zoomLevel}
                   {...(isCustomVisualizer(selected) ? { 
                     visualizerKey: selected,
-                    initialCode: initialCode
+                    initialCode: initialCode,
+                    initialConfig: initialConfig
                   } : {})}
                 />
               )}
