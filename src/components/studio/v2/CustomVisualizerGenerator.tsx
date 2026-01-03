@@ -14,11 +14,9 @@ import {
   BASE_SHAPES,
   ANIMATION_STYLES,
   BACKGROUND_EFFECTS,
-  COLOR_SCHEMES,
   type BaseShape,
   type AnimationStyle,
   type BackgroundEffect,
-  type ColorScheme,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
@@ -37,17 +35,6 @@ const PREVIEW_AUDIO = {
   beatStrength: 0.3,
 };
 
-// Color scheme preview swatches
-const COLOR_PREVIEWS: Record<ColorScheme, string[]> = {
-  mono: ['#fff', '#999', '#666'],
-  neon: ['#f0f', '#0ff', '#ff0'],
-  pastel: ['#ffb5e8', '#b5fffc', '#ffffd1'],
-  fire: ['#f00', '#f60', '#fc0'],
-  ice: ['#0ff', '#08f', '#fff'],
-  rainbow: ['#f00', '#ff0', '#0f0', '#00f'],
-  sunset: ['#ff6b6b', '#ffa500', '#ffd93d'],
-  ocean: ['#006994', '#40e0d0', '#00ced1'],
-};
 
 // Background effect labels
 const EFFECT_LABELS: Record<BackgroundEffect, string> = {
@@ -77,44 +64,38 @@ export function CustomVisualizerGenerator({
   const [animationFilter, setAnimationFilter] = useState<AnimationStyle | 'any'>('any');
   const [elementCount, setElementCount] = useState<number>(20);
   const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect | 'any'>('any');
-  const [colorFilter, setColorFilter] = useState<ColorScheme | 'any'>('any');
   const [threadingEnabled, setThreadingEnabled] = useState(false);
 
   // Generate new random visualizer
   const handleGenerate = useCallback(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>> = {
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>> = {
       elementCount,
+      connectionLines: threadingEnabled,
     };
     if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
     if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
     if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
-    if (colorFilter !== 'any') preferences.colorScheme = colorFilter;
     
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed, preferences);
-    // Override threading if manually set
-    if (threadingEnabled) {
-      newParams.connectionLines = true;
-    }
     setCurrentParams(newParams);
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, colorFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
 
   // Update preview in real-time when filters change
   useEffect(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>> = {
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>> = {
       elementCount,
+      connectionLines: threadingEnabled,
     };
     if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
     if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
     if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
-    if (colorFilter !== 'any') preferences.colorScheme = colorFilter;
     
     setCurrentParams(prev => {
       const updated = generateRandomParams(prev.seed, preferences);
-      if (threadingEnabled) updated.connectionLines = true;
       return updated;
     });
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, colorFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -171,8 +152,8 @@ export function CustomVisualizerGenerator({
           <div className="space-y-3">
             <p className="text-xs text-white/50">Customize your visualizer</p>
             
-            {/* Row 1: Shape, Animation, Color Scheme */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Row 1: Shape and Animation */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-white/70">Shape</label>
                 <select 
@@ -200,22 +181,6 @@ export function CustomVisualizerGenerator({
                   {ANIMATION_STYLES.map(style => (
                     <option key={style} value={style}>
                       {style.charAt(0).toUpperCase() + style.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Color Scheme</label>
-                <select 
-                  value={colorFilter}
-                  onChange={(e) => setColorFilter(e.target.value as ColorScheme | 'any')}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  <option value="any">Random</option>
-                  {COLOR_SCHEMES.map(scheme => (
-                    <option key={scheme} value={scheme}>
-                      {scheme.charAt(0).toUpperCase() + scheme.slice(1)}
                     </option>
                   ))}
                 </select>
@@ -273,19 +238,6 @@ export function CustomVisualizerGenerator({
               </div>
             </div>
 
-            {/* Row 4: Color Preview */}
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-white/50">Colors:</span>
-              <div className="flex gap-1">
-                {(COLOR_PREVIEWS[currentParams.colorScheme] || COLOR_PREVIEWS.mono).map((color, i) => (
-                  <div 
-                    key={i}
-                    className="w-5 h-5 rounded-full border border-white/30"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
