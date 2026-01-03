@@ -34,7 +34,645 @@ const detectGeometry = (prompt: string): string => {
 const getSemanticTemplate = (prompt: string): { code: string; name: string; emoji: string } | null => {
   const normalizedPrompt = prompt.toLowerCase();
   
-  // Airplane fleet template - creates 50-150 individual planes
+  // Smiley face / emoji template - audio reactive expressions
+  if (/\b(smiley|smile|face|emoji|happy|sad|frown|expression)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Reactive Smiley Face",
+      emoji: "😊",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
+
+export default function SmileyFaceVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const leftEyeRef = useRef<THREE.Group>(null);
+  const rightEyeRef = useRef<THREE.Group>(null);
+  const mouthRef = useRef<THREE.Group>(null);
+  const leftBrowRef = useRef<THREE.Mesh>(null);
+  const rightBrowRef = useRef<THREE.Mesh>(null);
+  
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  // Smoothed audio values for natural motion
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
+  
+  // Mouth segments for smile/frown animation
+  const mouthSegments = useMemo(() => {
+    const segments = [];
+    for (let i = 0; i < 20; i++) {
+      const t = (i / 19) * Math.PI; // 0 to PI for half circle
+      segments.push({
+        id: i,
+        baseX: Math.cos(t) * 2.5,
+        baseY: -2.2,
+        baseZ: 1.8
+      });
+    }
+    return segments;
+  }, []);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
+    const t = clock.getElapsedTime();
+    
+    // Calculate frequency bands
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+    const highsRaw = audioData.frequency.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255;
+    
+    // Smooth the values
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.12);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, midsRaw, 0.15);
+    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highsRaw, 0.18);
+    
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+    const highs = smoothedHighs.current * audioSensitivity.highsMultiplier;
+    
+    // Main face pulse
+    const faceScale = 1 + bass * 0.15 + audioData.beatStrength * 0.1;
+    groupRef.current.scale.setScalar(faceScale);
+    groupRef.current.rotation.y = Math.sin(t * 0.3) * 0.1;
+    groupRef.current.rotation.z = Math.sin(t * 0.5) * 0.05;
+    
+    // Eyes squint on bass hits
+    if (leftEyeRef.current && rightEyeRef.current) {
+      const eyeSquint = 1 - bass * 0.5; // Squint more with bass
+      leftEyeRef.current.scale.y = Math.max(0.3, eyeSquint);
+      rightEyeRef.current.scale.y = Math.max(0.3, eyeSquint);
+      
+      // Pupils follow mids
+      leftEyeRef.current.position.x = -1.5 + Math.sin(t * 2) * 0.1 * mids;
+      rightEyeRef.current.position.x = 1.5 + Math.sin(t * 2) * 0.1 * mids;
+    }
+    
+    // Eyebrows react to highs
+    if (leftBrowRef.current && rightBrowRef.current) {
+      const browLift = highs * 0.5;
+      leftBrowRef.current.position.y = 2.8 + browLift;
+      rightBrowRef.current.position.y = 2.8 + browLift;
+      leftBrowRef.current.rotation.z = -0.2 - bass * 0.3;
+      rightBrowRef.current.rotation.z = 0.2 + bass * 0.3;
+    }
+    
+    // Mouth animation - smile vs frown based on bass vs highs
+    if (mouthRef.current) {
+      const smileFactor = (bass - highs) * 2; // Positive = smile, negative = frown
+      mouthRef.current.children.forEach((child, i) => {
+        const segment = mouthSegments[i];
+        if (segment && child) {
+          const smileY = smileFactor * Math.sin((i / 19) * Math.PI) * 0.8;
+          child.position.y = segment.baseY + smileY;
+          child.scale.setScalar(0.25 + mids * 0.1);
+        }
+      });
+    }
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {/* Main face circle */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[5, 32, 32]} />
+        <primitive object={material} />
+      </mesh>
+      
+      {/* Left Eye */}
+      <group ref={leftEyeRef} position={[-1.5, 1.2, 4]}>
+        <mesh>
+          <sphereGeometry args={[0.8, 16, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {/* Pupil */}
+        <mesh position={[0, 0, 0.5]}>
+          <sphereGeometry args={[0.35, 12, 12]} />
+          <primitive object={material} />
+        </mesh>
+      </group>
+      
+      {/* Right Eye */}
+      <group ref={rightEyeRef} position={[1.5, 1.2, 4]}>
+        <mesh>
+          <sphereGeometry args={[0.8, 16, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {/* Pupil */}
+        <mesh position={[0, 0, 0.5]}>
+          <sphereGeometry args={[0.35, 12, 12]} />
+          <primitive object={material} />
+        </mesh>
+      </group>
+      
+      {/* Left Eyebrow */}
+      <mesh ref={leftBrowRef} position={[-1.5, 2.8, 4]} rotation={[0, 0, -0.2]}>
+        <boxGeometry args={[1.2, 0.25, 0.2]} />
+        <primitive object={material} />
+      </mesh>
+      
+      {/* Right Eyebrow */}
+      <mesh ref={rightBrowRef} position={[1.5, 2.8, 4]} rotation={[0, 0, 0.2]}>
+        <boxGeometry args={[1.2, 0.25, 0.2]} />
+        <primitive object={material} />
+      </mesh>
+      
+      {/* Mouth - series of spheres */}
+      <group ref={mouthRef}>
+        {mouthSegments.map((seg) => (
+          <mesh key={seg.id} position={[seg.baseX, seg.baseY, seg.baseZ]}>
+            <sphereGeometry args={[0.25, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Cheeks */}
+      <mesh position={[-3, -0.5, 3.5]}>
+        <sphereGeometry args={[0.6, 12, 12]} />
+        <primitive object={material} />
+      </mesh>
+      <mesh position={[3, -0.5, 3.5]}>
+        <sphereGeometry args={[0.6, 12, 12]} />
+        <primitive object={material} />
+      </mesh>
+      
+      {/* Nose */}
+      <mesh position={[0, 0, 4.5]}>
+        <sphereGeometry args={[0.4, 12, 12]} />
+        <primitive object={material} />
+      </mesh>
+    </group>
+  );
+}`
+    };
+  }
+  
+  // Car / vehicle template
+  if (/\b(car|vehicle|automobile|driving|drive|racing|race)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Audio Reactive Car",
+      emoji: "🚗",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
+
+export default function CarVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const wheelsRef = useRef<THREE.Group[]>([]);
+  const bodyRef = useRef<THREE.Group>(null);
+  const headlightsRef = useRef<THREE.Mesh[]>([]);
+  
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
+  const wheelRotation = useRef(0);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
+    const t = clock.getElapsedTime();
+    
+    // Calculate frequency bands
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+    const highsRaw = audioData.frequency.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255;
+    
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.1);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, midsRaw, 0.12);
+    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highsRaw, 0.15);
+    
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+    const highs = smoothedHighs.current * audioSensitivity.highsMultiplier;
+    
+    // Wheel rotation based on audio speed
+    const speed = audioSensitivity.animationSpeed * (1 + mids * 2);
+    wheelRotation.current += speed * 0.1;
+    
+    // Spin all wheels
+    wheelsRef.current.forEach((wheel) => {
+      if (wheel) {
+        wheel.rotation.x = wheelRotation.current;
+      }
+    });
+    
+    // Body bouncing (suspension) on bass
+    if (bodyRef.current) {
+      bodyRef.current.position.y = 1.5 + bass * 0.5 + Math.sin(t * 8) * bass * 0.1;
+      bodyRef.current.rotation.z = Math.sin(t * 3) * bass * 0.05;
+      bodyRef.current.rotation.x = -bass * 0.03;
+    }
+    
+    // Headlights pulse with highs
+    headlightsRef.current.forEach((light) => {
+      if (light) {
+        light.scale.setScalar(1 + highs * 0.5 + audioData.beatStrength * 0.3);
+      }
+    });
+    
+    // Whole car sways
+    groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.1;
+    groupRef.current.position.x = Math.sin(t * 0.3) * mids * 2;
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {/* Car body group */}
+      <group ref={bodyRef} position={[0, 1.5, 0]}>
+        {/* Main body */}
+        <mesh position={[0, 0.5, 0]}>
+          <boxGeometry args={[5, 1.5, 2.5]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Cabin */}
+        <mesh position={[0.3, 1.5, 0]}>
+          <boxGeometry args={[2.5, 1.2, 2.2]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Hood */}
+        <mesh position={[-1.8, 0.7, 0]} rotation={[0, 0, -0.15]}>
+          <boxGeometry args={[1.5, 0.5, 2.3]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Trunk */}
+        <mesh position={[2, 0.6, 0]}>
+          <boxGeometry args={[1, 0.8, 2.3]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Windshield frame */}
+        <mesh position={[-0.8, 1.8, 0]} rotation={[0, 0, 0.4]}>
+          <boxGeometry args={[0.1, 1, 2]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Rear window frame */}
+        <mesh position={[1.5, 1.7, 0]} rotation={[0, 0, -0.3]}>
+          <boxGeometry args={[0.1, 0.9, 1.8]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Headlights */}
+        <mesh ref={(el) => { if (el) headlightsRef.current[0] = el; }} position={[-2.5, 0.5, 0.8]}>
+          <sphereGeometry args={[0.25, 12, 12]} />
+          <primitive object={material} />
+        </mesh>
+        <mesh ref={(el) => { if (el) headlightsRef.current[1] = el; }} position={[-2.5, 0.5, -0.8]}>
+          <sphereGeometry args={[0.25, 12, 12]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Taillights */}
+        <mesh position={[2.5, 0.5, 0.9]}>
+          <boxGeometry args={[0.1, 0.3, 0.4]} />
+          <primitive object={material} />
+        </mesh>
+        <mesh position={[2.5, 0.5, -0.9]}>
+          <boxGeometry args={[0.1, 0.3, 0.4]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Side mirrors */}
+        <mesh position={[-0.5, 1.2, 1.4]}>
+          <boxGeometry args={[0.3, 0.2, 0.4]} />
+          <primitive object={material} />
+        </mesh>
+        <mesh position={[-0.5, 1.2, -1.4]}>
+          <boxGeometry args={[0.3, 0.2, 0.4]} />
+          <primitive object={material} />
+        </mesh>
+        
+        {/* Door handles */}
+        <mesh position={[0, 0.8, 1.26]}>
+          <boxGeometry args={[0.4, 0.1, 0.05]} />
+          <primitive object={material} />
+        </mesh>
+        <mesh position={[0, 0.8, -1.26]}>
+          <boxGeometry args={[0.4, 0.1, 0.05]} />
+          <primitive object={material} />
+        </mesh>
+      </group>
+      
+      {/* Wheels - Front Left */}
+      <group ref={(el) => { if (el) wheelsRef.current[0] = el; }} position={[-1.5, 0.5, 1.5]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.4, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {/* Wheel spokes */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} rotation={[0, 0, (i / 5) * Math.PI * 2]}>
+            <boxGeometry args={[0.1, 0.8, 0.1]} />
+            <primitive object={material} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Wheels - Front Right */}
+      <group ref={(el) => { if (el) wheelsRef.current[1] = el; }} position={[-1.5, 0.5, -1.5]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.4, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} rotation={[0, 0, (i / 5) * Math.PI * 2]}>
+            <boxGeometry args={[0.1, 0.8, 0.1]} />
+            <primitive object={material} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Wheels - Rear Left */}
+      <group ref={(el) => { if (el) wheelsRef.current[2] = el; }} position={[1.5, 0.5, 1.5]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.4, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} rotation={[0, 0, (i / 5) * Math.PI * 2]}>
+            <boxGeometry args={[0.1, 0.8, 0.1]} />
+            <primitive object={material} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Wheels - Rear Right */}
+      <group ref={(el) => { if (el) wheelsRef.current[3] = el; }} position={[1.5, 0.5, -1.5]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.4, 16]} />
+          <primitive object={material} />
+        </mesh>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} rotation={[0, 0, (i / 5) * Math.PI * 2]}>
+            <boxGeometry args={[0.1, 0.8, 0.1]} />
+            <primitive object={material} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Exhaust particles */}
+      {Array.from({ length: 8 }, (_, i) => (
+        <mesh key={i} position={[3 + i * 0.5, 0.3, 0]}>
+          <sphereGeometry args={[0.1 + i * 0.03, 8, 8]} />
+          <primitive object={material} />
+        </mesh>
+      ))}
+    </group>
+  );
+}`
+    };
+  }
+  
+  // Heart template
+  if (/\b(heart|love|valentine|romantic|pulse|beat)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Beating Heart",
+      emoji: "❤️",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
+
+export default function HeartVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const smoothedBass = useRef(0);
+  const lastBeat = useRef(0);
+  const beatScale = useRef(1);
+  
+  // Create heart shape with spheres
+  const heartPoints = useMemo(() => {
+    const points = [];
+    // Heart parametric equation
+    for (let t = 0; t < Math.PI * 2; t += 0.15) {
+      for (let layer = 0; layer < 5; layer++) {
+        const layerScale = 1 - layer * 0.15;
+        const x = 16 * Math.pow(Math.sin(t), 3) * layerScale * 0.3;
+        const y = (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) * layerScale * 0.3;
+        const z = (layer - 2) * 0.5;
+        points.push({ x, y, z, t, layer, fi: Math.floor((t / (Math.PI * 2)) * 255) });
+      }
+    }
+    return points;
+  }, []);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
+    const time = clock.getElapsedTime();
+    
+    // Calculate bass
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.15);
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    
+    // Beat detection for heartbeat effect
+    if (audioData.beatStrength > 0.5 && time - lastBeat.current > 0.3) {
+      beatScale.current = 1.3;
+      lastBeat.current = time;
+    }
+    beatScale.current = THREE.MathUtils.lerp(beatScale.current, 1, 0.08);
+    
+    // Main heartbeat scale
+    const pulseScale = beatScale.current + bass * 0.3;
+    groupRef.current.scale.setScalar(pulseScale);
+    
+    // Gentle rotation
+    groupRef.current.rotation.y = Math.sin(time * 0.5) * 0.2;
+    groupRef.current.rotation.z = Math.sin(time * 0.3) * 0.1;
+    
+    // Animate individual points
+    groupRef.current.children.forEach((child, i) => {
+      const point = heartPoints[i];
+      if (!child || !point) return;
+      
+      const freq = audioData.frequency[point.fi] || 0;
+      const response = (freq / 255) * audioSensitivity.frequency;
+      
+      // Radial pulse effect
+      const pulseOffset = Math.sin(time * 4 + point.t * 2) * response * 0.2;
+      const scale = 0.3 + response * 0.2 + pulseOffset * 0.5;
+      child.scale.setScalar(scale);
+      
+      // Slight position variation
+      child.position.x = point.x + Math.sin(time * 2 + i * 0.1) * response * 0.3;
+      child.position.y = point.y + Math.cos(time * 2 + i * 0.1) * response * 0.3;
+    });
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {heartPoints.map((point, i) => (
+        <mesh key={i} position={[point.x, point.y, point.z]}>
+          <sphereGeometry args={[0.3, 8, 8]} />
+          <primitive object={material} />
+        </mesh>
+      ))}
+    </group>
+  );
+}`
+    };
+  }
+  
+  // Star template
+  if (/\b(star|stars|stellar|cosmic|twinkle|sparkle)\b/.test(normalizedPrompt)) {
+    return {
+      name: "Spinning Star",
+      emoji: "⭐",
+      code: `
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useStudioStore } from '@/stores/studioStore';
+import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
+
+export default function StarVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  
+  // Create multi-layered star with particles
+  const starParts = useMemo(() => {
+    const parts = [];
+    const points = 5;
+    
+    // Main star points
+    for (let layer = 0; layer < 4; layer++) {
+      const layerScale = 1 - layer * 0.2;
+      const z = layer * 0.5 - 0.75;
+      
+      for (let i = 0; i < points * 2; i++) {
+        const angle = (i / (points * 2)) * Math.PI * 2;
+        const isOuter = i % 2 === 0;
+        const radius = isOuter ? 5 * layerScale : 2 * layerScale;
+        
+        parts.push({
+          type: 'point',
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          z,
+          angle,
+          isOuter,
+          layer,
+          fi: Math.floor((i / (points * 2)) * 255)
+        });
+      }
+    }
+    
+    // Connecting beams
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      for (let j = 0; j < 8; j++) {
+        const t = j / 7;
+        const radius = 2 + t * 3;
+        parts.push({
+          type: 'beam',
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          z: 0,
+          angle,
+          t,
+          fi: Math.floor((i / points) * 255)
+        });
+      }
+    }
+    
+    // Sparkle particles around
+    for (let i = 0; i < 50; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 6 + Math.random() * 4;
+      parts.push({
+        type: 'sparkle',
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        z: (Math.random() - 0.5) * 3,
+        phase: Math.random() * Math.PI * 2,
+        fi: Math.floor(Math.random() * 255)
+      });
+    }
+    
+    return parts;
+  }, []);
+  
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
+    const time = clock.getElapsedTime();
+    
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+    
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.1);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, midsRaw, 0.12);
+    
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+    
+    // Star rotation and scale
+    groupRef.current.rotation.z = time * audioSensitivity.animationSpeed * 0.3 + bass * 0.5;
+    groupRef.current.scale.setScalar(1 + bass * 0.2 + audioData.beatStrength * 0.15);
+    
+    groupRef.current.children.forEach((child, i) => {
+      const part = starParts[i];
+      if (!child || !part) return;
+      
+      const freq = audioData.frequency[part.fi] || 0;
+      const response = (freq / 255) * audioSensitivity.frequency;
+      
+      if (part.type === 'point') {
+        child.scale.setScalar(0.4 + response * 0.3 + (part.isOuter ? bass * 0.2 : 0));
+      } else if (part.type === 'beam') {
+        child.scale.setScalar(0.2 + response * 0.2);
+        child.position.x = part.x * (1 + mids * 0.2);
+        child.position.y = part.y * (1 + mids * 0.2);
+      } else if (part.type === 'sparkle') {
+        const twinkle = Math.sin(time * 5 + part.phase) * 0.5 + 0.5;
+        child.scale.setScalar(0.1 + twinkle * 0.15 + response * 0.1);
+      }
+    });
+  });
+  
+  const material = createVisualizerMaterial();
+  
+  return (
+    <group ref={groupRef}>
+      {starParts.map((part, i) => (
+        <mesh key={i} position={[part.x, part.y, part.z]}>
+          <sphereGeometry args={[part.type === 'sparkle' ? 0.15 : 0.4, 8, 8]} />
+          <primitive object={material} />
+        </mesh>
+      ))}
+    </group>
+  );
+}`
+    };
+  }
+  
+  // Airplane fleet template
   if (/\b(airplane|aircraft|plane|jet|fighter)\b/.test(normalizedPrompt)) {
     return {
       name: "Airplane Fleet",
@@ -44,44 +682,67 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
 
 export default function AirplaneFleetVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  
   const airplanes = useMemo(() => {
     const planes = [];
-    for (let i = 0; i < 80; i++) {
-      const angle = (i / 80) * Math.PI * 2;
-      const radius = 15 + Math.sin(i * 0.3) * 8;
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2;
+      const radius = 8 + Math.sin(i * 0.3) * 4;
       planes.push({
         id: i,
         x: Math.cos(angle) * radius,
-        y: Math.sin(i * 0.7) * 5,
+        y: Math.sin(i * 0.7) * 3,
         z: Math.sin(angle) * radius,
         rotation: [Math.random() * 0.3, angle, Math.random() * 0.2],
-        scale: 0.8 + Math.random() * 0.4,
-        freqIndex: Math.floor((i / 80) * (audioData.frequency.length - 1))
+        scale: 0.6 + Math.random() * 0.3,
+        freqIndex: Math.floor((i / 60) * 255)
       });
     }
     return planes;
-  }, [audioData.frequency.length]);
+  }, []);
   
   useFrame(({ clock }) => {
     if (!groupRef.current || !audioData.frequency.length) return;
     
     const time = clock.getElapsedTime();
-    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
+    
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+    
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.1);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, midsRaw, 0.12);
+    
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+    
+    // Fleet rotation
+    groupRef.current.rotation.y = time * 0.1 * audioSensitivity.animationSpeed;
     
     airplanes.forEach((plane, i) => {
       const freq = audioData.frequency[plane.freqIndex] || 0;
-      const child = groupRef.current.children[i];
-      if (child) {
-        // Banking motion based on audio
-        child.rotation.z = Math.sin(time + i * 0.2) * 0.3 + freq * audioSensitivity.frequency * 0.5;
-        child.rotation.y = time * 0.1 + i * 0.05;
-        child.position.y = plane.y + Math.sin(time + i * 0.3) * 2 + freq * audioSensitivity.frequency * 3 + audioData.beatStrength * 2;
-        child.scale.setScalar(plane.scale + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.2);
+      const response = (freq / 255) * audioSensitivity.frequency;
+      
+      // Each plane is a group with 4 children (fuselage, wings, tail, propeller)
+      const planeGroup = groupRef.current?.children[i];
+      if (planeGroup) {
+        planeGroup.rotation.z = Math.sin(time + i * 0.2) * 0.3 + response * 0.5;
+        planeGroup.rotation.y = time * 0.1 + i * 0.05;
+        planeGroup.position.y = plane.y + Math.sin(time + i * 0.3) * 1.5 + response * 2 + audioData.beatStrength * 1.5;
+        planeGroup.scale.setScalar(plane.scale + response * 0.3);
+        
+        // Spin propeller (last child)
+        const propeller = planeGroup.children[3];
+        if (propeller) {
+          propeller.rotation.z = time * 20 + mids * 10;
+        }
       }
     });
   });
@@ -94,22 +755,22 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: { fr
         <group key={plane.id} position={[plane.x, plane.y, plane.z]} rotation={plane.rotation}>
           {/* Fuselage */}
           <mesh position={[0, 0, 0]}>
-            <cylinderGeometry args={[0.3, 0.5, 4, 8]} />
+            <cylinderGeometry args={[0.2, 0.35, 2.5, 8]} />
             <primitive object={material} />
           </mesh>
           {/* Wings */}
           <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <boxGeometry args={[6, 0.2, 1]} />
+            <boxGeometry args={[4, 0.12, 0.7]} />
             <primitive object={material} />
           </mesh>
           {/* Tail */}
-          <mesh position={[0, 1, -1.5]} rotation={[Math.PI / 4, 0, 0]}>
-            <boxGeometry args={[2, 0.2, 1.5]} />
+          <mesh position={[0, 0.6, -1]} rotation={[Math.PI / 4, 0, 0]}>
+            <boxGeometry args={[1.3, 0.12, 1]} />
             <primitive object={material} />
           </mesh>
           {/* Propeller */}
-          <mesh position={[0, 0, 2]}>
-            <boxGeometry args={[0.1, 3, 0.1]} />
+          <mesh position={[0, 0, 1.3]}>
+            <boxGeometry args={[0.08, 1.8, 0.08]} />
             <primitive object={material} />
           </mesh>
         </group>
@@ -120,8 +781,8 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: { fr
     };
   }
   
-  // Flower/petal template - creates dancing petals in wind with robust matching
-  if (/\b(flowers?|petals?|petal\w*|blossoms?|blooms?)\b/.test(normalizedPrompt) && /\b(winds?|wind\w*|breeze\w*|blow\w*|gust\w*|danc\w*|sway\w*|mov\w*|flutter\w*)\b/.test(normalizedPrompt)) {
+  // Flower/petal template
+  if (/\b(flowers?|petals?|blossoms?|blooms?)\b/.test(normalizedPrompt) && /\b(winds?|breeze|blow|danc|sway|mov|flutter)\b/.test(normalizedPrompt)) {
     return {
       name: "Flower Petals Dancing in Wind",
       emoji: "🌸",
@@ -130,111 +791,87 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
 
 export default function FlowerPetalsVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
+  const smoothedBass = useRef(0);
+  
   const flowers = useMemo(() => {
-    const flowerArray = [];
-    const flowerCount = 25;
-    const petalsPerFlower = 12;
+    const arr = [];
+    const flowerCount = 20;
+    const petalsPerFlower = 8;
     
     for (let f = 0; f < flowerCount; f++) {
-      const flowerAngle = (f / flowerCount) * Math.PI * 2;
-      const flowerRadius = 6 + Math.sin(f * 0.4) * 3 + Math.cos(f * 0.7) * 2;
-      const flowerX = Math.cos(flowerAngle) * flowerRadius;
-      const flowerZ = Math.sin(flowerAngle) * flowerRadius;
-      const flowerY = Math.sin(f * 0.5) * 1.5 + Math.cos(f * 0.3) * 1;
-      
+      const angle = (f / flowerCount) * Math.PI * 2;
+      const radius = 5 + Math.sin(f * 0.4) * 2;
       const flower = {
         id: f,
-        center: [flowerX, flowerY, flowerZ],
-        petals: [] as any[],
-        freqIndex: Math.floor((f / flowerCount) * (audioData.frequency.length - 1))
-      };
-      
-      for (let p = 0; p < petalsPerFlower; p++) {
-        const petalAngle = (p / petalsPerFlower) * Math.PI * 2;
-        const petalDistance = 1.8 + Math.sin(p * 0.5) * 0.3;
-        
-        flower.petals.push({
+        x: Math.cos(angle) * radius,
+        y: Math.sin(f * 0.5) * 1,
+        z: Math.sin(angle) * radius,
+        petals: Array.from({ length: petalsPerFlower }, (_, p) => ({
           id: p,
-          angle: petalAngle,
-          distance: petalDistance,
-          baseRotation: [
-            Math.random() * 0.4 - 0.2,
-            petalAngle,
-            Math.random() * 0.6 - 0.3
-          ],
-          scale: 0.9 + Math.random() * 0.2,
-          swayPhase: Math.random() * Math.PI * 2,
-          twistPhase: Math.random() * Math.PI * 2
-        });
-      }
-      
-      flowerArray.push(flower);
+          angle: (p / petalsPerFlower) * Math.PI * 2,
+          phase: Math.random() * Math.PI * 2
+        })),
+        fi: Math.floor((f / flowerCount) * 255)
+      };
+      arr.push(flower);
     }
-    return flowerArray;
-  }, [audioData.frequency.length]);
+    return arr;
+  }, []);
   
   useFrame(({ clock }) => {
     if (!groupRef.current || !audioData.frequency.length) return;
     
-    const time = clock.getElapsedTime();
+    const t = clock.getElapsedTime();
     
-    flowers.forEach((flower, flowerIndex) => {
-      const freq = audioData.frequency[flower.freqIndex] || 0;
-      const bassResponse = freq * audioSensitivity.frequency + audioData.beatStrength;
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.1);
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    
+    let childIndex = 0;
+    flowers.forEach((flower) => {
+      const freq = audioData.frequency[flower.fi] || 0;
+      const response = (freq / 255) * audioSensitivity.frequency + audioData.beatStrength;
       
-      // Wind field calculations
-      const windX = Math.sin(time * 0.6 + flowerIndex * 0.3) * 0.4;
-      const windY = Math.cos(time * 0.4 + flowerIndex * 0.5) * 0.2;
-      const windZ = Math.sin(time * 0.8 + flowerIndex * 0.2) * 0.3;
+      // Wind effect
+      const windX = Math.sin(t * 0.6 + flower.id * 0.3) * 0.4;
+      const windZ = Math.sin(t * 0.8 + flower.id * 0.2) * 0.3;
       
-      flower.petals.forEach((petal, petalIndex) => {
-        const childIndex = flowerIndex * (flower.petals.length + 1) + petalIndex;
+      flower.petals.forEach((petal) => {
         const child = groupRef.current?.children[childIndex];
-        if (!child) return;
-        
-        // Calculate petal position with wind sway and audio response
-        const petalX = flower.center[0] + Math.cos(petal.angle) * petal.distance;
-        const petalZ = flower.center[2] + Math.sin(petal.angle) * petal.distance;
-        const petalY = flower.center[1] + Math.sin(petal.angle * 2) * 0.3;
-        
-        // Apply wind and audio-driven motion
-        const swayX = Math.sin(time * 0.9 + petal.swayPhase) * (0.5 + bassResponse);
-        const swayY = Math.cos(time * 0.7 + petal.swayPhase * 0.8) * (0.3 + bassResponse * 0.5);
-        const swayZ = Math.sin(time * 1.1 + petal.swayPhase * 1.2) * (0.4 + bassResponse);
-        
-        child.position.set(
-          petalX + windX + swayX,
-          petalY + windY + swayY + bassResponse * 1.5,
-          petalZ + windZ + swayZ
-        );
-        
-        // Petal rotation with natural flutter
-        const twistX = petal.baseRotation[0] + Math.sin(time + petal.twistPhase) * 0.4;
-        const twistY = petal.baseRotation[1] + time * 0.1 + windX * 0.8;
-        const twistZ = petal.baseRotation[2] + Math.cos(time * 0.8 + petal.twistPhase) * 0.5 + bassResponse * 0.3;
-        
-        child.rotation.set(twistX, twistY, twistZ);
-        
-        // Dynamic scaling with audio pulse
-        child.scale.setScalar(petal.scale * (1 + bassResponse * 0.4));
+        if (child) {
+          const petalX = flower.x + Math.cos(petal.angle) * 1.2;
+          const petalZ = flower.z + Math.sin(petal.angle) * 1.2;
+          const swayX = Math.sin(t * 0.9 + petal.phase) * (0.4 + response);
+          const swayZ = Math.sin(t * 1.1 + petal.phase * 1.2) * (0.3 + response);
+          
+          child.position.set(
+            petalX + windX + swayX,
+            flower.y + response * 1.2,
+            petalZ + windZ + swayZ
+          );
+          child.rotation.set(
+            Math.sin(t + petal.phase) * 0.3,
+            petal.angle + t * 0.1,
+            Math.cos(t * 0.8 + petal.phase) * 0.4 + response * 0.2
+          );
+          child.scale.setScalar(0.8 + response * 0.3);
+        }
+        childIndex++;
       });
       
-      // Animate flower center
-      const centerChildIndex = flowerIndex * (flower.petals.length + 1) + flower.petals.length;
-      const centerChild = groupRef.current?.children[centerChildIndex];
+      // Flower center
+      const centerChild = groupRef.current?.children[childIndex];
       if (centerChild) {
-        centerChild.position.set(
-          flower.center[0] + windX * 0.3,
-          flower.center[1] + windY + bassResponse * 0.8,
-          flower.center[2] + windZ * 0.3
-        );
-        centerChild.scale.setScalar(1 + bassResponse * 0.5);
+        centerChild.position.set(flower.x + windX * 0.3, flower.y + response * 0.6, flower.z + windZ * 0.3);
+        centerChild.scale.setScalar(0.6 + response * 0.4);
       }
+      childIndex++;
     });
   });
   
@@ -243,282 +880,34 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: { fre
   return (
     <group ref={groupRef}>
       {flowers.map((flower) => (
-        <group key={flower.id}>
-          {/* Render individual petals with realistic curved shapes */}
+        <React.Fragment key={flower.id}>
           {flower.petals.map((petal) => (
-            <group key={petal.id}>
-              {/* Main petal body - elongated ellipsoid */}
-              <mesh>
-                <sphereGeometry args={[0.6, 8, 12]} />
-                <primitive object={material} />
-              </mesh>
-              {/* Petal tip - smaller sphere for natural taper */}
-              <mesh position={[0, 0.8, 0]}>
-                <sphereGeometry args={[0.3, 6, 8]} />
-                <primitive object={material} />
-              </mesh>
-              {/* Petal base - wider connection point */}
-              <mesh position={[0, -0.4, 0]}>
-                <sphereGeometry args={[0.4, 6, 8]} />
-                <primitive object={material} />
-              </mesh>
-            </group>
-          ))}
-          
-          {/* Flower center - detailed pistil and stamen */}
-          <group>
-            {/* Main center */}
-            <mesh>
-              <sphereGeometry args={[0.4, 12, 12]} />
+            <mesh key={\`\${flower.id}-\${petal.id}\`}>
+              <sphereGeometry args={[0.4, 8, 8]} />
               <primitive object={material} />
             </mesh>
-            {/* Small stamen details */}
-            {Array.from({ length: 8 }, (_, i) => {
-              const angle = (i / 8) * Math.PI * 2;
-              const radius = 0.25;
-              return (
-                <mesh
-                  key={i}
-                  position={[
-                    Math.cos(angle) * radius,
-                    0.2,
-                    Math.sin(angle) * radius
-                  ]}
-                >
-                  <sphereGeometry args={[0.05, 4, 4]} />
-                  <primitive object={material} />
-                </mesh>
-              );
-            })}
-          </group>
-        </group>
-      ))}
-      
-      {/* Floating petal particles for enhanced atmosphere */}
-      {Array.from({ length: 40 }, (_, i) => {
-        const x = (Math.random() - 0.5) * 30;
-        const y = Math.random() * 15 + 5;
-        const z = (Math.random() - 0.5) * 30;
-        return (
-          <mesh
-            key={\`particle-\${i}\`}
-            position={[x, y, z]}
-            rotation={[
-              Math.random() * Math.PI,
-              Math.random() * Math.PI,
-              Math.random() * Math.PI
-            ]}
-          >
-            <sphereGeometry args={[0.15, 6, 8]} />
+          ))}
+          <mesh>
+            <sphereGeometry args={[0.3, 8, 8]} />
             <primitive object={material} />
           </mesh>
-        );
-      })}
-    </group>
-  );
-}`
-    };
-  }
-
-  // Apple with bite template - creates voxel-style apple
-  if (/\b(apple|fruit)\b/.test(normalizedPrompt)) {
-    return {
-      name: "Apple with Bite",
-      emoji: "🍎",
-      code: `
-import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { useStudioStore } from '@/stores/studioStore';
-import { createVisualizerMaterial } from '@/lib/visualizerUtils';
-
-export default function AppleWithBiteVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
-  
-  const voxels = useMemo(() => {
-    const cubes = [];
-    const resolution = 20;
-    
-    for (let x = -resolution; x <= resolution; x++) {
-      for (let y = -resolution; y <= resolution; y++) {
-        for (let z = -resolution; z <= resolution; z++) {
-          const nx = x / resolution;
-          const ny = y / resolution;
-          const nz = z / resolution;
-          
-          // Apple shape equation
-          const appleShape = nx * nx + ny * ny + nz * nz - 0.8;
-          const appleTop = (nx * nx + nz * nz) * 0.3 + (ny - 0.5) * (ny - 0.5) - 0.1;
-          
-          // Bite shape (remove cubes in bite area)
-          const biteX = nx + 0.6;
-          const biteShape = biteX * biteX + ny * ny + nz * nz - 0.3;
-          
-          if ((appleShape < 0 || appleTop < 0) && biteShape > 0) {
-            cubes.push({
-              x: x * 0.2,
-              y: y * 0.2,
-              z: z * 0.2,
-              freqIndex: Math.floor(((x + resolution) / (resolution * 2)) * (audioData.frequency.length - 1))
-            });
-          }
-        }
-      }
-    }
-    return cubes;
-  }, [audioData.frequency.length]);
-  
-  useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.frequency.length) return;
-    
-    const time = clock.getElapsedTime();
-    
-    groupRef.current.children.forEach((child, i) => {
-      if (i < voxels.length) {
-        const voxel = voxels[i];
-        const freq = audioData.frequency[voxel.freqIndex] || 0;
-        
-        child.position.y = voxel.y + Math.sin(time + i * 0.1) * 0.1 + freq * audioSensitivity.frequency * 0.5 + audioData.beatStrength * 0.3;
-        child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.1);
-      }
-    });
-  });
-  
-  const material = createVisualizerMaterial();
-  
-  return (
-    <group ref={groupRef}>
-      {voxels.map((voxel, i) => (
-        <mesh key={i} position={[voxel.x, voxel.y, voxel.z]}>
-          <boxGeometry args={[0.15, 0.15, 0.15]} />
+        </React.Fragment>
+      ))}
+      {/* Floating particles */}
+      {Array.from({ length: 30 }, (_, i) => (
+        <mesh key={\`p-\${i}\`} position={[(Math.random() - 0.5) * 20, Math.random() * 10, (Math.random() - 0.5) * 20]}>
+          <sphereGeometry args={[0.1, 6, 6]} />
           <primitive object={material} />
         </mesh>
       ))}
-      {/* Apple stem */}
-      <mesh position={[0, 4, 0]}>
-        <cylinderGeometry args={[0.1, 0.15, 1, 8]} />
-        <primitive object={material} />
-      </mesh>
     </group>
   );
 }`
     };
   }
   
-  // Shield template - creates detailed shield with boss and segments
-  if (/\b(shield|armor|protection|guard)\b/.test(normalizedPrompt)) {
-    return {
-      name: "Medieval Shield",
-      emoji: "🛡️",
-      code: `
-import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { useStudioStore } from '@/stores/studioStore';
-import { createVisualizerMaterial } from '@/lib/visualizerUtils';
-
-export default function MedievalShieldVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
-  
-  const segments = useMemo(() => {
-    const parts = [];
-    // Radial shield segments
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2;
-      parts.push({
-        type: 'segment',
-        angle,
-        radius: 3,
-        freqIndex: Math.floor((i / 12) * (audioData.frequency.length - 1))
-      });
-    }
-    // Concentric rings
-    for (let r = 1; r <= 4; r++) {
-      for (let i = 0; i < 8 * r; i++) {
-        const angle = (i / (8 * r)) * Math.PI * 2;
-        parts.push({
-          type: 'ring',
-          angle,
-          radius: r * 1.2,
-          freqIndex: Math.floor(((i + r * 10) / (8 * r + 40)) * (audioData.frequency.length - 1))
-        });
-      }
-    }
-    return parts;
-  }, [audioData.frequency.length]);
-  
-  useFrame(({ clock }) => {
-    if (!groupRef.current || !audioData.frequency.length) return;
-    
-    const time = clock.getElapsedTime();
-    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
-    
-    // Rotate entire shield
-    groupRef.current.rotation.z = time * 0.1 + avgFreq * audioSensitivity.frequency * 0.5 + audioData.beatStrength * 0.3;
-    
-    groupRef.current.children.forEach((child, i) => {
-      if (i < segments.length) {
-        const segment = segments[i];
-        const freq = audioData.frequency[segment.freqIndex] || 0;
-        
-        if (segment.type === 'segment') {
-          child.scale.setScalar(1 + freq * audioSensitivity.frequency * 0.4 + audioData.amplitude * 0.2);
-          child.position.z = freq * audioSensitivity.frequency * 1 + audioData.beatStrength * 0.5;
-        } else {
-          child.scale.setScalar(0.8 + freq * audioSensitivity.frequency * 0.3 + audioData.amplitude * 0.1);
-        }
-      }
-    });
-  });
-  
-  const material = createVisualizerMaterial();
-  
-  return (
-    <group ref={groupRef}>
-      {/* Main shield body */}
-      <mesh>
-        <cylinderGeometry args={[4, 3, 0.3, 16]} />
-        <primitive object={material} />
-      </mesh>
-      
-      {/* Shield boss (center) */}
-      <mesh position={[0, 0, 0.5]}>
-        <sphereGeometry args={[0.8, 16, 16]} />
-        <primitive object={material} />
-      </mesh>
-      
-      {/* Radial segments and rings */}
-      {segments.map((segment, i) => (
-        <mesh
-          key={i}
-          position={[
-            Math.cos(segment.angle) * segment.radius,
-            Math.sin(segment.angle) * segment.radius,
-            segment.type === 'segment' ? 0.2 : 0.1
-          ]}
-        >
-          {segment.type === 'segment' ? (
-            <boxGeometry args={[0.3, 1.5, 0.2]} />
-          ) : (
-            <sphereGeometry args={[0.1, 8, 8]} />
-          )}
-          <primitive object={material} />
-        </mesh>
-      ))}
-      
-      {/* Shield rim */}
-      <mesh>
-        <torusGeometry args={[4, 0.1, 8, 32]} />
-        <primitive object={material} />
-      </mesh>
-    </group>
-  );
-}`
-    };
-  }
-  
-  // Robot army template - creates marching robots reacting to beat
-  if (/\b(robot|robots?|army|march|android|mech|cyborg)\b/.test(normalizedPrompt)) {
+  // Robot army template
+  if (/\b(robot|android|mech|machine|droid|army|march)\b/.test(normalizedPrompt)) {
     return {
       name: "Robot Army March",
       emoji: "🤖",
@@ -527,86 +916,78 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
 
 export default function RobotArmyVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
   
+  const smoothedBass = useRef(0);
+  const marchPhase = useRef(0);
+  
   const robots = useMemo(() => {
-    const robotArray = [];
-    const rows = 8;
-    const cols = 10;
-    
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const x = (col - cols/2) * 3;
-        const z = (row - rows/2) * 4;
-        const y = 0;
-        
-        robotArray.push({
-          id: row * cols + col,
-          position: [x, y, z],
-          marchPhase: (row * cols + col) * 0.1,
-          freqIndex: Math.floor(((row * cols + col) / (rows * cols)) * (audioData.frequency.length - 1)),
-          row,
-          col
+    const arr = [];
+    const rows = 5;
+    const cols = 8;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        arr.push({
+          id: r * cols + c,
+          x: (c - cols / 2) * 2.5,
+          z: (r - rows / 2) * 2.5,
+          phase: (r + c) * 0.3,
+          fi: Math.floor(((r * cols + c) / (rows * cols)) * 255)
         });
       }
     }
-    return robotArray;
-  }, [audioData.frequency.length]);
+    return arr;
+  }, []);
   
   useFrame(({ clock }) => {
     if (!groupRef.current || !audioData.frequency.length) return;
     
-    const time = clock.getElapsedTime();
-    const avgFreq = audioData.frequency.reduce((a, b) => a + b, 0) / audioData.frequency.length;
-    const marchSpeed = 0.5 + audioData.beatStrength * 2;
+    const t = clock.getElapsedTime();
     
-    robots.forEach((robot, robotIndex) => {
-      const robotGroup = groupRef.current?.children[robotIndex];
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.12);
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    
+    // March rhythm
+    marchPhase.current += audioSensitivity.animationSpeed * 0.05 * (1 + bass * 2);
+    
+    robots.forEach((robot, i) => {
+      const freq = audioData.frequency[robot.fi] || 0;
+      const response = (freq / 255) * audioSensitivity.frequency;
+      
+      // Each robot is a group with body parts (head, torso, arms, legs)
+      const robotGroup = groupRef.current?.children[i];
       if (!robotGroup) return;
       
-      const freq = audioData.frequency[robot.freqIndex] || 0;
-      const bassResponse = freq * audioSensitivity.frequency + audioData.beatStrength;
+      // March hop
+      const marchY = Math.abs(Math.sin(marchPhase.current + robot.phase)) * (0.3 + bass * 0.5);
+      robotGroup.position.y = marchY;
       
-      // Marching motion synchronized to beat
-      const marchTime = time * marchSpeed + robot.marchPhase;
-      const stepHeight = Math.max(0, Math.sin(marchTime * 4)) * (0.3 + bassResponse);
+      // Body sway
+      robotGroup.rotation.z = Math.sin(marchPhase.current + robot.phase) * 0.1;
       
-      // Robot bouncing to beat
-      robotGroup.position.y = robot.position[1] + stepHeight + bassResponse * 0.5;
-      robotGroup.position.x = robot.position[0] + Math.sin(marchTime) * 0.1;
-      robotGroup.position.z = robot.position[2] + Math.sin(marchTime * 2) * 0.05;
-      
-      // Robot scaling with audio
-      robotGroup.scale.setScalar(1 + bassResponse * 0.2);
-      
-      // Robot head rotation looking around
-      const headChild = robotGroup.children[0]; // Head
-      if (headChild) {
-        headChild.rotation.y = Math.sin(time + robotIndex * 0.1) * 0.3 + bassResponse * 0.2;
+      // Head bob (first child)
+      const head = robotGroup.children[0];
+      if (head) {
+        head.rotation.y = Math.sin(t * 2 + i * 0.1) * 0.2 + response * 0.3;
+        head.scale.setScalar(1 + response * 0.2);
       }
       
-      // Arms swinging
-      const leftArm = robotGroup.children[3]; // Left arm
-      const rightArm = robotGroup.children[4]; // Right arm
-      if (leftArm) {
-        leftArm.rotation.x = Math.sin(marchTime * 2) * 0.5 + bassResponse * 0.3;
-      }
-      if (rightArm) {
-        rightArm.rotation.x = Math.sin(marchTime * 2 + Math.PI) * 0.5 + bassResponse * 0.3;
-      }
+      // Arm swing (children 2 and 3)
+      const leftArm = robotGroup.children[2];
+      const rightArm = robotGroup.children[3];
+      if (leftArm) leftArm.rotation.x = Math.sin(marchPhase.current + robot.phase) * 0.6;
+      if (rightArm) rightArm.rotation.x = -Math.sin(marchPhase.current + robot.phase) * 0.6;
       
-      // Legs marching
-      const leftLeg = robotGroup.children[5]; // Left leg
-      const rightLeg = robotGroup.children[6]; // Right leg
-      if (leftLeg) {
-        leftLeg.rotation.x = Math.sin(marchTime * 4) * 0.4 + bassResponse * 0.2;
-      }
-      if (rightLeg) {
-        rightLeg.rotation.x = Math.sin(marchTime * 4 + Math.PI) * 0.4 + bassResponse * 0.2;
-      }
+      // Leg movement (children 4 and 5)
+      const leftLeg = robotGroup.children[4];
+      const rightLeg = robotGroup.children[5];
+      if (leftLeg) leftLeg.rotation.x = -Math.sin(marchPhase.current + robot.phase) * 0.4;
+      if (rightLeg) rightLeg.rotation.x = Math.sin(marchPhase.current + robot.phase) * 0.4;
     });
   });
   
@@ -615,84 +996,53 @@ export default function RobotArmyVisualizer({ audioData }: { audioData: { freque
   return (
     <group ref={groupRef}>
       {robots.map((robot) => (
-        <group key={robot.id} position={robot.position}>
+        <group key={robot.id} position={[robot.x, 0, robot.z]}>
           {/* Head */}
-          <mesh position={[0, 3, 0]}>
-            <boxGeometry args={[1.2, 1.2, 1.2]} />
+          <mesh position={[0, 2.2, 0]}>
+            <boxGeometry args={[0.6, 0.6, 0.6]} />
             <primitive object={material} />
           </mesh>
-          
-          {/* Eyes */}
-          <mesh position={[-0.3, 3.2, 0.6]}>
-            <sphereGeometry args={[0.1, 8, 8]} />
+          {/* Torso */}
+          <mesh position={[0, 1.4, 0]}>
+            <boxGeometry args={[0.8, 1, 0.5]} />
             <primitive object={material} />
           </mesh>
-          <mesh position={[0.3, 3.2, 0.6]}>
-            <sphereGeometry args={[0.1, 8, 8]} />
-            <primitive object={material} />
-          </mesh>
-          
-          {/* Body */}
-          <mesh position={[0, 1.5, 0]}>
-            <boxGeometry args={[1.5, 2, 0.8]} />
-            <primitive object={material} />
-          </mesh>
-          
           {/* Left Arm */}
-          <group position={[-1, 2.2, 0]}>
-            <mesh position={[0, -0.8, 0]}>
-              <boxGeometry args={[0.4, 1.6, 0.4]} />
-              <primitive object={material} />
-            </mesh>
-            <mesh position={[0, -1.8, 0]}>
-              <boxGeometry args={[0.3, 0.8, 0.3]} />
-              <primitive object={material} />
-            </mesh>
-          </group>
-          
-          {/* Right Arm */}
-          <group position={[1, 2.2, 0]}>
-            <mesh position={[0, -0.8, 0]}>
-              <boxGeometry args={[0.4, 1.6, 0.4]} />
-              <primitive object={material} />
-            </mesh>
-            <mesh position={[0, -1.8, 0]}>
-              <boxGeometry args={[0.3, 0.8, 0.3]} />
-              <primitive object={material} />
-            </mesh>
-          </group>
-          
-          {/* Left Leg */}
-          <group position={[-0.4, 0, 0]}>
-            <mesh position={[0, -0.8, 0]}>
-              <boxGeometry args={[0.5, 1.6, 0.5]} />
-              <primitive object={material} />
-            </mesh>
-            <mesh position={[0, -1.8, 0]}>
-              <boxGeometry args={[0.6, 0.3, 0.8]} />
-              <primitive object={material} />
-            </mesh>
-          </group>
-          
-          {/* Right Leg */}
-          <group position={[0.4, 0, 0]}>
-            <mesh position={[0, -0.8, 0]}>
-              <boxGeometry args={[0.5, 1.6, 0.5]} />
-              <primitive object={material} />
-            </mesh>
-            <mesh position={[0, -1.8, 0]}>
-              <boxGeometry args={[0.6, 0.3, 0.8]} />
-              <primitive object={material} />
-            </mesh>
-          </group>
-          
-          {/* Antenna */}
-          <mesh position={[0, 4, 0]}>
-            <cylinderGeometry args={[0.05, 0.05, 0.8, 8]} />
+          <mesh position={[-0.6, 1.4, 0]}>
+            <boxGeometry args={[0.2, 0.8, 0.2]} />
             <primitive object={material} />
           </mesh>
-          <mesh position={[0, 4.5, 0]}>
-            <sphereGeometry args={[0.1, 8, 8]} />
+          {/* Right Arm */}
+          <mesh position={[0.6, 1.4, 0]}>
+            <boxGeometry args={[0.2, 0.8, 0.2]} />
+            <primitive object={material} />
+          </mesh>
+          {/* Left Leg */}
+          <mesh position={[-0.25, 0.4, 0]}>
+            <boxGeometry args={[0.25, 0.8, 0.25]} />
+            <primitive object={material} />
+          </mesh>
+          {/* Right Leg */}
+          <mesh position={[0.25, 0.4, 0]}>
+            <boxGeometry args={[0.25, 0.8, 0.25]} />
+            <primitive object={material} />
+          </mesh>
+          {/* Eyes */}
+          <mesh position={[-0.15, 2.3, 0.31]}>
+            <sphereGeometry args={[0.08, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+          <mesh position={[0.15, 2.3, 0.31]}>
+            <sphereGeometry args={[0.08, 8, 8]} />
+            <primitive object={material} />
+          </mesh>
+          {/* Antenna */}
+          <mesh position={[0, 2.6, 0]}>
+            <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
+            <primitive object={material} />
+          </mesh>
+          <mesh position={[0, 2.8, 0]}>
+            <sphereGeometry args={[0.06, 8, 8]} />
             <primitive object={material} />
           </mesh>
         </group>
@@ -759,43 +1109,67 @@ serve(async (req) => {
       const detectedGeometry = detectGeometry(prompt);
       console.log('Detected geometry:', detectedGeometry);
 
-      const systemPrompt = `You are a React Three Fiber visualizer generator. Create a COMPLEX audio-reactive 3D visualizer component.
+      const systemPrompt = `You are a React Three Fiber audio visualizer generator. Create COMPLEX audio-reactive 3D scenes.
 
-CRITICAL REQUIREMENTS:
-1. Use ONLY white materials via createVisualizerMaterial() - NO colors
-2. Create 50-300+ individual mesh components for complex scenes
-3. Each mesh must react to different frequency bands from audioData
-4. Use only standard R3F geometries: boxGeometry, sphereGeometry, cylinderGeometry, coneGeometry, planeGeometry, torusGeometry
-5. Import: useRef, useMemo from 'react', useFrame from '@react-three/fiber', useStudioStore from '@/stores/studioStore', createVisualizerMaterial from '@/lib/visualizerUtils'
-6. Component signature: export default function CustomVisualizer({ audioData }: { audioData: number[] })
+CRITICAL STRUCTURE REQUIREMENTS:
+1. Always use this exact import pattern at the top (they will be stripped but used for reference):
+   import React, { useRef, useMemo } from 'react';
+   import { useFrame } from '@react-three/fiber';
+   import { useStudioStore } from '@/stores/studioStore';
+   import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+   import * as THREE from 'three';
 
-COMPLEXITY EXAMPLES:
-- "Forest" = 100+ individual trees with branches, leaves
-- "City" = 200+ buildings, windows, roads, cars
-- "Ocean" = 300+ water droplets, waves, fish
-- "Galaxy" = 500+ stars, planets, asteroids
+2. Always access audioSensitivity from the store:
+   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
 
-Make it visually stunning with intricate details and smooth audio reactivity.`;
+3. Calculate frequency bands like this:
+   const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+   const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+   const highsRaw = audioData.frequency.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255;
 
-      const userPrompt = `Create a complex audio-reactive visualizer for: "${prompt}"
+4. Use smoothing with refs for natural motion:
+   const smoothedBass = useRef(0);
+   smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.12);
 
-Use detected geometry: ${detectedGeometry}
+5. Apply audioSensitivity multipliers:
+   const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+   const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+   const highs = smoothedHighs.current * audioSensitivity.highsMultiplier;
+   
+6. Use createVisualizerMaterial() for ALL materials - NO colors allowed
+   const material = createVisualizerMaterial();
+   <primitive object={material} />
+
+7. Target scale: entire scene should fit in ~8-12 unit radius
+
+8. Component signature: 
+   export default function CustomVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } })
+
+ONLY use these geometries: boxGeometry, sphereGeometry, cylinderGeometry, coneGeometry, torusGeometry, planeGeometry
+
+Create 50-200 individual mesh components for complex, detailed scenes.`;
+
+      const userPrompt = `Create a detailed audio-reactive 3D visualizer for: "${prompt}"
 
 Requirements:
-- 50-300+ individual mesh components
-- All white materials only
-- Complex, detailed scene
-- Smooth audio reactivity
-- Each component reacts to different frequencies`;
+- Create a recognizable, complex ${prompt} shape using multiple meshes (50-200 components)
+- All white materials via createVisualizerMaterial()
+- Bass (0-85): major movements, size pulses
+- Mids (86-170): rotations, secondary animations  
+- Highs (171-255): fine details, particle effects
+- Use audioData.beatStrength for beat-synced effects
+- Smooth all values with THREE.MathUtils.lerp
+- Make it visually impressive and clearly reactive to audio`;
 
       const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
       if (!openaiApiKey) {
         throw new Error('OpenAI API key not configured');
       }
 
-      // Try LLM generation, fall back to deterministic local template on failure (e.g., 429)
+      // Try LLM generation with gpt-4o (stable model)
       const tryGenerateWithLLM = async (): Promise<string | null> => {
         try {
+          console.log('Calling OpenAI API with gpt-4o...');
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -803,17 +1177,23 @@ Requirements:
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-5-2025-08-07',
+              model: 'gpt-4o',
               messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
               ],
-              max_completion_tokens: 2000
+              max_tokens: 4000,
+              temperature: 0.7
             }),
           });
 
-          if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('OpenAI API error:', response.status, errorText);
+            throw new Error(`OpenAI API error: ${response.status}`);
+          }
           const data = await response.json();
+          console.log('OpenAI response received successfully');
           return data.choices?.[0]?.message?.content || null;
         } catch (e) {
           console.error('OpenAI generation failed, using fallback:', e);
@@ -824,44 +1204,63 @@ Requirements:
       let rawCode = await tryGenerateWithLLM();
       if (!rawCode) {
         // Fallback: Procedural geometric pattern reacting to audio
+        console.log('Using fallback visualizer code');
         rawCode = `
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStudioStore } from '@/stores/studioStore';
 import { createVisualizerMaterial } from '@/lib/visualizerUtils';
+import * as THREE from 'three';
 
 export default function FallbackVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } }) {
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  
   const items = useMemo(() => {
     const arr: { x:number; y:number; z:number; r:number; fi:number }[] = [];
     const count = 120;
     for (let i = 0; i < count; i++) {
       const a = (i / count) * Math.PI * 2;
-      const r = 4 + (i % 8) * 0.5;
+      const r = 5 + (i % 8) * 0.6;
       arr.push({
         x: Math.cos(a) * r,
         z: Math.sin(a) * r,
-        y: Math.sin(i * 0.2) * 2,
+        y: Math.sin(i * 0.2) * 2.5,
         r: Math.random() * Math.PI,
-        fi: Math.floor((i / count) * (audioData.frequency.length - 1))
+        fi: Math.floor((i / count) * 255)
       });
     }
     return arr;
-  }, [audioData.frequency.length]);
+  }, []);
 
   useFrame(({ clock }) => {
-    if (!groupRef.current) return;
+    if (!groupRef.current || !audioData.frequency.length) return;
+    
     const t = clock.getElapsedTime();
+    
+    const bassRaw = audioData.frequency.slice(0, 85).reduce((a, b) => a + b, 0) / 85 / 255;
+    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
+    
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.12);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, midsRaw, 0.15);
+    
+    const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
+    const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
+    
+    groupRef.current.rotation.y = t * 0.1 * audioSensitivity.animationSpeed;
+    
     groupRef.current.children.forEach((child, i) => {
       const it = items[i];
       if (!it) return;
       const f = audioData.frequency[it.fi] || 0;
-      const response = f * audioSensitivity.frequency + audioData.beatStrength;
+      const response = (f / 255) * audioSensitivity.frequency + audioData.beatStrength * 0.5;
       child.rotation.y = it.r + Math.sin(t + i * 0.03) * 0.4;
       child.rotation.x = Math.sin(t * 0.3 + i * 0.02) * (0.3 + response * 0.5);
-      child.position.y = it.y + Math.sin(t + i * 0.04) * (0.5 + response * 1.5) + audioData.amplitude * 0.3;
-      (child as any).scale.setScalar(0.9 + response * 0.6);
+      child.position.y = it.y + Math.sin(t + i * 0.04) * (0.5 + response * 1.5);
+      (child as any).scale.setScalar(0.8 + response * 0.6 + bass * 0.3);
     });
   });
 
@@ -870,7 +1269,7 @@ export default function FallbackVisualizer({ audioData }: { audioData: { frequen
     <group ref={groupRef}>
       {items.map((p, i) => (
         <mesh key={i} position={[p.x, p.y, p.z]} rotation={[0, p.r, 0]}>
-          <boxGeometry args={[0.4, 0.8, 0.2]} />
+          <boxGeometry args={[0.5, 1, 0.25]} />
           <primitive object={material} />
         </mesh>
       ))}
@@ -900,11 +1299,7 @@ export default function FallbackVisualizer({ audioData }: { audioData: { frequen
         // Convert common HTML elements to groups (HTML isn't allowed inside Canvas)
         .replace(/<\/?(div|span|button|p|img|video|canvas)(\s|>)/gi, (m) => {
           return m.replace(/(div|span|button|p|img|video|canvas)/i, 'group');
-        })
-        // Replace any capitalized JSX elements and namespaced ones with groups
-        .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)\/>/g, '<group$2 />')
-        .replace(/<([A-Z][A-Za-z0-9_.-]*)\b([^>]*)>/g, '<group$2>')
-        .replace(/<\/(?:[A-Z][A-Za-z0-9_.-]*)>/g, '</group>');
+        });
         
         // Inject material declaration if missing but primitive object={material} is used
         if (sanitized.includes('<primitive object={material}') && !sanitized.includes('const material = createVisualizerMaterial')) {
@@ -920,14 +1315,17 @@ export default function FallbackVisualizer({ audioData }: { audioData: { frequen
       visualizerCode = allowSanitize(visualizerCode);
 
       // Generate name and emoji
-      const words = prompt.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1));
+      const words = prompt.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1));
       visualizerName = words.join(' ') + ' Visualizer';
 
       // Emoji mapping
       const emojiMap: Record<string, string> = {
         forest: '🌲', city: '🏙️', ocean: '🌊', space: '🌌', fire: '🔥',
         ice: '❄️', crystal: '💎', energy: '⚡', magic: '✨', flower: '🌸',
-        mountain: '🏔️', desert: '🏜️', jungle: '🌿', volcano: '🌋', aurora: '🌌'
+        mountain: '🏔️', desert: '🏜️', jungle: '🌿', volcano: '🌋', aurora: '🌌',
+        skull: '💀', dragon: '🐉', moon: '🌙', sun: '☀️', planet: '🪐',
+        galaxy: '🌀', wave: '🌊', tree: '🌳', bird: '🐦', fish: '🐟',
+        butterfly: '🦋', snake: '🐍', wolf: '🐺', lion: '🦁', eagle: '🦅'
       };
       
       previewEmoji = Object.entries(emojiMap).find(([key]) => 
@@ -977,7 +1375,7 @@ export default function FallbackVisualizer({ audioData }: { audioData: { frequen
         description: `Generated from prompt: ${prompt}`,
         prompt: prompt,
         jsx_code: visualizerCode,
-        scale_factor: 1.0,
+        scale_factor: 0.25, // Default scale to match standard visualizers
         preview_emoji: previewEmoji,
         is_public: false
       })
