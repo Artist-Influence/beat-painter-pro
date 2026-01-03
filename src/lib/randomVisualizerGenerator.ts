@@ -9,24 +9,19 @@ export function seededRandom(seed: number) {
 
 export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix';
 export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 'smooth' | 'breathing' | 'explosive';
-export type Intensity = 'subtle' | 'medium' | 'intense' | 'extreme';
-export type Density = 'sparse' | 'normal' | 'dense' | 'extreme';
-export type VisualEffect = 'none' | 'glow' | 'wireframe' | 'hybrid' | 'threading';
+export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'grid' | 'particles' | 'lightRays' | 'aurora';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
 
 export interface RandomVisualizerParams {
   seed: number;
   baseShape: BaseShape;
   animationStyle: AnimationStyle;
-  intensity: Intensity;
   elementCount: number;
   particleCount: number;
   symmetry: boolean;
   rotationSpeed: number;
   colorShift: number;
-  // New params
-  density: Density;
-  visualEffect: VisualEffect;
+  backgroundEffect: BackgroundEffect;
   colorScheme: ColorScheme;
   mixedGeometry: boolean;
   connectionLines: boolean;
@@ -34,9 +29,7 @@ export interface RandomVisualizerParams {
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix'];
 export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
-export const INTENSITIES: Intensity[] = ['subtle', 'medium', 'intense', 'extreme'];
-export const DENSITIES: Density[] = ['sparse', 'normal', 'dense', 'extreme'];
-export const VISUAL_EFFECTS: VisualEffect[] = ['none', 'glow', 'wireframe', 'hybrid', 'threading'];
+export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'grid', 'particles', 'lightRays', 'aurora'];
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
 
 export function generateRandomSeed(): number {
@@ -45,36 +38,31 @@ export function generateRandomSeed(): number {
 
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'intensity' | 'density' | 'visualEffect' | 'colorScheme'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
-  const intensity = preferences?.intensity || INTENSITIES[Math.floor(random() * INTENSITIES.length)];
-  const density = preferences?.density || DENSITIES[Math.floor(random() * DENSITIES.length)];
-  const visualEffect = preferences?.visualEffect || VISUAL_EFFECTS[Math.floor(random() * VISUAL_EFFECTS.length)];
+  const backgroundEffect = preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
   const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
   
-  // Intensity affects element counts
-  const intensityMultiplier = intensity === 'subtle' ? 0.4 : intensity === 'medium' ? 1 : intensity === 'intense' ? 1.8 : 2.5;
-  const densityMultiplier = density === 'sparse' ? 0.5 : density === 'normal' ? 1 : density === 'dense' ? 1.8 : 3;
+  // Element count: use preference or random between 8-40
+  const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
   
   return {
     seed,
     baseShape,
     animationStyle,
-    intensity,
-    density,
-    visualEffect,
+    backgroundEffect,
     colorScheme,
-    elementCount: Math.floor((8 + random() * 25) * densityMultiplier),
-    particleCount: Math.floor((150 + random() * 600) * densityMultiplier),
+    elementCount,
+    particleCount: Math.floor(150 + random() * 400),
     symmetry: random() > 0.4,
     rotationSpeed: 0.2 + random() * 0.8,
     colorShift: random() * Math.PI * 2,
     mixedGeometry: random() > 0.5,
-    connectionLines: visualEffect === 'threading' || random() > 0.7,
+    connectionLines: random() > 0.7,
   };
 }
 
