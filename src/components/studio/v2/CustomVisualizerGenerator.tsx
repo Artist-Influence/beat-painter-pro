@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Save, RefreshCw, Sparkles, Link2 } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import { 
   generateRandomSeed, 
   generateRandomParams, 
@@ -154,6 +155,7 @@ export function CustomVisualizerGenerator({
                   audioData={PREVIEW_AUDIO}
                 />
               </Suspense>
+              <OrbitControls enablePan={false} enableZoom={true} minDistance={4} maxDistance={15} />
             </Canvas>
             
             {/* Current visualizer name overlay */}

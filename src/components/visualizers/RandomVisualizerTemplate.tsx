@@ -21,7 +21,7 @@ const GEOMETRY_TYPES = [
 
 type GeometryType = typeof GEOMETRY_TYPES[number];
 
-// Background effects component
+// Background effects component - renders behind main visualizer
 function BackgroundEffects({ 
   effect, 
   colors, 
@@ -33,9 +33,15 @@ function BackgroundEffects({
   bass: number;
   seed: number;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
   const pointsRef = useRef<THREE.Points>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
+  const shootingStarsRef = useRef<THREE.Points>(null);
+  
+  // Shooting star velocities for movingLines effect
+  const shootingStarData = useRef<{
+    velocities: Float32Array;
+    startPositions: Float32Array;
+  } | null>(null);
   
   // Generate positions based on effect type
   const effectData = useMemo(() => {
@@ -47,39 +53,60 @@ function BackgroundEffects({
       const opacities = new Float32Array(count);
       
       for (let i = 0; i < count; i++) {
-        // Spread stars in a large sphere
+        // Spread stars in a large sphere behind the visualizer
         const phi = r() * Math.PI * 2;
         const theta = r() * Math.PI;
-        const radius = 8 + r() * 12;
+        const radius = 12 + r() * 8;
         positions[i * 3] = Math.sin(theta) * Math.cos(phi) * radius;
         positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * radius;
-        positions[i * 3 + 2] = Math.cos(theta) * radius;
+        positions[i * 3 + 2] = Math.cos(theta) * radius - 10; // Push back
         opacities[i] = r();
       }
       return { positions, opacities, count };
     }
     
     if (effect === 'movingLines') {
-      const count = 20;
-      const linePositions: number[] = [];
+      // Shooting stars that move diagonally across the screen
+      const count = 25;
+      const positions = new Float32Array(count * 3);
+      const velocities = new Float32Array(count * 3);
+      const startPositions = new Float32Array(count * 3);
       
       for (let i = 0; i < count; i++) {
+        // Start at random positions
+        const x = (r() - 0.5) * 30;
         const y = (r() - 0.5) * 20;
-        const z = (r() - 0.5) * 10;
-        linePositions.push(-15, y, z, 15, y, z);
+        const z = -8 + r() * 4; // Behind the main visualizer
+        
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+        
+        startPositions[i * 3] = x;
+        startPositions[i * 3 + 1] = y;
+        startPositions[i * 3 + 2] = z;
+        
+        // Random diagonal velocities (shooting star movement)
+        const speed = 0.15 + r() * 0.25;
+        const angle = -Math.PI / 4 + (r() - 0.5) * 0.5; // Mostly diagonal down-right
+        velocities[i * 3] = Math.cos(angle) * speed;
+        velocities[i * 3 + 1] = Math.sin(angle) * speed;
+        velocities[i * 3 + 2] = 0;
       }
-      return { linePositions: new Float32Array(linePositions), count };
+      
+      shootingStarData.current = { velocities, startPositions };
+      return { positions, count };
     }
     
     if (effect === 'grid') {
       const linePositions: number[] = [];
-      const gridSize = 10;
+      const gridSize = 8;
       const spacing = 2;
       
-      // Horizontal lines
+      // Floor grid, pushed back
       for (let i = -gridSize; i <= gridSize; i += spacing) {
-        linePositions.push(-gridSize, -5, i, gridSize, -5, i);
-        linePositions.push(i, -5, -gridSize, i, -5, gridSize);
+        linePositions.push(-gridSize, -5, i - 5, gridSize, -5, i - 5);
+        linePositions.push(i, -5, -gridSize - 5, i, -5, gridSize - 5);
       }
       return { linePositions: new Float32Array(linePositions), count: linePositions.length / 6 };
     }
@@ -90,12 +117,12 @@ function BackgroundEffects({
       const velocities = new Float32Array(count * 3);
       
       for (let i = 0; i < count; i++) {
-        positions[i * 3] = (r() - 0.5) * 20;
-        positions[i * 3 + 1] = (r() - 0.5) * 20;
-        positions[i * 3 + 2] = (r() - 0.5) * 10;
+        positions[i * 3] = (r() - 0.5) * 16;
+        positions[i * 3 + 1] = (r() - 0.5) * 16;
+        positions[i * 3 + 2] = (r() - 0.5) * 8 - 5; // Push back
         velocities[i * 3] = (r() - 0.5) * 0.02;
         velocities[i * 3 + 1] = (r() - 0.5) * 0.02;
-        velocities[i * 3 + 2] = (r() - 0.5) * 0.02;
+        velocities[i * 3 + 2] = (r() - 0.5) * 0.01;
       }
       return { positions, velocities, count };
     }
@@ -106,9 +133,9 @@ function BackgroundEffects({
       
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
-        const x = Math.cos(angle) * 15;
-        const y = Math.sin(angle) * 15;
-        linePositions.push(0, 0, -5, x, y, -5);
+        const x = Math.cos(angle) * 12;
+        const y = Math.sin(angle) * 12;
+        linePositions.push(0, 0, -8, x, y, -8); // Push back
       }
       return { linePositions: new Float32Array(linePositions), count };
     }
@@ -118,9 +145,9 @@ function BackgroundEffects({
       const positions = new Float32Array(count * 3);
       
       for (let i = 0; i < count; i++) {
-        positions[i * 3] = (i / count - 0.5) * 30;
-        positions[i * 3 + 1] = 8 + r() * 4;
-        positions[i * 3 + 2] = -10 + r() * 2;
+        positions[i * 3] = (i / count - 0.5) * 25;
+        positions[i * 3 + 1] = 6 + r() * 3;
+        positions[i * 3 + 2] = -12 + r() * 2; // Push further back
       }
       return { positions, count };
     }
@@ -137,10 +164,35 @@ function BackgroundEffects({
       material.opacity = 0.4 + Math.sin(t * 2) * 0.2 + bass * 0.3;
     }
     
-    if (effect === 'movingLines' && linesRef.current) {
-      linesRef.current.position.x = Math.sin(t * 0.3) * 2;
-      const material = linesRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.2 + bass * 0.3;
+    // Shooting stars effect - animate individual points moving diagonally
+    if (effect === 'movingLines' && shootingStarsRef.current && shootingStarData.current) {
+      const positions = shootingStarsRef.current.geometry.attributes.position;
+      const { velocities, startPositions } = shootingStarData.current;
+      const bounds = 15;
+      
+      for (let i = 0; i < effectData!.count; i++) {
+        let x = positions.getX(i);
+        let y = positions.getY(i);
+        
+        // Move in velocity direction
+        const speedMult = 1 + bass * 0.5;
+        x += velocities[i * 3] * speedMult;
+        y += velocities[i * 3 + 1] * speedMult;
+        
+        // Reset when out of bounds
+        if (x > bounds || x < -bounds || y > bounds || y < -bounds) {
+          // Respawn at opposite edge
+          x = -bounds + Math.random() * bounds * 0.5;
+          y = bounds * 0.5 + Math.random() * bounds * 0.5;
+        }
+        
+        positions.setX(i, x);
+        positions.setY(i, y);
+      }
+      positions.needsUpdate = true;
+      
+      const material = shootingStarsRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.5 + bass * 0.4;
     }
     
     if (effect === 'grid' && linesRef.current) {
@@ -153,8 +205,8 @@ function BackgroundEffects({
       for (let i = 0; i < Math.min(50, effectData.count); i++) {
         let y = positions.getY(i);
         y += effectData.velocities[i * 3 + 1] + bass * 0.01;
-        if (y > 10) y = -10;
-        if (y < -10) y = 10;
+        if (y > 8) y = -8;
+        if (y < -8) y = 8;
         positions.setY(i, y);
       }
       positions.needsUpdate = true;
@@ -166,11 +218,11 @@ function BackgroundEffects({
       material.opacity = 0.1 + bass * 0.4;
     }
     
-    if (effect === 'aurora' && pointsRef.current) {
+    if (effect === 'aurora' && pointsRef.current && effectData) {
       const positions = pointsRef.current.geometry.attributes.position;
-      for (let i = 0; i < effectData!.count; i++) {
+      for (let i = 0; i < effectData.count; i++) {
         const x = positions.getX(i);
-        const baseY = 8 + Math.sin(x * 0.3 + t) * 2;
+        const baseY = 6 + Math.sin(x * 0.3 + t) * 2;
         positions.setY(i, baseY + bass * 2);
       }
       positions.needsUpdate = true;
@@ -204,8 +256,31 @@ function BackgroundEffects({
     );
   }
   
-  // Moving lines, grid, or light rays
-  if ((effect === 'movingLines' || effect === 'grid' || effect === 'lightRays') && effectData.linePositions) {
+  // Shooting stars (movingLines effect) - points that move like meteors
+  if (effect === 'movingLines' && effectData.positions) {
+    return (
+      <points ref={shootingStarsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={effectData.count}
+            array={effectData.positions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={primaryColor}
+          size={0.15}
+          transparent
+          opacity={0.6}
+          sizeAttenuation
+        />
+      </points>
+    );
+  }
+  
+  // Grid or light rays
+  if ((effect === 'grid' || effect === 'lightRays') && effectData.linePositions) {
     return (
       <lineSegments ref={linesRef}>
         <bufferGeometry>
@@ -674,12 +749,13 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         }
       }
       
-      // Matrix falling effect
-      if (params.baseShape === 'matrix') {
-        mesh.position.y -= 0.03;
-        if (mesh.position.y < -6) {
-          mesh.position.y = 6;
-        }
+      // Matrix falling effect - use time-based animation for smoother results
+      if (params.baseShape === 'matrix' && meshConfigs[i]) {
+        const config = meshConfigs[i];
+        const fallSpeed = 2;
+        const range = 12;
+        const offset = (t * fallSpeed + config.position[1] + 6) % range;
+        mesh.position.y = offset - 6;
       }
     });
 
