@@ -66,49 +66,47 @@ function BackgroundEffects({
     }
     
     if (effect === 'movingLines') {
-      // Shooting stars that move diagonally across the screen
-      const count = 25;
-      const positions = new Float32Array(count * 3);
-      const velocities = new Float32Array(count * 3);
-      const startPositions = new Float32Array(count * 3);
+      // Pre-generate stable star configs - no buffer modification needed
+      const starCount = 20;
+      const stars: Array<{
+        speed: number;
+        angle: number;
+        startX: number;
+        startY: number;
+        phase: number;
+      }> = [];
       
-      for (let i = 0; i < count; i++) {
-        // Start at random positions
-        const x = (r() - 0.5) * 30;
-        const y = (r() - 0.5) * 20;
-        const z = -8 + r() * 4; // Behind the main visualizer
-        
-        positions[i * 3] = x;
-        positions[i * 3 + 1] = y;
-        positions[i * 3 + 2] = z;
-        
-        startPositions[i * 3] = x;
-        startPositions[i * 3 + 1] = y;
-        startPositions[i * 3 + 2] = z;
-        
-        // Random diagonal velocities (shooting star movement)
-        const speed = 0.15 + r() * 0.25;
-        const angle = -Math.PI / 4 + (r() - 0.5) * 0.5; // Mostly diagonal down-right
-        velocities[i * 3] = Math.cos(angle) * speed;
-        velocities[i * 3 + 1] = Math.sin(angle) * speed;
-        velocities[i * 3 + 2] = 0;
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          speed: 0.15 + r() * 0.35,
+          angle: -Math.PI / 4 + (r() - 0.5) * 0.4,
+          startX: (r() - 0.5) * 35,
+          startY: r() * 20 - 5,
+          phase: r() * 100,
+        });
       }
-      
-      shootingStarData.current = { velocities, startPositions };
-      return { positions, count };
+      return { stars, count: starCount };
     }
     
-    if (effect === 'grid') {
-      const linePositions: number[] = [];
-      const gridSize = 8;
-      const spacing = 2;
+    if (effect === 'energyField') {
+      // Concentric pulsing rings
+      const ringCount = 6;
+      const rings: Array<{
+        baseRadius: number;
+        phase: number;
+        speed: number;
+        thickness: number;
+      }> = [];
       
-      // Floor grid, pushed back
-      for (let i = -gridSize; i <= gridSize; i += spacing) {
-        linePositions.push(-gridSize, -5, i - 5, gridSize, -5, i - 5);
-        linePositions.push(i, -5, -gridSize - 5, i, -5, gridSize - 5);
+      for (let i = 0; i < ringCount; i++) {
+        rings.push({
+          baseRadius: 2 + i * 1.8,
+          phase: r() * Math.PI * 2,
+          speed: 0.3 + r() * 0.3,
+          thickness: 0.015 + r() * 0.01,
+        });
       }
-      return { linePositions: new Float32Array(linePositions), count: linePositions.length / 6 };
+      return { rings, count: ringCount };
     }
     
     if (effect === 'particles') {
@@ -178,50 +176,7 @@ function BackgroundEffects({
       material.opacity = 0.4 + Math.sin(t * 2) * 0.2 + bass * 0.3;
     }
     
-    // Shooting stars effect - animate individual points moving diagonally
-    if (effect === 'movingLines' && shootingStarsRef.current) {
-      try {
-        const geometry = shootingStarsRef.current.geometry;
-        const positions = geometry?.attributes?.position;
-        const data = shootingStarData.current;
-        
-        if (!positions || !data?.velocities || !effectData?.count) return;
-        
-        const { velocities } = data;
-        const bounds = 15;
-        const count = effectData.count;
-        
-        for (let i = 0; i < count; i++) {
-          let x = positions.getX(i);
-          let y = positions.getY(i);
-          
-          // Move in velocity direction
-          const speedMult = 1 + bass * 0.5;
-          x += velocities[i * 3] * speedMult;
-          y += velocities[i * 3 + 1] * speedMult;
-          
-          // Reset when out of bounds
-          if (x > bounds || x < -bounds || y > bounds || y < -bounds) {
-            x = -bounds + Math.random() * bounds * 0.5;
-            y = bounds * 0.5 + Math.random() * bounds * 0.5;
-          }
-          
-          positions.setX(i, x);
-          positions.setY(i, y);
-        }
-        positions.needsUpdate = true;
-        
-        const material = shootingStarsRef.current.material as THREE.PointsMaterial;
-        material.opacity = 0.5 + bass * 0.4;
-      } catch (e) {
-        // Silently handle initialization errors
-      }
-    }
-    
-    if (effect === 'grid' && linesRef.current) {
-      const material = linesRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.1 + bass * 0.15;
-    }
+    // MovingLines and EnergyField are handled by their own components
     
     if (effect === 'particles' && pointsRef.current && effectData?.velocities) {
       const positions = pointsRef.current.geometry.attributes.position;
@@ -275,48 +230,14 @@ function BackgroundEffects({
     );
   }
   
-  // Shooting stars (movingLines effect) - points that move like meteors
-  if (effect === 'movingLines' && effectData.positions) {
-    return (
-      <points ref={shootingStarsRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={effectData.count}
-            array={effectData.positions}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          color={primaryColor}
-          size={0.15}
-          transparent
-          opacity={0.6}
-          sizeAttenuation
-        />
-      </points>
-    );
+  // Moving lines - use separate component to avoid buffer issues
+  if (effect === 'movingLines' && effectData.stars) {
+    return <MovingLinesEffect stars={effectData.stars} bass={bass} color={primaryColor} />;
   }
   
-  // Grid
-  if (effect === 'grid' && effectData.linePositions) {
-    return (
-      <lineSegments ref={linesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={effectData.linePositions.length / 3}
-            array={effectData.linePositions}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial
-          color={primaryColor}
-          transparent
-          opacity={0.2}
-        />
-      </lineSegments>
-    );
+  // Energy field - pulsing rings
+  if (effect === 'energyField' && effectData.rings) {
+    return <EnergyFieldEffect rings={effectData.rings} bass={bass} color={primaryColor} />;
   }
   
   // Light rays - volumetric glowing beams
@@ -448,6 +369,129 @@ function LightRaysEffect({ rays, bass }: {
   );
 }
 
+// Moving lines effect - safe component without buffer modifications
+function MovingLinesEffect({ 
+  stars, 
+  bass, 
+  color 
+}: { 
+  stars: Array<{ speed: number; angle: number; startX: number; startY: number; phase: number }>;
+  bass: number;
+  color: THREE.Color;
+}) {
+  const meshRefs = useRef<THREE.Mesh[]>([]);
+  
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const star = stars[i];
+      if (!star) return;
+      
+      // Calculate position along trajectory
+      const progress = ((t * star.speed + star.phase) % 50) / 50; // 0-1 cycle
+      const travelDist = 40; // Total travel distance
+      
+      // Move from start position in diagonal direction
+      const dx = Math.cos(star.angle) * progress * travelDist;
+      const dy = Math.sin(star.angle) * progress * travelDist;
+      
+      mesh.position.x = star.startX + dx;
+      mesh.position.y = star.startY + dy;
+      mesh.position.z = -8;
+      
+      // Fade in at start, fade out at end
+      const fadeIn = Math.min(progress * 5, 1);
+      const fadeOut = Math.min((1 - progress) * 5, 1);
+      const opacity = fadeIn * fadeOut * (0.4 + bass * 0.4);
+      
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      material.opacity = opacity;
+      
+      // Scale based on speed (faster = longer trail)
+      mesh.scale.x = 0.5 + star.speed * 2 + bass * 0.5;
+    });
+  });
+  
+  return (
+    <group>
+      {stars.map((star, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { if (el) meshRefs.current[i] = el; }}
+          position={[star.startX, star.startY, -8]}
+          rotation={[0, 0, star.angle]}
+        >
+          <capsuleGeometry args={[0.02, 0.3, 2, 4]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.5}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// Energy field effect - pulsing concentric rings
+function EnergyFieldEffect({ 
+  rings, 
+  bass, 
+  color 
+}: { 
+  rings: Array<{ baseRadius: number; phase: number; speed: number; thickness: number }>;
+  bass: number;
+  color: THREE.Color;
+}) {
+  const meshRefs = useRef<THREE.Mesh[]>([]);
+  
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const ring = rings[i];
+      if (!ring) return;
+      
+      // Pulsing expansion/contraction
+      const pulse = Math.sin(t * ring.speed + ring.phase);
+      const scale = 1 + pulse * 0.15 + bass * 0.2;
+      
+      mesh.scale.setScalar(scale);
+      
+      // Fade opacity based on pulse
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      const baseOpacity = 0.08 + (i / rings.length) * 0.05;
+      material.opacity = baseOpacity + pulse * 0.05 + bass * 0.1;
+      
+      // Slow rotation
+      mesh.rotation.z = t * 0.1 * (i % 2 === 0 ? 1 : -1);
+    });
+  });
+  
+  return (
+    <group position={[0, 0, -10]}>
+      {rings.map((ring, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { if (el) meshRefs.current[i] = el; }}
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <torusGeometry args={[ring.baseRadius, ring.thickness, 8, 64]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.1}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizerTemplateProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
@@ -496,7 +540,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       wireframe: boolean;
     }> = [];
     
-    const count = params.elementCount;
+    // Single-element shapes only render 1 element
+    const isSingleElement = ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+    const count = isSingleElement ? 1 : params.elementCount;
     const r = seededRandom(params.seed);
     
     // Pick geometries - orb ALWAYS uses spherical shapes regardless of mixedGeometry
@@ -519,6 +565,11 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         case 'lattice': return r() > 0.5 ? 'box' : 'octahedron';
         case 'matrix': return r() > 0.5 ? 'box' : 'cylinder';
         case 'nebula': return r() > 0.5 ? 'sphere' : 'icosahedron';
+        // Single-element shapes use specific geometries
+        case 'membrane': return 'icosahedron';
+        case 'pulsar': return 'sphere';
+        case 'vortexCore': return 'torusKnot';
+        case 'cosmicEye': return 'torus';
         default: return 'sphere';
       }
     };
@@ -668,6 +719,16 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           break;
         }
         
+        // Single-element shapes - only render ONE element at center
+        case 'membrane':
+        case 'pulsar':
+        case 'vortexCore':
+        case 'cosmicEye': {
+          // These are single-element shapes - just position at center
+          pos = [0, 0, 0];
+          break;
+        }
+        
         default: {
           pos = [
             (r() - 0.5) * 8,
@@ -688,10 +749,15 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       const scaleMult = params.scaleVariation || 1;
       const rotOffset = params.rotationOffset || 0;
       
+      // Single-element shapes get a large scale to fill the screen
+      const baseScale = isSingleElement 
+        ? 2.5 + (params.scaleVariation || 1) * 0.5 
+        : (0.15 + r() * 0.45) * elementScale * scaleMult;
+      
       configs.push({
-        position: [pos[0] * spreadMult, pos[1] * spreadMult, pos[2] * spreadMult],
+        position: isSingleElement ? [0, 0, 0] : [pos[0] * spreadMult, pos[1] * spreadMult, pos[2] * spreadMult],
         rotation: [r() * Math.PI + rotOffset, r() * Math.PI, r() * Math.PI],
-        scale: (0.15 + r() * 0.45) * elementScale * scaleMult,
+        scale: baseScale,
         geometry: geo,
         colorIndex: Math.floor(r() * colors.length),
         wireframe: false,
@@ -873,6 +939,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       }
     }
 
+    // Check if we're using a single-element shape
+    const isSingleElementShape = ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+
     // Animate individual meshes - style-specific behavior
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
@@ -885,6 +954,50 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       
       // Base scale from config
       const baseScale = config.scale || 0.3;
+      
+      // Single-element shapes get dramatic wild animations regardless of style
+      if (isSingleElementShape) {
+        const intensity = 1 + bass * 0.8 + mids * 0.4;
+        
+        switch (params.baseShape) {
+          case 'membrane':
+            // Organic pulsing blob - wild deformation
+            mesh.rotation.x = t * 0.5 + Math.sin(t * 2.3) * 0.5;
+            mesh.rotation.y = t * 0.7 + Math.cos(t * 1.8) * 0.5;
+            mesh.rotation.z = Math.sin(t * 1.5) * 0.3;
+            mesh.scale.x = baseScale * (1 + Math.sin(t * 3) * 0.3 * intensity);
+            mesh.scale.y = baseScale * (1 + Math.cos(t * 2.7) * 0.3 * intensity);
+            mesh.scale.z = baseScale * (1 + Math.sin(t * 2.1) * 0.3 * intensity);
+            break;
+            
+          case 'pulsar':
+            // Pulsing star with rhythmic beats
+            const pulsarBeat = Math.sin(t * 4);
+            const pulsarPop = pulsarBeat > 0.6 ? 1.4 : 1;
+            mesh.rotation.y = t * 1.5;
+            mesh.rotation.x = Math.sin(t * 0.8) * 0.4;
+            mesh.scale.setScalar(baseScale * pulsarPop * intensity);
+            break;
+            
+          case 'vortexCore':
+            // Wild spinning torusKnot
+            mesh.rotation.x = t * 2 + bass;
+            mesh.rotation.y = t * 3;
+            mesh.rotation.z = t * 1.5;
+            mesh.scale.setScalar(baseScale * (0.9 + Math.sin(t * 2) * 0.2) * intensity);
+            break;
+            
+          case 'cosmicEye':
+            // Hypnotic iris dilation
+            const eyePulse = Math.sin(t * 1.5);
+            mesh.rotation.z = t * 0.3;
+            mesh.scale.x = baseScale * (1 + eyePulse * 0.4 * intensity);
+            mesh.scale.y = baseScale * (1 + eyePulse * 0.4 * intensity);
+            mesh.scale.z = baseScale * (0.5 + bass * 0.5);
+            break;
+        }
+        return; // Skip normal animation processing for single elements
+      }
       
       // Style-specific individual mesh animations
       switch (params.animationStyle) {
