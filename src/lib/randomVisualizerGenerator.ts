@@ -24,6 +24,10 @@ export interface RandomVisualizerParams {
   backgroundEffect: BackgroundEffect;
   mixedGeometry: boolean;
   connectionLines: boolean;
+  // New variance parameters for unique generations
+  scaleVariation: number;
+  positionSpread: number;
+  rotationOffset: number;
 }
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix'];
@@ -44,8 +48,6 @@ export function generateRandomParams(
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const backgroundEffect = preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
-  // Always use mono (white) color scheme - aesthetics layered later
-  const colorScheme: ColorScheme = 'mono';
   
   // Element count: use preference or random between 8-40
   const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
@@ -60,13 +62,16 @@ export function generateRandomParams(
     animationStyle,
     backgroundEffect,
     elementCount,
-    particleCount: Math.floor(150 + random() * 400),
-    symmetry: random() > 0.4,
-    rotationSpeed: 0.2 + random() * 0.8,
+    particleCount: Math.floor(100 + random() * 300),
+    symmetry: random() > 0.5, // 50/50 for more variation
+    rotationSpeed: 0.1 + random() * 1.2, // Wider range
     colorShift: random() * Math.PI * 2,
     mixedGeometry,
-    // Connection lines default to false - only enabled via explicit toggle
     connectionLines: preferences?.connectionLines ?? false,
+    // New variance parameters - these create unique looks even with same shape/animation
+    scaleVariation: 0.5 + random() * 1.0, // 0.5x to 1.5x
+    positionSpread: 2 + random() * 4, // How spread out elements are
+    rotationOffset: random() * Math.PI * 2, // Starting rotation angle
   };
 }
 

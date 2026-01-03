@@ -128,29 +128,30 @@ function BackgroundEffects({
     }
     
     if (effect === 'lightRays') {
-      // Volumetric god rays from corners - aesthetic beams
-      const count = 16;
-      const linePositions: number[] = [];
+      // Volumetric god rays - wide beams with glow effect
+      const count = 10;
+      const rays: Array<{
+        angle: number;
+        width: number;
+        length: number;
+        phase: number;
+        speed: number;
+        opacity: number;
+      }> = [];
       
       for (let i = 0; i < count; i++) {
-        // Rays emanate from corners/edges toward center
-        const corner = i % 4;
-        const rayIndex = Math.floor(i / 4);
-        const spreadOffset = (rayIndex - 1.5) * 0.3;
-        
-        // Start positions at corners
-        const startX = (corner < 2 ? -1 : 1) * (12 + r() * 3);
-        const startY = (corner % 2 === 0 ? 1 : -1) * (8 + r() * 2) + spreadOffset * 3;
-        const startZ = -15;
-        
-        // End positions toward center with spread
-        const endX = startX * 0.15 + spreadOffset * 2;
-        const endY = startY * 0.2 + spreadOffset;
-        const endZ = -5;
-        
-        linePositions.push(startX, startY, startZ, endX, endY, endZ);
+        // Rays from edges of screen at various angles
+        const angle = (i / count) * Math.PI * 2 + r() * 0.3;
+        rays.push({
+          angle,
+          width: 0.8 + r() * 1.2, // Varying widths for depth
+          length: 12 + r() * 8,
+          phase: r() * Math.PI * 2,
+          speed: 0.2 + r() * 0.4,
+          opacity: 0.15 + r() * 0.15,
+        });
       }
-      return { linePositions: new Float32Array(linePositions), count };
+      return { rays, count };
     }
     
     if (effect === 'aurora') {
@@ -178,38 +179,43 @@ function BackgroundEffects({
     }
     
     // Shooting stars effect - animate individual points moving diagonally
-    if (effect === 'movingLines' && shootingStarsRef.current && shootingStarData.current && effectData?.count) {
-      const geometry = shootingStarsRef.current.geometry;
-      const positions = geometry?.attributes?.position;
-      if (!positions) return;
-      
-      const { velocities } = shootingStarData.current;
-      const bounds = 15;
-      const count = effectData.count;
-      
-      for (let i = 0; i < count; i++) {
-        let x = positions.getX(i);
-        let y = positions.getY(i);
+    if (effect === 'movingLines' && shootingStarsRef.current) {
+      try {
+        const geometry = shootingStarsRef.current.geometry;
+        const positions = geometry?.attributes?.position;
+        const data = shootingStarData.current;
         
-        // Move in velocity direction
-        const speedMult = 1 + bass * 0.5;
-        x += velocities[i * 3] * speedMult;
-        y += velocities[i * 3 + 1] * speedMult;
+        if (!positions || !data?.velocities || !effectData?.count) return;
         
-        // Reset when out of bounds
-        if (x > bounds || x < -bounds || y > bounds || y < -bounds) {
-          // Respawn at opposite edge
-          x = -bounds + Math.random() * bounds * 0.5;
-          y = bounds * 0.5 + Math.random() * bounds * 0.5;
+        const { velocities } = data;
+        const bounds = 15;
+        const count = effectData.count;
+        
+        for (let i = 0; i < count; i++) {
+          let x = positions.getX(i);
+          let y = positions.getY(i);
+          
+          // Move in velocity direction
+          const speedMult = 1 + bass * 0.5;
+          x += velocities[i * 3] * speedMult;
+          y += velocities[i * 3 + 1] * speedMult;
+          
+          // Reset when out of bounds
+          if (x > bounds || x < -bounds || y > bounds || y < -bounds) {
+            x = -bounds + Math.random() * bounds * 0.5;
+            y = bounds * 0.5 + Math.random() * bounds * 0.5;
+          }
+          
+          positions.setX(i, x);
+          positions.setY(i, y);
         }
+        positions.needsUpdate = true;
         
-        positions.setX(i, x);
-        positions.setY(i, y);
+        const material = shootingStarsRef.current.material as THREE.PointsMaterial;
+        material.opacity = 0.5 + bass * 0.4;
+      } catch (e) {
+        // Silently handle initialization errors
       }
-      positions.needsUpdate = true;
-      
-      const material = shootingStarsRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.5 + bass * 0.4;
     }
     
     if (effect === 'grid' && linesRef.current) {
@@ -229,14 +235,7 @@ function BackgroundEffects({
       positions.needsUpdate = true;
     }
     
-    if (effect === 'lightRays' && linesRef.current) {
-      // Subtle drift and pulse for god rays
-      linesRef.current.rotation.z = Math.sin(t * 0.05) * 0.05;
-      linesRef.current.position.x = Math.sin(t * 0.08) * 0.3;
-      linesRef.current.position.y = Math.cos(t * 0.06) * 0.2;
-      const material = linesRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.12 + Math.sin(t * 0.4) * 0.08 + bass * 0.25;
-    }
+    // Light rays animation is handled in the render loop via mesh updates
     
     if (effect === 'aurora' && pointsRef.current && effectData) {
       const positions = pointsRef.current.geometry.attributes.position;
@@ -299,8 +298,8 @@ function BackgroundEffects({
     );
   }
   
-  // Grid or light rays
-  if ((effect === 'grid' || effect === 'lightRays') && effectData.linePositions) {
+  // Grid
+  if (effect === 'grid' && effectData.linePositions) {
     return (
       <lineSegments ref={linesRef}>
         <bufferGeometry>
@@ -317,6 +316,13 @@ function BackgroundEffects({
           opacity={0.2}
         />
       </lineSegments>
+    );
+  }
+  
+  // Light rays - volumetric glowing beams
+  if (effect === 'lightRays' && effectData.rays) {
+    return (
+      <LightRaysEffect rays={effectData.rays} bass={bass} />
     );
   }
   
@@ -367,6 +373,79 @@ function BackgroundEffects({
   }
   
   return null;
+}
+
+// Volumetric light rays component with glow effect
+function LightRaysEffect({ rays, bass }: { 
+  rays: Array<{ angle: number; width: number; length: number; phase: number; speed: number; opacity: number }>;
+  bass: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const meshRefs = useRef<THREE.Mesh[]>([]);
+  
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const ray = rays[i];
+      if (!ray) return;
+      
+      // Animate rays sliding in and out of view
+      const slidePhase = Math.sin(t * ray.speed + ray.phase);
+      const slideAmount = slidePhase * 4;
+      
+      // Move along the ray direction (toward/away from center)
+      mesh.position.x = Math.cos(ray.angle) * (10 + slideAmount);
+      mesh.position.y = Math.sin(ray.angle) * (7 + slideAmount * 0.5);
+      mesh.position.z = -12 + slideAmount * 0.5;
+      
+      // Fade opacity based on slide position (more visible when "entering")
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      const visibilityPhase = (slidePhase + 1) / 2; // 0 to 1
+      material.opacity = ray.opacity * (0.3 + visibilityPhase * 0.7) + bass * 0.2;
+    });
+  });
+  
+  return (
+    <group ref={groupRef}>
+      {rays.map((ray, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { if (el) meshRefs.current[i] = el; }}
+          position={[Math.cos(ray.angle) * 10, Math.sin(ray.angle) * 7, -12]}
+          rotation={[0, 0, ray.angle - Math.PI / 2]}
+        >
+          {/* Cone for volumetric ray appearance */}
+          <coneGeometry args={[ray.width, ray.length, 6, 1, true]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={ray.opacity}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+      {/* Add softer glow layer */}
+      {rays.map((ray, i) => (
+        <mesh
+          key={`glow-${i}`}
+          position={[Math.cos(ray.angle) * 10, Math.sin(ray.angle) * 7, -12.5]}
+          rotation={[0, 0, ray.angle - Math.PI / 2]}
+        >
+          <coneGeometry args={[ray.width * 2, ray.length * 0.8, 4, 1, true]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={ray.opacity * 0.3}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
 }
 
 export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizerTemplateProps) {
@@ -604,10 +683,15 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         pos = [-prev.position[0], prev.position[1], prev.position[2]];
       }
       
+      // Apply variance parameters for unique generations
+      const spreadMult = params.positionSpread ? params.positionSpread / 4 : 1;
+      const scaleMult = params.scaleVariation || 1;
+      const rotOffset = params.rotationOffset || 0;
+      
       configs.push({
-        position: pos,
-        rotation: [r() * Math.PI, r() * Math.PI, r() * Math.PI],
-        scale: (0.15 + r() * 0.45) * elementScale,
+        position: [pos[0] * spreadMult, pos[1] * spreadMult, pos[2] * spreadMult],
+        rotation: [r() * Math.PI + rotOffset, r() * Math.PI, r() * Math.PI],
+        scale: (0.15 + r() * 0.45) * elementScale * scaleMult,
         geometry: geo,
         colorIndex: Math.floor(r() * colors.length),
         wireframe: false,
@@ -615,7 +699,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     }
     
     return configs;
-  }, [params.seed, params.baseShape, params.elementCount, params.symmetry, params.mixedGeometry, colors.length, elementScale]);
+  }, [params.seed, params.baseShape, params.elementCount, params.symmetry, params.mixedGeometry, params.scaleVariation, params.positionSpread, params.rotationOffset, colors.length, elementScale]);
 
   // Particle system positions
   const particlePositions = useMemo(() => {
