@@ -64,16 +64,22 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
 
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
-    if (audioElement) {
-      audioElement.volume = newVolume;
+    
+    // Control volume via GainNode (after analyser) so visualizer stays reactive
+    const W = window as any;
+    if (W.__GAIN_NODE__) {
+      W.__GAIN_NODE__.gain.value = newVolume;
     }
+    W.__GAIN_VALUE__ = newVolume; // Store for when audio graph is recreated
+    
     if (newVolume > 0) {
       setIsMuted(false);
     }
   };
 
   const handleToggleMute = () => {
-    if (!audioElement) return;
+    const W = window as any;
+    if (!W.__GAIN_NODE__) return;
     
     if (isMuted || volume === 0) {
       const restoreVolume = previousVolumeRef.current > 0 ? previousVolumeRef.current : 0.75;
