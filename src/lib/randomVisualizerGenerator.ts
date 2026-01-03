@@ -12,6 +12,59 @@ export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 's
 export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'energyField' | 'particles' | 'lightRays' | 'aurora';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
 
+// Geometry types for standalone procedural generation
+export type GeometryType = 'sphere' | 'icosahedron' | 'octahedron' | 'dodecahedron' | 'tetrahedron' | 
+  'torusKnot' | 'torus' | 'box' | 'cone' | 'cylinder' | 'capsule' | 'ring';
+
+export type PulseMode = 'none' | 'breathe' | 'heartbeat' | 'erratic' | 'stutter' | 'swell';
+
+// Standalone variant for procedural generation - 100,000+ unique combinations
+export interface StandaloneVariant {
+  // Core geometry (12 types)
+  primaryGeometry: GeometryType;
+  secondaryGeometry: GeometryType;
+  
+  // Geometry modifiers (axis stretching)
+  stretchX: number;  // 0.3 - 2.5
+  stretchY: number;
+  stretchZ: number;
+  
+  // Secondary decorative elements
+  hasOrbitRings: boolean;
+  orbitRingCount: number;     // 1-4
+  orbitRingTilt: number;      // rotation angle
+  hasParticleHalo: boolean;
+  particleHaloCount: number;  // 50-200
+  hasInnerCore: boolean;
+  innerCoreScale: number;     // 0.2-0.5
+  hasMirrorCopy: boolean;
+  mirrorDistance: number;
+  hasOuterShell: boolean;
+  outerShellOpacity: number;
+  
+  // Animation modifiers
+  wobbleIntensity: number;    // 0 - 1
+  wobbleSpeed: number;        // 0.5 - 3
+  spinAxes: [boolean, boolean, boolean];
+  spinSpeeds: [number, number, number];
+  pulseMode: PulseMode;
+  pulseIntensity: number;     // 0.1 - 0.5
+  morphSpeed: number;
+  
+  // Visual style modifiers
+  wireframeMix: number;       // 0 = solid, 1 = wireframe, 0.5 = layered
+  detailLevel: number;        // 1-4
+  emissiveIntensity: number;  // 0.3 - 1.5
+  
+  // Structural complexity
+  layerCount: number;         // 1-4 concentric layers
+  layerSpacing: number;       // 0.2 - 0.8
+  fractured: boolean;         // Split into shards
+  fracturedCount: number;     // 3-8 pieces
+  hollowed: boolean;          // Ring/hollow version
+  twisted: number;            // 0-1 twist amount
+}
+
 export interface RandomVisualizerParams {
   seed: number;
   baseShape: BaseShape;
@@ -24,19 +77,123 @@ export interface RandomVisualizerParams {
   backgroundEffect: BackgroundEffect;
   mixedGeometry: boolean;
   connectionLines: boolean;
-  // New variance parameters for unique generations
+  // Variance parameters for unique generations
   scaleVariation: number;
   positionSpread: number;
   rotationOffset: number;
+  // Standalone variant for single-element procedural generation
+  standaloneVariant?: StandaloneVariant;
 }
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
 export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
 export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'energyField', 'particles', 'lightRays', 'aurora'];
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
+export const GEOMETRY_TYPES: GeometryType[] = ['sphere', 'icosahedron', 'octahedron', 'dodecahedron', 'tetrahedron', 'torusKnot', 'torus', 'box', 'cone', 'cylinder', 'capsule', 'ring'];
+export const PULSE_MODES: PulseMode[] = ['none', 'breathe', 'heartbeat', 'erratic', 'stutter', 'swell'];
 
 export function generateRandomSeed(): number {
   return Math.floor(Math.random() * 1000000);
+}
+
+// Generate a procedural standalone variant with massive variety
+export function generateStandaloneVariant(seed: number): StandaloneVariant {
+  const r = seededRandom(seed);
+  
+  // Helper for weighted random choices
+  const weightedChoice = <T>(options: T[], weights: number[]): T => {
+    const total = weights.reduce((a, b) => a + b, 0);
+    let random = r() * total;
+    for (let i = 0; i < options.length; i++) {
+      random -= weights[i];
+      if (random <= 0) return options[i];
+    }
+    return options[options.length - 1];
+  };
+  
+  // Primary geometry with weighted distribution (favor interesting shapes)
+  const primaryGeometry = weightedChoice(GEOMETRY_TYPES, [
+    0.8, 1.2, 1.0, 1.0, 0.8, 1.5, 1.3, 0.6, 0.9, 0.7, 0.8, 1.0
+  ]);
+  
+  // Secondary geometry (different from primary for contrast)
+  const filteredGeometries = GEOMETRY_TYPES.filter(g => g !== primaryGeometry);
+  const secondaryGeometry = filteredGeometries[Math.floor(r() * filteredGeometries.length)];
+  
+  // Axis stretching - sometimes extreme, sometimes subtle
+  const stretchMode = r();
+  let stretchX: number, stretchY: number, stretchZ: number;
+  if (stretchMode < 0.3) {
+    // Uniform scale
+    const s = 0.6 + r() * 1.0;
+    stretchX = stretchY = stretchZ = s;
+  } else if (stretchMode < 0.6) {
+    // One axis stretched
+    stretchX = 0.5 + r() * 0.5;
+    stretchY = 0.5 + r() * 0.5;
+    stretchZ = 0.5 + r() * 0.5;
+    const axis = Math.floor(r() * 3);
+    if (axis === 0) stretchX = 1.5 + r() * 1.0;
+    else if (axis === 1) stretchY = 1.5 + r() * 1.0;
+    else stretchZ = 1.5 + r() * 1.0;
+  } else {
+    // Random per-axis
+    stretchX = 0.4 + r() * 1.8;
+    stretchY = 0.4 + r() * 1.8;
+    stretchZ = 0.4 + r() * 1.8;
+  }
+  
+  // Decorative elements
+  const hasOrbitRings = r() > 0.5;
+  const hasParticleHalo = r() > 0.6;
+  const hasInnerCore = r() > 0.45;
+  const hasMirrorCopy = r() > 0.75;
+  const hasOuterShell = r() > 0.65;
+  
+  // Animation style
+  const pulseMode = PULSE_MODES[Math.floor(r() * PULSE_MODES.length)];
+  
+  // Spin configuration
+  const spinAxes: [boolean, boolean, boolean] = [r() > 0.3, r() > 0.4, r() > 0.5];
+  // Ensure at least one axis spins
+  if (!spinAxes[0] && !spinAxes[1] && !spinAxes[2]) {
+    spinAxes[Math.floor(r() * 3)] = true;
+  }
+  
+  return {
+    primaryGeometry,
+    secondaryGeometry,
+    stretchX,
+    stretchY,
+    stretchZ,
+    hasOrbitRings,
+    orbitRingCount: hasOrbitRings ? Math.floor(1 + r() * 3) : 0,
+    orbitRingTilt: r() * Math.PI,
+    hasParticleHalo,
+    particleHaloCount: hasParticleHalo ? Math.floor(50 + r() * 150) : 0,
+    hasInnerCore,
+    innerCoreScale: 0.15 + r() * 0.35,
+    hasMirrorCopy,
+    mirrorDistance: 2.5 + r() * 2,
+    hasOuterShell,
+    outerShellOpacity: 0.1 + r() * 0.25,
+    wobbleIntensity: r() * 0.8,
+    wobbleSpeed: 0.5 + r() * 2.5,
+    spinAxes,
+    spinSpeeds: [0.2 + r() * 1.5, 0.2 + r() * 1.5, 0.2 + r() * 1.5],
+    pulseMode,
+    pulseIntensity: 0.1 + r() * 0.4,
+    morphSpeed: 0.5 + r() * 2.5,
+    wireframeMix: r() > 0.7 ? (r() > 0.5 ? 1 : 0.5) : 0,
+    detailLevel: Math.floor(1 + r() * 3),
+    emissiveIntensity: 0.3 + r() * 1.0,
+    layerCount: Math.floor(1 + r() * 3),
+    layerSpacing: 0.25 + r() * 0.5,
+    fractured: r() > 0.85,
+    fracturedCount: Math.floor(3 + r() * 5),
+    hollowed: r() > 0.8,
+    twisted: r() > 0.7 ? r() * 0.8 : 0,
+  };
 }
 
 export function generateRandomParams(
@@ -56,6 +213,10 @@ export function generateRandomParams(
   const shapeWasExplicitlyChosen = preferences?.baseShape !== undefined;
   const mixedGeometry = shapeWasExplicitlyChosen ? false : random() > 0.5;
   
+  // Generate standalone variant only when in standalone mode (elementCount === 1)
+  const isStandalone = elementCount === 1;
+  const standaloneVariant = isStandalone ? generateStandaloneVariant(seed) : undefined;
+  
   return {
     seed,
     baseShape,
@@ -63,15 +224,15 @@ export function generateRandomParams(
     backgroundEffect,
     elementCount,
     particleCount: Math.floor(100 + random() * 300),
-    symmetry: random() > 0.5, // 50/50 for more variation
-    rotationSpeed: 0.1 + random() * 1.2, // Wider range
+    symmetry: random() > 0.5,
+    rotationSpeed: 0.1 + random() * 1.2,
     colorShift: random() * Math.PI * 2,
     mixedGeometry,
     connectionLines: preferences?.connectionLines ?? false,
-    // New variance parameters - these create unique looks even with same shape/animation
-    scaleVariation: 0.5 + random() * 1.0, // 0.5x to 1.5x
-    positionSpread: 2 + random() * 4, // How spread out elements are
-    rotationOffset: random() * Math.PI * 2, // Starting rotation angle
+    scaleVariation: 0.5 + random() * 1.0,
+    positionSpread: 2 + random() * 4,
+    rotationOffset: random() * Math.PI * 2,
+    standaloneVariant,
   };
 }
 

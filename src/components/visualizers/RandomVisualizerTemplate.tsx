@@ -1,8 +1,8 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
-import { seededRandom, COLOR_PALETTES } from '@/lib/randomVisualizerGenerator';
+import type { RandomVisualizerParams, StandaloneVariant, GeometryType } from '@/lib/randomVisualizerGenerator';
+import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
 
 interface RandomVisualizerTemplateProps {
   params: RandomVisualizerParams;
@@ -13,13 +13,340 @@ interface RandomVisualizerTemplateProps {
   };
 }
 
-// All available geometry types
-const GEOMETRY_TYPES = [
-  'box', 'sphere', 'torus', 'cone', 'octahedron', 'icosahedron',
-  'dodecahedron', 'tetrahedron', 'torusKnot', 'ring', 'cylinder', 'capsule'
-] as const;
+// Audio analysis helper
+function analyzeAudioData(frequency: number[]) {
+  const freq = frequency || [];
+  const bassRange = freq.slice(0, Math.floor(freq.length * 0.2));
+  const midRange = freq.slice(Math.floor(freq.length * 0.2), Math.floor(freq.length * 0.6));
+  const highRange = freq.slice(Math.floor(freq.length * 0.6));
+  
+  return {
+    bass: bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0,
+    mids: midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0,
+    highs: highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0,
+  };
+}
 
-type GeometryType = typeof GEOMETRY_TYPES[number];
+// Geometry component factory for standalone shapes
+function getStandaloneGeometry(type: GeometryType, detail: number) {
+  const d = Math.max(1, Math.min(4, detail));
+  switch (type) {
+    case 'sphere': return <sphereGeometry args={[1, 16 * d, 16 * d]} />;
+    case 'icosahedron': return <icosahedronGeometry args={[1, d]} />;
+    case 'octahedron': return <octahedronGeometry args={[1, d - 1]} />;
+    case 'dodecahedron': return <dodecahedronGeometry args={[1, d - 1]} />;
+    case 'tetrahedron': return <tetrahedronGeometry args={[1, d - 1]} />;
+    case 'torusKnot': return <torusKnotGeometry args={[0.6, 0.25, 64 * d, 16 * d]} />;
+    case 'torus': return <torusGeometry args={[0.7, 0.3, 16 * d, 32 * d]} />;
+    case 'box': return <boxGeometry args={[1.4, 1.4, 1.4]} />;
+    case 'cone': return <coneGeometry args={[0.8, 1.6, 16 * d]} />;
+    case 'cylinder': return <cylinderGeometry args={[0.6, 0.6, 1.4, 16 * d]} />;
+    case 'capsule': return <capsuleGeometry args={[0.5, 1, 8, 16 * d]} />;
+    case 'ring': return <torusGeometry args={[0.9, 0.15, 8, 32 * d]} />;
+    default: return <sphereGeometry args={[1, 32, 32]} />;
+  }
+}
+
+// Standalone procedural shape component - renders unique shapes based on variant
+function StandaloneShape({ 
+  variant, 
+  audioData,
+  seed
+}: { 
+  variant: StandaloneVariant;
+  audioData: { frequency: number[]; amplitude: number; beatStrength: number };
+  seed: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const innerGroupRef = useRef<THREE.Group>(null);
+  const meshRefs = useRef<THREE.Mesh[]>([]);
+  const ringRefs = useRef<THREE.Mesh[]>([]);
+  const particlesRef = useRef<THREE.Points>(null);
+  
+  const { bass, mids, highs } = useMemo(() => analyzeAudioData(audioData.frequency), [audioData.frequency]);
+  
+  // Generate particle halo positions
+  const particlePositions = useMemo(() => {
+    if (!variant.hasParticleHalo) return null;
+    const count = variant.particleHaloCount;
+    const positions = new Float32Array(count * 3);
+    const r = seededRandom(seed + 888);
+    
+    for (let i = 0; i < count; i++) {
+      // Distribute in a shell around the shape
+      const phi = r() * Math.PI * 2;
+      const theta = r() * Math.PI;
+      const radius = 2 + r() * 1.5;
+      positions[i * 3] = Math.sin(theta) * Math.cos(phi) * radius;
+      positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * radius;
+      positions[i * 3 + 2] = Math.cos(theta) * radius;
+    }
+    return positions;
+  }, [variant.hasParticleHalo, variant.particleHaloCount, seed]);
+  
+  // Generate fractured pieces if enabled
+  const fracturedPieces = useMemo(() => {
+    if (!variant.fractured) return null;
+    const pieces: Array<{ position: [number, number, number]; rotation: [number, number, number]; scale: number }> = [];
+    const r = seededRandom(seed + 777);
+    
+    for (let i = 0; i < variant.fracturedCount; i++) {
+      const angle = (i / variant.fracturedCount) * Math.PI * 2;
+      const radius = 0.3 + r() * 0.5;
+      pieces.push({
+        position: [Math.cos(angle) * radius, (r() - 0.5) * 0.8, Math.sin(angle) * radius],
+        rotation: [r() * Math.PI, r() * Math.PI, r() * Math.PI],
+        scale: 0.3 + r() * 0.4,
+      });
+    }
+    return pieces;
+  }, [variant.fractured, variant.fracturedCount, seed]);
+  
+  // Animation frame
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    if (groupRef.current) {
+      const g = groupRef.current;
+      
+      // Base rotation on selected axes
+      if (variant.spinAxes[0]) g.rotation.x += 0.01 * variant.spinSpeeds[0];
+      if (variant.spinAxes[1]) g.rotation.y += 0.01 * variant.spinSpeeds[1];
+      if (variant.spinAxes[2]) g.rotation.z += 0.01 * variant.spinSpeeds[2];
+      
+      // Wobble effect
+      if (variant.wobbleIntensity > 0) {
+        g.rotation.x += Math.sin(t * variant.wobbleSpeed) * variant.wobbleIntensity * 0.08;
+        g.rotation.z += Math.cos(t * variant.wobbleSpeed * 0.7) * variant.wobbleIntensity * 0.06;
+      }
+      
+      // Pulse modes with audio reactivity
+      let pulseScale = 1;
+      switch (variant.pulseMode) {
+        case 'breathe':
+          pulseScale = 1 + Math.sin(t * 0.8) * variant.pulseIntensity + bass * 0.15;
+          break;
+        case 'heartbeat':
+          const beat = Math.sin(t * 4);
+          pulseScale = 1 + (beat > 0.7 ? variant.pulseIntensity * 2 : 0) + bass * 0.25;
+          break;
+        case 'erratic':
+          pulseScale = 1 + Math.sin(t * 5) * Math.cos(t * 3.7) * variant.pulseIntensity + bass * 0.3;
+          break;
+        case 'stutter':
+          const stutterPhase = Math.floor(t * 8) % 4;
+          pulseScale = 1 + (stutterPhase === 0 ? variant.pulseIntensity : 0) + bass * 0.2;
+          break;
+        case 'swell':
+          pulseScale = 1 + (Math.sin(t * 0.3) + 1) * 0.5 * variant.pulseIntensity + mids * 0.15;
+          break;
+        default:
+          pulseScale = 1 + bass * 0.1;
+      }
+      g.scale.setScalar(1.8 * pulseScale);
+    }
+    
+    // Animate inner group for twist effect
+    if (innerGroupRef.current && variant.twisted > 0) {
+      innerGroupRef.current.rotation.y = Math.sin(t * 0.5) * variant.twisted * Math.PI;
+    }
+    
+    // Animate orbit rings
+    ringRefs.current.forEach((ring, i) => {
+      if (!ring) return;
+      ring.rotation.z = t * (0.3 + i * 0.1) * (i % 2 === 0 ? 1 : -1);
+      const ringScale = 1 + Math.sin(t * 2 + i) * 0.05 + bass * 0.1;
+      ring.scale.setScalar(ringScale);
+    });
+    
+    // Animate particles
+    if (particlesRef.current && variant.hasParticleHalo) {
+      particlesRef.current.rotation.y = t * 0.1;
+      particlesRef.current.rotation.x = Math.sin(t * 0.2) * 0.1;
+      const material = particlesRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.3 + bass * 0.4 + highs * 0.2;
+    }
+    
+    // Animate fractured pieces
+    if (variant.fractured && fracturedPieces) {
+      meshRefs.current.forEach((mesh, i) => {
+        if (!mesh || i >= fracturedPieces.length) return;
+        const piece = fracturedPieces[i];
+        const explosionAmount = Math.sin(t * 0.5) * 0.3 + bass * 0.5;
+        const dir = new THREE.Vector3(...piece.position).normalize();
+        mesh.position.x = piece.position[0] + dir.x * explosionAmount;
+        mesh.position.y = piece.position[1] + dir.y * explosionAmount;
+        mesh.position.z = piece.position[2] + dir.z * explosionAmount;
+        mesh.rotation.x = piece.rotation[0] + t * 0.5;
+        mesh.rotation.y = piece.rotation[1] + t * 0.7;
+      });
+    }
+  });
+  
+  const baseColor = new THREE.Color('#ffffff');
+  
+  return (
+    <group ref={groupRef}>
+      <group ref={innerGroupRef}>
+        {/* Main primary geometry - with axis stretching */}
+        {!variant.fractured && (
+          <mesh scale={[variant.stretchX, variant.stretchY, variant.stretchZ]}>
+            {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={baseColor}
+              emissiveIntensity={variant.emissiveIntensity}
+              metalness={0.7}
+              roughness={0.3}
+              wireframe={variant.wireframeMix === 1}
+              transparent={variant.wireframeMix > 0}
+              opacity={variant.wireframeMix === 1 ? 0.9 : 1}
+            />
+          </mesh>
+        )}
+        
+        {/* Wireframe overlay if mixed mode */}
+        {variant.wireframeMix === 0.5 && !variant.fractured && (
+          <mesh scale={[variant.stretchX * 1.02, variant.stretchY * 1.02, variant.stretchZ * 1.02]}>
+            {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
+            <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
+          </mesh>
+        )}
+        
+        {/* Additional concentric layers */}
+        {variant.layerCount > 1 && !variant.fractured && Array.from({ length: variant.layerCount - 1 }).map((_, i) => {
+          const layerScale = 1 - (i + 1) * variant.layerSpacing;
+          if (layerScale <= 0.1) return null;
+          return (
+            <mesh 
+              key={`layer-${i}`}
+              scale={[
+                variant.stretchX * layerScale, 
+                variant.stretchY * layerScale, 
+                variant.stretchZ * layerScale
+              ]}
+            >
+              {getStandaloneGeometry(i % 2 === 0 ? variant.primaryGeometry : variant.secondaryGeometry, variant.detailLevel)}
+              <meshStandardMaterial
+                color="#cccccc"
+                emissive="#ffffff"
+                emissiveIntensity={variant.emissiveIntensity * 0.5}
+                metalness={0.8}
+                roughness={0.2}
+                transparent
+                opacity={0.6 - i * 0.15}
+              />
+            </mesh>
+          );
+        })}
+        
+        {/* Inner core */}
+        {variant.hasInnerCore && !variant.fractured && (
+          <mesh scale={[variant.innerCoreScale, variant.innerCoreScale, variant.innerCoreScale]}>
+            {getStandaloneGeometry(variant.secondaryGeometry, 2)}
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+        )}
+        
+        {/* Outer shell (hollow transparent version) */}
+        {variant.hasOuterShell && !variant.fractured && (
+          <mesh scale={[variant.stretchX * 1.3, variant.stretchY * 1.3, variant.stretchZ * 1.3]}>
+            {getStandaloneGeometry(variant.primaryGeometry, 1)}
+            <meshBasicMaterial 
+              color="#ffffff" 
+              wireframe 
+              transparent 
+              opacity={variant.outerShellOpacity}
+            />
+          </mesh>
+        )}
+        
+        {/* Fractured pieces - replaces main geometry when enabled */}
+        {variant.fractured && fracturedPieces?.map((piece, i) => (
+          <mesh
+            key={`frac-${i}`}
+            ref={(el) => { if (el) meshRefs.current[i] = el; }}
+            position={piece.position}
+            rotation={piece.rotation}
+            scale={piece.scale}
+          >
+            {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={baseColor}
+              emissiveIntensity={variant.emissiveIntensity}
+              metalness={0.7}
+              roughness={0.3}
+            />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Orbit rings */}
+      {variant.hasOrbitRings && Array.from({ length: variant.orbitRingCount }).map((_, i) => {
+        const ringRadius = 1.4 + i * 0.5;
+        const tiltAngle = variant.orbitRingTilt + i * 0.4;
+        return (
+          <mesh
+            key={`ring-${i}`}
+            ref={(el) => { if (el) ringRefs.current[i] = el; }}
+            rotation={[tiltAngle, i * 0.3, 0]}
+          >
+            <torusGeometry args={[ringRadius, 0.02, 8, 64]} />
+            <meshBasicMaterial 
+              color="#ffffff" 
+              transparent 
+              opacity={0.4 - i * 0.08}
+            />
+          </mesh>
+        );
+      })}
+      
+      {/* Mirror copy */}
+      {variant.hasMirrorCopy && (
+        <mesh 
+          position={[variant.mirrorDistance, 0, 0]} 
+          scale={[-variant.stretchX * 0.7, variant.stretchY * 0.7, variant.stretchZ * 0.7]}
+        >
+          {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel - 1)}
+          <meshStandardMaterial 
+            color="#888888" 
+            emissive="#666666"
+            emissiveIntensity={0.3}
+            transparent 
+            opacity={0.5}
+          />
+        </mesh>
+      )}
+      
+      {/* Particle halo */}
+      {variant.hasParticleHalo && particlePositions && (
+        <points ref={particlesRef}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={variant.particleHaloCount}
+              array={particlePositions}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            color="#ffffff"
+            size={0.05}
+            transparent
+            opacity={0.4}
+            sizeAttenuation
+          />
+        </points>
+      )}
+      
+      {/* Lights for standalone shape */}
+      <ambientLight intensity={0.4} />
+      <pointLight position={[4, 4, 4]} intensity={1.2} color="#ffffff" />
+      <pointLight position={[-3, -2, 2]} intensity={0.6} color="#aaaaff" />
+    </group>
+  );
+}
 
 // Background effects component - renders behind main visualizer
 function BackgroundEffects({ 
@@ -1145,6 +1472,27 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       default: return <sphereGeometry args={[0.5, 16, 16]} />;
     }
   };
+
+  // Use standalone procedural shape if we have a standalone variant
+  if (params.standaloneVariant) {
+    return (
+      <>
+        {/* Background effects layer */}
+        <BackgroundEffects 
+          effect={params.backgroundEffect} 
+          colors={colors} 
+          bass={bass}
+          seed={params.seed}
+        />
+        
+        <StandaloneShape 
+          variant={params.standaloneVariant}
+          audioData={audioData}
+          seed={params.seed}
+        />
+      </>
+    );
+  }
 
   return (
     <>
