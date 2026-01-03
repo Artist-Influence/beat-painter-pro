@@ -52,7 +52,22 @@ const transformJSXCode = (code: string): string => {
   // Remove TypeScript generics and param types often present in templates
   transformed = transformed.replace(/useRef<[^>]+>\(/g, 'useRef(');
   transformed = transformed.replace(/useMemo<[^>]+>\(/g, 'useMemo(');
-  transformed = transformed.replace(/\(\{\s*audioData\s*\}\)\s*:\s*\{[^}]+\}/g, '({ audioData })');
+  transformed = transformed.replace(/useState<[^>]+>\(/g, 'useState(');
+  
+  // Remove TypeScript type annotations from function parameters - handles nested braces
+  // Pattern: ({ audioData }: { audioData: { frequency: number[]; ... } })
+  transformed = transformed.replace(
+    /\(\s*\{\s*audioData\s*\}\s*\)\s*:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g, 
+    '({ audioData })'
+  );
+  // Also handle simpler patterns
+  transformed = transformed.replace(/\(\{\s*audioData\s*\}\)\s*:\s*[^)=>{]+(?=\s*[)=>{])/g, '({ audioData })');
+  
+  // Remove type annotations from arrow function parameters
+  transformed = transformed.replace(/\(\s*([a-zA-Z_$][\w$]*)\s*:\s*[^)]+\)\s*=>/g, '($1) =>');
+  
+  // Remove interface/type declarations that might be in the code
+  transformed = transformed.replace(/^(interface|type)\s+\w+\s*[=\{][^]*?(?:\};?|\})\s*$/gm, '');
 
   // Enforce all-white materials by replacing material tags with our material instance
   transformed = transformed.replace(/<meshStandardMaterial[^>]*\/?>(?:<\/meshStandardMaterial>)?/g, '<primitive object={material} />');
@@ -193,8 +208,9 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
     }
 
     try {
+      console.log('📝 DynamicVisualizer - Original code (first 300):', jsxCode.slice(0, 300));
       const transformedCode = transformJSXCode(jsxCode);
-      console.log('🔄 DynamicVisualizer - Code transformed, length:', transformedCode.length);
+      console.log('📝 DynamicVisualizer - Transformed code (first 300):', transformedCode.slice(0, 300));
       
       validateJSX(transformedCode);
       console.log('✅ DynamicVisualizer - Validation passed');
@@ -278,10 +294,17 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
         height?: number;
       }>;
 
-    } catch (error) {
-      console.error('❌ DynamicVisualizer - Compilation FAILED:', error);
-      console.error('Failed code preview:', jsxCode.slice(0, 300) + '...');
-      
+    } catch (error: any) {
+      console.error('❌ DynamicVisualizer - Compilation FAILED');
+      console.error('❌ Error message:', error?.message || error);
+      console.error('❌ Original code (first 500):', jsxCode.slice(0, 500));
+      try {
+        const debugTransformed = transformJSXCode(jsxCode);
+        console.error('❌ Transformed code (first 500):', debugTransformed.slice(0, 500));
+      } catch (e) {
+        console.error('❌ Transform also failed:', e);
+      }
+
       // Try to use last good code if available
       if (lastGoodCodeRef.current && lastGoodCodeRef.current !== jsxCode) {
         try {

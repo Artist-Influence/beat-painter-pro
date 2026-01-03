@@ -102,11 +102,9 @@ export function useCustomVisualizers() {
         addVisualizer(data.visualizer);
         setVisualizerCount(visualizerCount + 1);
         
-        // Background refresh to keep store in sync (count/role and list)
-        setTimeout(() => {
-          checkUserRole(user.id);
-          fetchVisualizers(user.id);
-        }, 50);
+        // Force immediate refresh without race condition
+        checkUserRole(user.id);
+        await fetchVisualizers(user.id);
         
         return data.visualizer;
       }

@@ -135,7 +135,7 @@ export default function SmileyFaceVisualizer({ audioData }: { audioData: { frequ
     }
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -287,7 +287,7 @@ export default function CarVisualizer({ audioData }: { audioData: { frequency: n
     groupRef.current.position.x = Math.sin(t * 0.3) * mids * 2;
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -520,7 +520,7 @@ export default function HeartVisualizer({ audioData }: { audioData: { frequency:
     });
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -656,7 +656,7 @@ export default function StarVisualizer({ audioData }: { audioData: { frequency: 
     });
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -747,7 +747,7 @@ export default function AirplaneFleetVisualizer({ audioData }: { audioData: { fr
     });
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -875,7 +875,7 @@ export default function FlowerPetalsVisualizer({ audioData }: { audioData: { fre
     });
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
@@ -991,7 +991,7 @@ export default function RobotArmyVisualizer({ audioData }: { audioData: { freque
     });
   });
   
-  const material = createVisualizerMaterial();
+  const material = createVisualizerMaterial('#ffffff');
   
   return (
     <group ref={groupRef}>
