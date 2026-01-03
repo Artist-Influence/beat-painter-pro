@@ -128,14 +128,27 @@ function BackgroundEffects({
     }
     
     if (effect === 'lightRays') {
-      const count = 8;
+      // Volumetric god rays from corners - aesthetic beams
+      const count = 16;
       const linePositions: number[] = [];
       
       for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        const x = Math.cos(angle) * 12;
-        const y = Math.sin(angle) * 12;
-        linePositions.push(0, 0, -8, x, y, -8); // Push back
+        // Rays emanate from corners/edges toward center
+        const corner = i % 4;
+        const rayIndex = Math.floor(i / 4);
+        const spreadOffset = (rayIndex - 1.5) * 0.3;
+        
+        // Start positions at corners
+        const startX = (corner < 2 ? -1 : 1) * (12 + r() * 3);
+        const startY = (corner % 2 === 0 ? 1 : -1) * (8 + r() * 2) + spreadOffset * 3;
+        const startZ = -15;
+        
+        // End positions toward center with spread
+        const endX = startX * 0.15 + spreadOffset * 2;
+        const endY = startY * 0.2 + spreadOffset;
+        const endZ = -5;
+        
+        linePositions.push(startX, startY, startZ, endX, endY, endZ);
       }
       return { linePositions: new Float32Array(linePositions), count };
     }
@@ -165,12 +178,16 @@ function BackgroundEffects({
     }
     
     // Shooting stars effect - animate individual points moving diagonally
-    if (effect === 'movingLines' && shootingStarsRef.current && shootingStarData.current) {
-      const positions = shootingStarsRef.current.geometry.attributes.position;
-      const { velocities, startPositions } = shootingStarData.current;
-      const bounds = 15;
+    if (effect === 'movingLines' && shootingStarsRef.current && shootingStarData.current && effectData?.count) {
+      const geometry = shootingStarsRef.current.geometry;
+      const positions = geometry?.attributes?.position;
+      if (!positions) return;
       
-      for (let i = 0; i < effectData!.count; i++) {
+      const { velocities } = shootingStarData.current;
+      const bounds = 15;
+      const count = effectData.count;
+      
+      for (let i = 0; i < count; i++) {
         let x = positions.getX(i);
         let y = positions.getY(i);
         
@@ -213,9 +230,12 @@ function BackgroundEffects({
     }
     
     if (effect === 'lightRays' && linesRef.current) {
-      linesRef.current.rotation.z = t * 0.1;
+      // Subtle drift and pulse for god rays
+      linesRef.current.rotation.z = Math.sin(t * 0.05) * 0.05;
+      linesRef.current.position.x = Math.sin(t * 0.08) * 0.3;
+      linesRef.current.position.y = Math.cos(t * 0.06) * 0.2;
       const material = linesRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.1 + bass * 0.4;
+      material.opacity = 0.12 + Math.sin(t * 0.4) * 0.08 + bass * 0.25;
     }
     
     if (effect === 'aurora' && pointsRef.current && effectData) {
@@ -357,11 +377,11 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
   
   const random = useMemo(() => seededRandom(params.seed), [params.seed]);
   
-  // Get color palette
+  // Always use mono (white) color palette for clean layering of aesthetics
   const colors = useMemo(() => {
-    const palette = COLOR_PALETTES[params.colorScheme] || COLOR_PALETTES.mono;
+    const palette = COLOR_PALETTES.mono;
     return palette.map(c => new THREE.Color(c));
-  }, [params.colorScheme]);
+  }, []);
 
   // Analyze audio
   const { bass, mids, highs } = useMemo(() => {
@@ -400,14 +420,20 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     const count = params.elementCount;
     const r = seededRandom(params.seed);
     
-    // Pick random geometries for mixed mode
+    // Pick geometries - orb ALWAYS uses spherical shapes regardless of mixedGeometry
     const getRandomGeometry = (): GeometryType => {
+      // ORB shape always returns spheres - no exceptions
+      if (params.baseShape === 'orb') {
+        return r() > 0.5 ? 'sphere' : 'icosahedron';
+      }
+      
+      // For other shapes, allow mixed geometry if enabled
       if (params.mixedGeometry) {
         return GEOMETRY_TYPES[Math.floor(r() * GEOMETRY_TYPES.length)];
       }
+      
       // Return shape-appropriate default
       switch (params.baseShape) {
-        case 'orb': return r() > 0.5 ? 'sphere' : 'icosahedron';
         case 'geometric': return ['box', 'octahedron', 'dodecahedron', 'tetrahedron'][Math.floor(r() * 4)] as GeometryType;
         case 'crystal': return r() > 0.5 ? 'cone' : 'octahedron';
         case 'helix': return r() > 0.5 ? 'torusKnot' : 'sphere';
@@ -699,82 +725,162 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     const speed = params.rotationSpeed;
     
     if (groupRef.current) {
-      // Apply animation style
+      // Apply animation style - each style is dramatically different
       switch (params.animationStyle) {
         case 'rotating':
-          groupRef.current.rotation.y = t * speed;
-          groupRef.current.rotation.x = Math.sin(t * speed * 0.5) * 0.2;
+          // Fast orbital rotation
+          groupRef.current.rotation.y = t * speed * 1.5;
+          groupRef.current.rotation.x = Math.sin(t * speed) * 0.4;
+          groupRef.current.rotation.z = Math.cos(t * speed * 0.7) * 0.2;
           break;
           
         case 'pulsing':
-          const pulseScale = 1 + bass * 0.3;
+          // Sharp rhythmic pulses on beat
+          const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5; // 0-1 wave
+          const pulsePop = Math.pow(pulsePhase, 3); // Sharp peaks
+          const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
           groupRef.current.scale.setScalar(pulseScale);
-          break;
-          
-        case 'flowing':
-          groupRef.current.position.y = Math.sin(t * speed) * 0.5;
-          groupRef.current.rotation.z = Math.sin(t * speed * 0.3) * 0.1;
-          break;
-          
-        case 'chaotic':
-          // Time-based values only - no cumulative rotation
-          groupRef.current.rotation.x = Math.sin(t * speed * 2) * 0.5 + bass * 0.3;
-          groupRef.current.rotation.y = Math.cos(t * speed * 1.3) * 0.4 + t * speed * 0.3;
-          groupRef.current.rotation.z = Math.sin(t * speed * 1.7) * 0.3 + mids * 0.2;
-          break;
-          
-        case 'breathing':
-          const breathScale = 1 + Math.sin(t * 0.5) * 0.15 + bass * 0.2;
-          groupRef.current.scale.setScalar(breathScale);
           groupRef.current.rotation.y = t * speed * 0.2;
           break;
           
+        case 'flowing':
+          // Smooth wave motion - whole group undulates
+          groupRef.current.position.y = Math.sin(t * speed * 1.5) * 1.2;
+          groupRef.current.position.x = Math.cos(t * speed * 0.8) * 0.6;
+          groupRef.current.rotation.z = Math.sin(t * speed) * 0.3;
+          groupRef.current.rotation.x = Math.cos(t * speed * 0.6) * 0.15;
+          break;
+          
+        case 'chaotic':
+          // Wild, erratic movement - group level
+          groupRef.current.rotation.x = Math.sin(t * 3.7) * 0.8;
+          groupRef.current.rotation.y = Math.cos(t * 2.3) * 0.9;
+          groupRef.current.rotation.z = Math.sin(t * 4.1) * 0.6;
+          groupRef.current.position.x = Math.sin(t * 2.9) * 0.5;
+          groupRef.current.position.y = Math.cos(t * 3.3) * 0.5;
+          break;
+          
+        case 'breathing':
+          // Deep, slow inhale/exhale cycle
+          const breathCycle = Math.sin(t * 0.4); // Very slow
+          const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15; // 0.7 to 1.4
+          groupRef.current.scale.setScalar(breathScale);
+          // Slight rotation during breath
+          groupRef.current.rotation.y = t * 0.05;
+          groupRef.current.rotation.x = breathCycle * 0.1;
+          break;
+          
         case 'explosive':
-          const explodeScale = 1 + audioData.beatStrength * 0.5;
-          groupRef.current.scale.setScalar(explodeScale);
-          groupRef.current.rotation.y = t * speed * 0.5;
-          groupRef.current.rotation.x = audioData.beatStrength * 0.3;
+          // Burst outward, then reset
+          const explosionCycle = (t * 0.8) % 3; // 3 second cycle
+          const burstPhase = explosionCycle < 0.5 ? explosionCycle * 2 : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
+          const explosiveScale = 0.6 + burstPhase * 0.8 + audioData.beatStrength * 0.4;
+          groupRef.current.scale.setScalar(explosiveScale);
+          groupRef.current.rotation.y = t * speed;
+          groupRef.current.rotation.x = burstPhase * 0.5;
           break;
           
         case 'smooth':
         default:
-          groupRef.current.rotation.y = t * speed * 0.3;
-          groupRef.current.rotation.x = Math.sin(t * speed * 0.2) * 0.1;
+          // Zen-like minimal movement
+          groupRef.current.rotation.y = t * speed * 0.15;
+          groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.05;
+          groupRef.current.position.y = Math.sin(t * 0.2) * 0.1;
       }
     }
 
-    // Animate individual meshes
+    // Animate individual meshes - style-specific behavior
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
+      
+      const config = meshConfigs[i];
+      if (!config) return;
       
       const freqIndex = Math.floor((i / meshRefs.current.length) * (audioData.frequency?.length || 1));
       const freqValue = (audioData.frequency?.[freqIndex] || 0) / 255;
       
-      // Scale based on frequency
-      const baseScale = meshConfigs[i]?.scale || 0.3;
-      const audioScale = 1 + freqValue * 0.5;
-      mesh.scale.setScalar(baseScale * audioScale);
+      // Base scale from config
+      const baseScale = config.scale || 0.3;
       
-      // Position offset based on animation style
-      if (params.animationStyle === 'chaotic') {
-        // Time-based rotation, not additive - prevents freezing
-        mesh.rotation.x = Math.sin(t * 0.5 + i * 0.2) * Math.PI;
-        mesh.rotation.y = Math.cos(t * 0.3 + i * 0.3) * Math.PI;
-      } else if (params.animationStyle === 'flowing') {
-        mesh.position.y += Math.sin(t + i * 0.5) * 0.01;
-      } else if (params.animationStyle === 'explosive' && audioData.beatStrength > 0.5) {
-        const config = meshConfigs[i];
-        if (config) {
+      // Style-specific individual mesh animations
+      switch (params.animationStyle) {
+        case 'chaotic':
+          // Each element moves independently and erratically
+          const chaosX = Math.sin(t * 2.5 + i * 1.7) * 1.5;
+          const chaosY = Math.cos(t * 3.1 + i * 0.9) * 1.5;
+          const chaosZ = Math.sin(t * 1.9 + i * 2.3) * 1.5;
+          mesh.position.x = config.position[0] + chaosX;
+          mesh.position.y = config.position[1] + chaosY;
+          mesh.position.z = config.position[2] + chaosZ;
+          mesh.rotation.x = t * 2 + i;
+          mesh.rotation.y = t * 3 + i * 0.5;
+          mesh.scale.setScalar(baseScale * (0.8 + Math.sin(t * 4 + i) * 0.4));
+          break;
+          
+        case 'flowing':
+          // Wave propagation through elements
+          const waveOffset = Math.sin(t * 2 + i * 0.4) * 0.8;
+          const waveX = Math.sin(t * 1.5 + i * 0.3) * 0.4;
+          mesh.position.x = config.position[0] + waveX;
+          mesh.position.y = config.position[1] + waveOffset;
+          mesh.position.z = config.position[2];
+          mesh.rotation.z = Math.sin(t + i * 0.2) * 0.3;
+          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.3));
+          break;
+          
+        case 'explosive':
+          // Elements burst outward from center, then reset
+          const explosionCycle = (t * 0.8) % 3;
+          const burstAmount = explosionCycle < 0.5 ? explosionCycle * 4 : Math.max(0, 2 - (explosionCycle - 0.5) * 1.5);
           const dir = new THREE.Vector3(...config.position).normalize();
-          mesh.position.x += dir.x * 0.02;
-          mesh.position.y += dir.y * 0.02;
-          mesh.position.z += dir.z * 0.02;
-        }
+          mesh.position.x = config.position[0] + dir.x * burstAmount;
+          mesh.position.y = config.position[1] + dir.y * burstAmount;
+          mesh.position.z = config.position[2] + dir.z * burstAmount;
+          mesh.scale.setScalar(baseScale * (1 + burstAmount * 0.2 + freqValue * 0.3));
+          break;
+          
+        case 'breathing':
+          // All elements expand/contract together like lungs
+          const breathPhase = Math.sin(t * 0.4);
+          const breathExpand = (breathPhase + 1) * 0.3; // 0 to 0.6
+          const breathDir = new THREE.Vector3(...config.position).normalize();
+          mesh.position.x = config.position[0] + breathDir.x * breathExpand;
+          mesh.position.y = config.position[1] + breathDir.y * breathExpand;
+          mesh.position.z = config.position[2] + breathDir.z * breathExpand;
+          mesh.scale.setScalar(baseScale * (0.9 + breathPhase * 0.2 + freqValue * 0.2));
+          break;
+          
+        case 'pulsing':
+          // Sharp scale pops on rhythm
+          const pulseWave = Math.sin(t * 4 + i * 0.3);
+          const pulsePop = pulseWave > 0.7 ? 1.5 : 1;
+          mesh.scale.setScalar(baseScale * pulsePop * (1 + freqValue * 0.4));
+          mesh.position.set(...config.position);
+          break;
+          
+        case 'rotating':
+          // Elements orbit their original positions
+          const orbitRadius = 0.3;
+          const orbitSpeed = 1 + (i % 3) * 0.5;
+          mesh.position.x = config.position[0] + Math.cos(t * orbitSpeed + i) * orbitRadius;
+          mesh.position.y = config.position[1] + Math.sin(t * orbitSpeed * 0.7 + i) * orbitRadius;
+          mesh.position.z = config.position[2];
+          mesh.rotation.y = t * 2;
+          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.4));
+          break;
+          
+        case 'smooth':
+        default:
+          // Minimal, zen-like gentle drift
+          mesh.position.x = config.position[0] + Math.sin(t * 0.3 + i * 0.1) * 0.1;
+          mesh.position.y = config.position[1] + Math.cos(t * 0.2 + i * 0.15) * 0.1;
+          mesh.position.z = config.position[2];
+          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.3));
+          break;
       }
       
-      // Matrix falling effect - use time-based animation for smoother results
-      if (params.baseShape === 'matrix' && meshConfigs[i]) {
-        const config = meshConfigs[i];
+      // Matrix falling effect - override position for matrix shape
+      if (params.baseShape === 'matrix') {
         const fallSpeed = 2;
         const range = 12;
         const offset = (t * fallSpeed + config.position[1] + 6) % range;
