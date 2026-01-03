@@ -455,24 +455,28 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         }
         
         case 'tunnel': {
-          const angle = (i / count) * Math.PI * 2;
-          const depth = (r() - 0.5) * 10;
+          // Ring formations at different depths - clear tunnel effect
+          const ringIndex = Math.floor(i / 8); // 8 elements per ring
+          const angleInRing = (i % 8) / 8 * Math.PI * 2;
+          const depth = (ringIndex / Math.ceil(count / 8) - 0.5) * 12;
+          const ringRadius = 2.5 + Math.sin(ringIndex * 0.5) * 0.5;
           pos = [
-            Math.cos(angle) * 3,
-            Math.sin(angle) * 3,
+            Math.cos(angleInRing) * ringRadius,
+            Math.sin(angleInRing) * ringRadius,
             depth
           ];
           break;
         }
         
         case 'crystal': {
-          const cAngle = r() * Math.PI * 2;
-          const cHeight = (r() - 0.5) * 6;
-          const cRadius = 1 + r() * 3;
+          // Vertical crystalline spires radiating from center
+          const spikeAngle = (i / count) * Math.PI * 2;
+          const spikeHeight = (r() * 2 - 0.5) * 5; // Vary height
+          const spikeRadius = 0.5 + (Math.abs(spikeHeight) / 5) * 2; // Wider at base, narrower at tips
           pos = [
-            Math.cos(cAngle) * cRadius,
-            cHeight,
-            Math.sin(cAngle) * cRadius
+            Math.cos(spikeAngle) * spikeRadius,
+            spikeHeight,
+            Math.sin(spikeAngle) * spikeRadius
           ];
           break;
         }
@@ -516,15 +520,17 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         }
         
         case 'nebula': {
-          // Gaussian-like distribution
-          const u1 = r();
-          const u2 = r();
-          const radius = Math.sqrt(-2 * Math.log(u1 || 0.001)) * 2;
-          const theta = u2 * Math.PI * 2;
+          // Spiral galaxy with arms - distinct from particles
+          const armIndex = i % 3; // 3 spiral arms
+          const armAngle = (armIndex / 3) * Math.PI * 2;
+          const spiralProgress = (i / count) * 3;
+          const spiralRadius = 1 + spiralProgress * 1.5;
+          const spiralAngle = armAngle + spiralProgress * Math.PI * 1.5;
+          const heightVariation = (r() - 0.5) * (1 - spiralProgress / 4); // Flatter toward edges
           pos = [
-            Math.cos(theta) * radius + (r() - 0.5) * 2,
-            (r() - 0.5) * 4,
-            Math.sin(theta) * radius + (r() - 0.5) * 2
+            Math.cos(spiralAngle) * spiralRadius + (r() - 0.5) * 0.5,
+            heightVariation,
+            Math.sin(spiralAngle) * spiralRadius + (r() - 0.5) * 0.5
           ];
           break;
         }
@@ -541,7 +547,22 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           break;
         }
         
-        case 'particles':
+        case 'particles': {
+          // Clustered cloud formations - distinct groupings
+          const clusterIndex = i % 5; // 5 clusters
+          const clusterCenterAngle = (clusterIndex / 5) * Math.PI * 2;
+          const clusterRadius = 3;
+          const clusterCenterX = Math.cos(clusterCenterAngle) * clusterRadius;
+          const clusterCenterZ = Math.sin(clusterCenterAngle) * clusterRadius;
+          // Random position within cluster
+          pos = [
+            clusterCenterX + (r() - 0.5) * 3,
+            (r() - 0.5) * 4,
+            clusterCenterZ + (r() - 0.5) * 3
+          ];
+          break;
+        }
+        
         default: {
           pos = [
             (r() - 0.5) * 8,
@@ -696,9 +717,10 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           break;
           
         case 'chaotic':
-          groupRef.current.rotation.x = Math.sin(t * speed * 2) * 0.3 + bass * 0.5;
-          groupRef.current.rotation.y = t * speed;
-          groupRef.current.rotation.z = Math.cos(t * speed * 1.5) * 0.2 + mids * 0.3;
+          // Time-based values only - no cumulative rotation
+          groupRef.current.rotation.x = Math.sin(t * speed * 2) * 0.5 + bass * 0.3;
+          groupRef.current.rotation.y = Math.cos(t * speed * 1.3) * 0.4 + t * speed * 0.3;
+          groupRef.current.rotation.z = Math.sin(t * speed * 1.7) * 0.3 + mids * 0.2;
           break;
           
         case 'breathing':
@@ -735,8 +757,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       
       // Position offset based on animation style
       if (params.animationStyle === 'chaotic') {
-        mesh.rotation.x = t + i * 0.1;
-        mesh.rotation.y = t * 0.7 + i * 0.2;
+        // Time-based rotation, not additive - prevents freezing
+        mesh.rotation.x = Math.sin(t * 0.5 + i * 0.2) * Math.PI;
+        mesh.rotation.y = Math.cos(t * 0.3 + i * 0.3) * Math.PI;
       } else if (params.animationStyle === 'flowing') {
         mesh.position.y += Math.sin(t + i * 0.5) * 0.01;
       } else if (params.animationStyle === 'explosive' && audioData.beatStrength > 0.5) {
@@ -865,8 +888,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           </lineSegments>
         )}
         
-        {/* Particle system */}
-        {params.baseShape !== 'ribbons' && (
+        {/* Particle system - only for particles shape */}
+        {params.baseShape === 'particles' && (
           <points ref={particlesRef}>
             <bufferGeometry>
               <bufferAttribute

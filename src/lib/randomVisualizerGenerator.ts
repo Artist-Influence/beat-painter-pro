@@ -38,14 +38,15 @@ export function generateRandomSeed(): number {
 
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const backgroundEffect = preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
-  const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
+  // Always use mono (white) color scheme - aesthetics layered later
+  const colorScheme: ColorScheme = 'mono';
   
   // Element count: use preference or random between 8-40
   const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
@@ -62,7 +63,8 @@ export function generateRandomParams(
     rotationSpeed: 0.2 + random() * 0.8,
     colorShift: random() * Math.PI * 2,
     mixedGeometry: random() > 0.5,
-    connectionLines: random() > 0.7,
+    // Connection lines default to false - only enabled via explicit toggle
+    connectionLines: preferences?.connectionLines ?? false,
   };
 }
 
