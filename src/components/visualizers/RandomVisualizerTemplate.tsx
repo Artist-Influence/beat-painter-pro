@@ -21,6 +21,259 @@ const GEOMETRY_TYPES = [
 
 type GeometryType = typeof GEOMETRY_TYPES[number];
 
+// Background effects component
+function BackgroundEffects({ 
+  effect, 
+  colors, 
+  bass, 
+  seed 
+}: { 
+  effect: string; 
+  colors: THREE.Color[]; 
+  bass: number;
+  seed: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const pointsRef = useRef<THREE.Points>(null);
+  const linesRef = useRef<THREE.LineSegments>(null);
+  
+  // Generate positions based on effect type
+  const effectData = useMemo(() => {
+    const r = seededRandom(seed + 999);
+    
+    if (effect === 'stars') {
+      const count = 300;
+      const positions = new Float32Array(count * 3);
+      const opacities = new Float32Array(count);
+      
+      for (let i = 0; i < count; i++) {
+        // Spread stars in a large sphere
+        const phi = r() * Math.PI * 2;
+        const theta = r() * Math.PI;
+        const radius = 8 + r() * 12;
+        positions[i * 3] = Math.sin(theta) * Math.cos(phi) * radius;
+        positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * radius;
+        positions[i * 3 + 2] = Math.cos(theta) * radius;
+        opacities[i] = r();
+      }
+      return { positions, opacities, count };
+    }
+    
+    if (effect === 'movingLines') {
+      const count = 20;
+      const linePositions: number[] = [];
+      
+      for (let i = 0; i < count; i++) {
+        const y = (r() - 0.5) * 20;
+        const z = (r() - 0.5) * 10;
+        linePositions.push(-15, y, z, 15, y, z);
+      }
+      return { linePositions: new Float32Array(linePositions), count };
+    }
+    
+    if (effect === 'grid') {
+      const linePositions: number[] = [];
+      const gridSize = 10;
+      const spacing = 2;
+      
+      // Horizontal lines
+      for (let i = -gridSize; i <= gridSize; i += spacing) {
+        linePositions.push(-gridSize, -5, i, gridSize, -5, i);
+        linePositions.push(i, -5, -gridSize, i, -5, gridSize);
+      }
+      return { linePositions: new Float32Array(linePositions), count: linePositions.length / 6 };
+    }
+    
+    if (effect === 'particles') {
+      const count = 150;
+      const positions = new Float32Array(count * 3);
+      const velocities = new Float32Array(count * 3);
+      
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = (r() - 0.5) * 20;
+        positions[i * 3 + 1] = (r() - 0.5) * 20;
+        positions[i * 3 + 2] = (r() - 0.5) * 10;
+        velocities[i * 3] = (r() - 0.5) * 0.02;
+        velocities[i * 3 + 1] = (r() - 0.5) * 0.02;
+        velocities[i * 3 + 2] = (r() - 0.5) * 0.02;
+      }
+      return { positions, velocities, count };
+    }
+    
+    if (effect === 'lightRays') {
+      const count = 8;
+      const linePositions: number[] = [];
+      
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const x = Math.cos(angle) * 15;
+        const y = Math.sin(angle) * 15;
+        linePositions.push(0, 0, -5, x, y, -5);
+      }
+      return { linePositions: new Float32Array(linePositions), count };
+    }
+    
+    if (effect === 'aurora') {
+      const count = 100;
+      const positions = new Float32Array(count * 3);
+      
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = (i / count - 0.5) * 30;
+        positions[i * 3 + 1] = 8 + r() * 4;
+        positions[i * 3 + 2] = -10 + r() * 2;
+      }
+      return { positions, count };
+    }
+    
+    return null;
+  }, [effect, seed]);
+  
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    
+    if (effect === 'stars' && pointsRef.current && effectData?.opacities) {
+      // Twinkle effect
+      const material = pointsRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.4 + Math.sin(t * 2) * 0.2 + bass * 0.3;
+    }
+    
+    if (effect === 'movingLines' && linesRef.current) {
+      linesRef.current.position.x = Math.sin(t * 0.3) * 2;
+      const material = linesRef.current.material as THREE.LineBasicMaterial;
+      material.opacity = 0.2 + bass * 0.3;
+    }
+    
+    if (effect === 'grid' && linesRef.current) {
+      const material = linesRef.current.material as THREE.LineBasicMaterial;
+      material.opacity = 0.1 + bass * 0.15;
+    }
+    
+    if (effect === 'particles' && pointsRef.current && effectData?.velocities) {
+      const positions = pointsRef.current.geometry.attributes.position;
+      for (let i = 0; i < Math.min(50, effectData.count); i++) {
+        let y = positions.getY(i);
+        y += effectData.velocities[i * 3 + 1] + bass * 0.01;
+        if (y > 10) y = -10;
+        if (y < -10) y = 10;
+        positions.setY(i, y);
+      }
+      positions.needsUpdate = true;
+    }
+    
+    if (effect === 'lightRays' && linesRef.current) {
+      linesRef.current.rotation.z = t * 0.1;
+      const material = linesRef.current.material as THREE.LineBasicMaterial;
+      material.opacity = 0.1 + bass * 0.4;
+    }
+    
+    if (effect === 'aurora' && pointsRef.current) {
+      const positions = pointsRef.current.geometry.attributes.position;
+      for (let i = 0; i < effectData!.count; i++) {
+        const x = positions.getX(i);
+        const baseY = 8 + Math.sin(x * 0.3 + t) * 2;
+        positions.setY(i, baseY + bass * 2);
+      }
+      positions.needsUpdate = true;
+    }
+  });
+  
+  if (!effectData || effect === 'none') return null;
+  
+  const primaryColor = colors[0] || new THREE.Color('#ffffff');
+  
+  // Stars effect
+  if (effect === 'stars' && effectData.positions) {
+    return (
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={effectData.count}
+            array={effectData.positions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#ffffff"
+          size={0.08}
+          transparent
+          opacity={0.5}
+          sizeAttenuation
+        />
+      </points>
+    );
+  }
+  
+  // Moving lines, grid, or light rays
+  if ((effect === 'movingLines' || effect === 'grid' || effect === 'lightRays') && effectData.linePositions) {
+    return (
+      <lineSegments ref={linesRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={effectData.linePositions.length / 3}
+            array={effectData.linePositions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
+          color={primaryColor}
+          transparent
+          opacity={0.2}
+        />
+      </lineSegments>
+    );
+  }
+  
+  // Ambient particles
+  if (effect === 'particles' && effectData.positions) {
+    return (
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={effectData.count}
+            array={effectData.positions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={primaryColor}
+          size={0.05}
+          transparent
+          opacity={0.3}
+          sizeAttenuation
+        />
+      </points>
+    );
+  }
+  
+  // Aurora
+  if (effect === 'aurora' && effectData.positions) {
+    return (
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={effectData.count}
+            array={effectData.positions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={colors[1] || primaryColor}
+          size={0.3}
+          transparent
+          opacity={0.4}
+          sizeAttenuation
+        />
+      </points>
+    );
+  }
+  
+  return null;
+}
+
 export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizerTemplateProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
@@ -49,8 +302,14 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     };
   }, [audioData.frequency]);
 
-  // Intensity multipliers
-  const intensityMult = params.intensity === 'subtle' ? 0.4 : params.intensity === 'medium' ? 1 : params.intensity === 'intense' ? 1.8 : 2.5;
+  // Scale elements inversely with count (more elements = smaller each)
+  const elementScale = useMemo(() => {
+    const count = params.elementCount;
+    if (count <= 10) return 1;
+    if (count <= 30) return 0.7;
+    if (count <= 60) return 0.5;
+    return 0.35;
+  }, [params.elementCount]);
   
   // Generate mesh positions based on shape type
   const meshConfigs = useMemo(() => {
@@ -223,23 +482,18 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         pos = [-prev.position[0], prev.position[1], prev.position[2]];
       }
       
-      // Determine wireframe based on visual effect
-      let wireframe = false;
-      if (params.visualEffect === 'wireframe') wireframe = true;
-      else if (params.visualEffect === 'hybrid') wireframe = r() > 0.5;
-      
       configs.push({
         position: pos,
         rotation: [r() * Math.PI, r() * Math.PI, r() * Math.PI],
-        scale: 0.15 + r() * 0.45,
+        scale: (0.15 + r() * 0.45) * elementScale,
         geometry: geo,
         colorIndex: Math.floor(r() * colors.length),
-        wireframe,
+        wireframe: false,
       });
     }
     
     return configs;
-  }, [params.seed, params.baseShape, params.elementCount, params.symmetry, params.mixedGeometry, params.visualEffect, colors.length]);
+  }, [params.seed, params.baseShape, params.elementCount, params.symmetry, params.mixedGeometry, colors.length, elementScale]);
 
   // Particle system positions
   const particlePositions = useMemo(() => {
@@ -357,7 +611,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           break;
           
         case 'pulsing':
-          const pulseScale = 1 + bass * 0.3 * intensityMult;
+          const pulseScale = 1 + bass * 0.3;
           groupRef.current.scale.setScalar(pulseScale);
           break;
           
@@ -379,7 +633,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           break;
           
         case 'explosive':
-          const explodeScale = 1 + audioData.beatStrength * 0.5 * intensityMult;
+          const explodeScale = 1 + audioData.beatStrength * 0.5;
           groupRef.current.scale.setScalar(explodeScale);
           groupRef.current.rotation.y = t * speed * 0.5;
           groupRef.current.rotation.x = audioData.beatStrength * 0.3;
@@ -401,7 +655,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       
       // Scale based on frequency
       const baseScale = meshConfigs[i]?.scale || 0.3;
-      const audioScale = 1 + freqValue * 0.5 * intensityMult;
+      const audioScale = 1 + freqValue * 0.5;
       mesh.scale.setScalar(baseScale * audioScale);
       
       // Position offset based on animation style
@@ -414,15 +668,15 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         const config = meshConfigs[i];
         if (config) {
           const dir = new THREE.Vector3(...config.position).normalize();
-          mesh.position.x += dir.x * 0.02 * intensityMult;
-          mesh.position.y += dir.y * 0.02 * intensityMult;
-          mesh.position.z += dir.z * 0.02 * intensityMult;
+          mesh.position.x += dir.x * 0.02;
+          mesh.position.y += dir.y * 0.02;
+          mesh.position.z += dir.z * 0.02;
         }
       }
       
       // Matrix falling effect
       if (params.baseShape === 'matrix') {
-        mesh.position.y -= 0.03 * intensityMult;
+        mesh.position.y -= 0.03;
         if (mesh.position.y < -6) {
           mesh.position.y = 6;
         }
@@ -440,12 +694,12 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           const y = positions.getY(i);
           
           if (params.baseShape === 'matrix') {
-            positions.setY(i, y - 0.05 * intensityMult);
+            positions.setY(i, y - 0.05);
             if (y < -8) positions.setY(i, 8);
           } else {
             const x = positions.getX(i);
-            positions.setY(i, y + Math.sin(t + i * 0.1) * 0.01 * intensityMult);
-            positions.setX(i, x + Math.cos(t + i * 0.1) * 0.005 * intensityMult);
+            positions.setY(i, y + Math.sin(t + i * 0.1) * 0.01);
+            positions.setX(i, x + Math.cos(t + i * 0.1) * 0.005);
           }
         }
         positions.needsUpdate = true;
@@ -477,90 +731,97 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     }
   };
 
-  // Glow intensity
-  const glowIntensity = params.visualEffect === 'glow' ? 0.8 : 0.3;
-
   return (
-    <group ref={groupRef} scale={0.8}>
-      {/* Main meshes */}
-      {meshConfigs.map((config, i) => (
-        <mesh
-          key={i}
-          ref={(el) => { if (el) meshRefs.current[i] = el; }}
-          position={config.position}
-          rotation={config.rotation}
-          scale={config.scale}
-        >
-          {getGeometry(config.geometry)}
-          <meshStandardMaterial
-            color={colors[config.colorIndex]}
-            emissive={colors[config.colorIndex]}
-            emissiveIntensity={glowIntensity + bass * 0.4}
-            metalness={0.7}
-            roughness={0.3}
-            wireframe={config.wireframe}
-          />
-        </mesh>
-      ))}
+    <>
+      {/* Background effects layer */}
+      <BackgroundEffects 
+        effect={params.backgroundEffect} 
+        colors={colors} 
+        bass={bass}
+        seed={params.seed}
+      />
       
-      {/* Connection lines (threading) */}
-      {linePositions && (
-        <lineSegments ref={linesRef}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={linePositions.positions.length / 3}
-              array={linePositions.positions}
-              itemSize={3}
+      <group ref={groupRef} scale={0.8}>
+        {/* Main meshes */}
+        {meshConfigs.map((config, i) => (
+          <mesh
+            key={i}
+            ref={(el) => { if (el) meshRefs.current[i] = el; }}
+            position={config.position}
+            rotation={config.rotation}
+            scale={config.scale}
+          >
+            {getGeometry(config.geometry)}
+            <meshStandardMaterial
+              color={colors[config.colorIndex]}
+              emissive={colors[config.colorIndex]}
+              emissiveIntensity={0.5 + bass * 0.4}
+              metalness={0.7}
+              roughness={0.3}
+              wireframe={config.wireframe}
             />
-            <bufferAttribute
-              attach="attributes-color"
-              count={linePositions.colors.length / 3}
-              array={linePositions.colors}
-              itemSize={3}
+          </mesh>
+        ))}
+        
+        {/* Connection lines (threading) */}
+        {linePositions && (
+          <lineSegments ref={linesRef}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                count={linePositions.positions.length / 3}
+                array={linePositions.positions}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-color"
+                count={linePositions.colors.length / 3}
+                array={linePositions.colors}
+                itemSize={3}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial 
+              vertexColors 
+              transparent 
+              opacity={0.5}
+              linewidth={1}
             />
-          </bufferGeometry>
-          <lineBasicMaterial 
-            vertexColors 
-            transparent 
-            opacity={0.5}
-            linewidth={1}
-          />
-        </lineSegments>
-      )}
-      
-      {/* Particle system */}
-      {params.baseShape !== 'ribbons' && (
-        <points ref={particlesRef}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={params.particleCount}
-              array={particlePositions.positions}
-              itemSize={3}
+          </lineSegments>
+        )}
+        
+        {/* Particle system */}
+        {params.baseShape !== 'ribbons' && (
+          <points ref={particlesRef}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                count={params.particleCount}
+                array={particlePositions.positions}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-color"
+                count={params.particleCount}
+                array={particlePositions.colors}
+                itemSize={3}
+              />
+            </bufferGeometry>
+            <pointsMaterial
+              vertexColors
+              size={0.06}
+              transparent
+              opacity={0.6 + highs * 0.4}
+              sizeAttenuation
             />
-            <bufferAttribute
-              attach="attributes-color"
-              count={params.particleCount}
-              array={particlePositions.colors}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <pointsMaterial
-            vertexColors
-            size={0.06}
-            transparent
-            opacity={0.6 + highs * 0.4}
-            sizeAttenuation
-          />
-        </points>
-      )}
-      
-      {/* Lights */}
-      <ambientLight intensity={0.3} />
-      <pointLight position={[5, 5, 5]} intensity={1 + bass * 0.5} color={colors[0]} />
-      <pointLight position={[-5, -3, 3]} intensity={0.5 + mids * 0.3} color={colors[colors.length > 1 ? 1 : 0]} />
-    </group>
+          </points>
+        )}
+        
+        {/* Lights */}
+        <ambientLight intensity={0.3} />
+        <pointLight position={[5, 5, 5]} intensity={1 + bass * 0.5} color={colors[0]} />
+        <pointLight position={[-5, -3, 3]} intensity={0.5 + mids * 0.3} color={colors[colors.length > 1 ? 1 : 0]} />
+      </group>
+    </>
   );
 }
 

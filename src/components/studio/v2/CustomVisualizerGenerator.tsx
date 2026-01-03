@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Save, RefreshCw, Sparkles, Link2 } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
 import { 
@@ -11,15 +12,11 @@ import {
   paramsToEmoji,
   BASE_SHAPES,
   ANIMATION_STYLES,
-  INTENSITIES,
-  DENSITIES,
-  VISUAL_EFFECTS,
+  BACKGROUND_EFFECTS,
   COLOR_SCHEMES,
   type BaseShape,
   type AnimationStyle,
-  type Intensity,
-  type Density,
-  type VisualEffect,
+  type BackgroundEffect,
   type ColorScheme,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
@@ -51,6 +48,17 @@ const COLOR_PREVIEWS: Record<ColorScheme, string[]> = {
   ocean: ['#006994', '#40e0d0', '#00ced1'],
 };
 
+// Background effect labels
+const EFFECT_LABELS: Record<BackgroundEffect, string> = {
+  none: 'None',
+  stars: 'Stars',
+  movingLines: 'Moving Lines',
+  grid: 'Grid',
+  particles: 'Particles',
+  lightRays: 'Light Rays',
+  aurora: 'Aurora',
+};
+
 export function CustomVisualizerGenerator({ 
   isOpen, 
   onClose, 
@@ -66,20 +74,19 @@ export function CustomVisualizerGenerator({
   // User preferences (optional filters)
   const [shapeFilter, setShapeFilter] = useState<BaseShape | 'any'>('any');
   const [animationFilter, setAnimationFilter] = useState<AnimationStyle | 'any'>('any');
-  const [intensityFilter, setIntensityFilter] = useState<Intensity | 'any'>('any');
-  const [densityFilter, setDensityFilter] = useState<Density | 'any'>('any');
-  const [effectFilter, setEffectFilter] = useState<VisualEffect | 'any'>('any');
+  const [elementCount, setElementCount] = useState<number>(20);
+  const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect | 'any'>('any');
   const [colorFilter, setColorFilter] = useState<ColorScheme | 'any'>('any');
   const [threadingEnabled, setThreadingEnabled] = useState(false);
 
   // Generate new random visualizer
   const handleGenerate = useCallback(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'intensity' | 'density' | 'visualEffect' | 'colorScheme'>> = {};
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>> = {
+      elementCount,
+    };
     if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
     if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
-    if (intensityFilter !== 'any') preferences.intensity = intensityFilter;
-    if (densityFilter !== 'any') preferences.density = densityFilter;
-    if (effectFilter !== 'any') preferences.visualEffect = effectFilter;
+    if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
     if (colorFilter !== 'any') preferences.colorScheme = colorFilter;
     
     const newSeed = generateRandomSeed();
@@ -89,16 +96,16 @@ export function CustomVisualizerGenerator({
       newParams.connectionLines = true;
     }
     setCurrentParams(newParams);
-  }, [shapeFilter, animationFilter, intensityFilter, densityFilter, effectFilter, colorFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, colorFilter, threadingEnabled]);
 
   // Update preview in real-time when filters change
   useEffect(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'intensity' | 'density' | 'visualEffect' | 'colorScheme'>> = {};
+    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'colorScheme' | 'elementCount'>> = {
+      elementCount,
+    };
     if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
     if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
-    if (intensityFilter !== 'any') preferences.intensity = intensityFilter;
-    if (densityFilter !== 'any') preferences.density = densityFilter;
-    if (effectFilter !== 'any') preferences.visualEffect = effectFilter;
+    if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
     if (colorFilter !== 'any') preferences.colorScheme = colorFilter;
     
     setCurrentParams(prev => {
@@ -106,7 +113,7 @@ export function CustomVisualizerGenerator({
       if (threadingEnabled) updated.connectionLines = true;
       return updated;
     });
-  }, [shapeFilter, animationFilter, intensityFilter, densityFilter, effectFilter, colorFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, colorFilter, threadingEnabled]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -162,7 +169,7 @@ export function CustomVisualizerGenerator({
           <div className="space-y-3">
             <p className="text-xs text-white/50">Customize your visualizer</p>
             
-            {/* Row 1: Shape, Animation, Intensity */}
+            {/* Row 1: Shape, Animation, Color Scheme */}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-white/70">Shape</label>
@@ -197,57 +204,6 @@ export function CustomVisualizerGenerator({
               </div>
               
               <div className="space-y-1">
-                <label className="text-xs text-white/70">Intensity</label>
-                <select 
-                  value={intensityFilter}
-                  onChange={(e) => setIntensityFilter(e.target.value as Intensity | 'any')}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  <option value="any">Random</option>
-                  {INTENSITIES.map(int => (
-                    <option key={int} value={int}>
-                      {int.charAt(0).toUpperCase() + int.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Row 2: Density, Visual Effect, Color Scheme */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Density</label>
-                <select 
-                  value={densityFilter}
-                  onChange={(e) => setDensityFilter(e.target.value as Density | 'any')}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  <option value="any">Random</option>
-                  {DENSITIES.map(d => (
-                    <option key={d} value={d}>
-                      {d.charAt(0).toUpperCase() + d.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Visual Effect</label>
-                <select 
-                  value={effectFilter}
-                  onChange={(e) => setEffectFilter(e.target.value as VisualEffect | 'any')}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  <option value="any">Random</option>
-                  {VISUAL_EFFECTS.map(effect => (
-                    <option key={effect} value={effect}>
-                      {effect === 'none' ? 'Solid' : effect.charAt(0).toUpperCase() + effect.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="space-y-1">
                 <label className="text-xs text-white/70">Color Scheme</label>
                 <select 
                   value={colorFilter}
@@ -264,35 +220,69 @@ export function CustomVisualizerGenerator({
               </div>
             </div>
 
-            {/* Row 3: Color Preview & Threading Toggle */}
-            <div className="flex items-center justify-between gap-4 pt-2">
-              {/* Color preview */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-white/50">Colors:</span>
-                <div className="flex gap-1">
-                  {(COLOR_PREVIEWS[currentParams.colorScheme] || COLOR_PREVIEWS.mono).map((color, i) => (
-                    <div 
-                      key={i}
-                      className="w-5 h-5 rounded-full border border-white/30"
-                      style={{ backgroundColor: color }}
-                    />
+            {/* Row 2: Element Count Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-white/70">Elements</label>
+                <span className="text-xs text-white/90 font-medium">{elementCount}</span>
+              </div>
+              <Slider
+                value={[elementCount]}
+                onValueChange={(value) => setElementCount(value[0])}
+                min={1}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+            </div>
+
+            {/* Row 3: Background Effect & Connection Lines */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-white/70">Background Effect</label>
+                <select 
+                  value={backgroundEffectFilter}
+                  onChange={(e) => setBackgroundEffectFilter(e.target.value as BackgroundEffect | 'any')}
+                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
+                >
+                  <option value="any">Random</option>
+                  {BACKGROUND_EFFECTS.map(effect => (
+                    <option key={effect} value={effect}>
+                      {EFFECT_LABELS[effect]}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
               
               {/* Threading toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={threadingEnabled}
-                  onChange={(e) => setThreadingEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded bg-white/10 border-white/20 text-purple-500 focus:ring-purple-500"
-                />
-                <span className="text-xs text-white/70 flex items-center gap-1">
-                  <Link2 className="w-3 h-3" />
-                  Connection Lines
-                </span>
-              </label>
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={threadingEnabled}
+                    onChange={(e) => setThreadingEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-purple-500 focus:ring-purple-500"
+                  />
+                  <span className="text-xs text-white/70 flex items-center gap-1">
+                    <Link2 className="w-3 h-3" />
+                    Connection Lines
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Row 4: Color Preview */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-white/50">Colors:</span>
+              <div className="flex gap-1">
+                {(COLOR_PREVIEWS[currentParams.colorScheme] || COLOR_PREVIEWS.mono).map((color, i) => (
+                  <div 
+                    key={i}
+                    className="w-5 h-5 rounded-full border border-white/30"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
