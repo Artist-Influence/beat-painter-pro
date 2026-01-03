@@ -1,7 +1,7 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { RandomVisualizerParams, StandaloneVariant, GeometryType } from '@/lib/randomVisualizerGenerator';
+import type { RandomVisualizerParams, StandaloneVariant, GeometryType, AnimationStyle } from '@/lib/randomVisualizerGenerator';
 import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
 
 interface RandomVisualizerTemplateProps {
@@ -51,11 +51,13 @@ function getStandaloneGeometry(type: GeometryType, detail: number) {
 function StandaloneShape({ 
   variant, 
   audioData,
-  seed
+  seed,
+  animationStyle
 }: { 
   variant: StandaloneVariant;
   audioData: { frequency: number[]; amplitude: number; beatStrength: number };
   seed: number;
+  animationStyle: AnimationStyle;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const innerGroupRef = useRef<THREE.Group>(null);
@@ -102,48 +104,102 @@ function StandaloneShape({
     return pieces;
   }, [variant.fractured, variant.fracturedCount, seed]);
   
-  // Animation frame
+  // Animation frame - now driven by animationStyle
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
     
     if (groupRef.current) {
       const g = groupRef.current;
       
-      // Base rotation on selected axes
-      if (variant.spinAxes[0]) g.rotation.x += 0.01 * variant.spinSpeeds[0];
-      if (variant.spinAxes[1]) g.rotation.y += 0.01 * variant.spinSpeeds[1];
-      if (variant.spinAxes[2]) g.rotation.z += 0.01 * variant.spinSpeeds[2];
-      
-      // Wobble effect
-      if (variant.wobbleIntensity > 0) {
-        g.rotation.x += Math.sin(t * variant.wobbleSpeed) * variant.wobbleIntensity * 0.08;
-        g.rotation.z += Math.cos(t * variant.wobbleSpeed * 0.7) * variant.wobbleIntensity * 0.06;
-      }
-      
-      // Pulse modes with audio reactivity
-      let pulseScale = 1;
-      switch (variant.pulseMode) {
-        case 'breathe':
-          pulseScale = 1 + Math.sin(t * 0.8) * variant.pulseIntensity + bass * 0.15;
+      // Apply animation based on selected animationStyle
+      switch (animationStyle) {
+        case 'rotating':
+          // Fast orbital rotation
+          g.rotation.y = t * 1.5;
+          g.rotation.x = Math.sin(t) * 0.4;
+          g.rotation.z = Math.cos(t * 0.7) * 0.2;
+          g.scale.setScalar(1.8 * (1 + bass * 0.2));
           break;
-        case 'heartbeat':
-          const beat = Math.sin(t * 4);
-          pulseScale = 1 + (beat > 0.7 ? variant.pulseIntensity * 2 : 0) + bass * 0.25;
+          
+        case 'pulsing':
+          // Sharp rhythmic pulses on beat
+          const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5;
+          const pulsePop = Math.pow(pulsePhase, 3);
+          const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
+          g.scale.setScalar(1.8 * pulseScale);
+          g.rotation.y = t * 0.2;
+          if (variant.spinAxes[0]) g.rotation.x += Math.sin(t * 2) * 0.15;
           break;
-        case 'erratic':
-          pulseScale = 1 + Math.sin(t * 5) * Math.cos(t * 3.7) * variant.pulseIntensity + bass * 0.3;
+          
+        case 'flowing':
+          // Smooth wave motion - whole shape undulates
+          g.position.y = Math.sin(t * 1.5) * 1.2;
+          g.position.x = Math.cos(t * 0.8) * 0.6;
+          g.rotation.z = Math.sin(t) * 0.3;
+          g.rotation.x = Math.cos(t * 0.6) * 0.15;
+          g.scale.setScalar(1.8 * (1 + mids * 0.15));
           break;
-        case 'stutter':
-          const stutterPhase = Math.floor(t * 8) % 4;
-          pulseScale = 1 + (stutterPhase === 0 ? variant.pulseIntensity : 0) + bass * 0.2;
+          
+        case 'chaotic':
+          // Wild, erratic movement
+          g.rotation.x = Math.sin(t * 3.7) * 0.8;
+          g.rotation.y = Math.cos(t * 2.3) * 0.9;
+          g.rotation.z = Math.sin(t * 4.1) * 0.6;
+          g.position.x = Math.sin(t * 2.9) * 0.5;
+          g.position.y = Math.cos(t * 3.3) * 0.5;
+          g.scale.setScalar(1.8 * (0.8 + Math.sin(t * 4) * 0.3 + bass * 0.3));
           break;
-        case 'swell':
-          pulseScale = 1 + (Math.sin(t * 0.3) + 1) * 0.5 * variant.pulseIntensity + mids * 0.15;
+          
+        case 'breathing':
+          // Deep, slow inhale/exhale cycle
+          const breathCycle = Math.sin(t * 0.4);
+          const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15;
+          g.scale.setScalar(1.8 * breathScale);
+          g.rotation.y = t * 0.05;
+          g.rotation.x = breathCycle * 0.1;
           break;
+          
+        case 'explosive':
+          // Burst outward, then reset
+          const explosionCycle = (t * 0.8) % 3;
+          const burstPhase = explosionCycle < 0.5 
+            ? explosionCycle * 2 
+            : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
+          const explosiveScale = 0.6 + burstPhase * 0.8 + audioData.beatStrength * 0.4;
+          g.scale.setScalar(1.8 * explosiveScale);
+          g.rotation.y = t;
+          g.rotation.x = burstPhase * 0.5;
+          break;
+          
+        case 'smooth':
         default:
-          pulseScale = 1 + bass * 0.1;
+          // Zen-like minimal movement combined with variant's properties
+          g.rotation.y = t * 0.15;
+          if (variant.spinAxes[0]) g.rotation.x += 0.01 * variant.spinSpeeds[0];
+          if (variant.spinAxes[2]) g.rotation.z += 0.008 * variant.spinSpeeds[2];
+          
+          // Apply variant's wobble on top
+          if (variant.wobbleIntensity > 0) {
+            g.rotation.x += Math.sin(t * variant.wobbleSpeed) * variant.wobbleIntensity * 0.08;
+          }
+          
+          // Apply variant's pulse mode on top of smooth base
+          let variantPulse = 1;
+          switch (variant.pulseMode) {
+            case 'breathe':
+              variantPulse = 1 + Math.sin(t * 0.8) * variant.pulseIntensity;
+              break;
+            case 'heartbeat':
+              const beat = Math.sin(t * 4);
+              variantPulse = 1 + (beat > 0.7 ? variant.pulseIntensity * 1.5 : 0);
+              break;
+            case 'erratic':
+              variantPulse = 1 + Math.sin(t * 5) * Math.cos(t * 3.7) * variant.pulseIntensity;
+              break;
+          }
+          g.scale.setScalar(1.8 * variantPulse * (1 + bass * 0.1));
+          g.position.y = Math.sin(t * 0.2) * 0.1;
       }
-      g.scale.setScalar(1.8 * pulseScale);
     }
     
     // Animate inner group for twist effect
@@ -1489,6 +1545,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           variant={params.standaloneVariant}
           audioData={audioData}
           seed={params.seed}
+          animationStyle={params.animationStyle}
         />
       </>
     );
