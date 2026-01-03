@@ -22,7 +22,6 @@ export interface RandomVisualizerParams {
   rotationSpeed: number;
   colorShift: number;
   backgroundEffect: BackgroundEffect;
-  colorScheme: ColorScheme;
   mixedGeometry: boolean;
   connectionLines: boolean;
 }
@@ -51,18 +50,21 @@ export function generateRandomParams(
   // Element count: use preference or random between 8-40
   const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
   
+  // If user explicitly selected a shape, don't mix geometries
+  const shapeWasExplicitlyChosen = preferences?.baseShape !== undefined;
+  const mixedGeometry = shapeWasExplicitlyChosen ? false : random() > 0.5;
+  
   return {
     seed,
     baseShape,
     animationStyle,
     backgroundEffect,
-    colorScheme,
     elementCount,
     particleCount: Math.floor(150 + random() * 400),
     symmetry: random() > 0.4,
     rotationSpeed: 0.2 + random() * 0.8,
     colorShift: random() * Math.PI * 2,
-    mixedGeometry: random() > 0.5,
+    mixedGeometry,
     // Connection lines default to false - only enabled via explicit toggle
     connectionLines: preferences?.connectionLines ?? false,
   };
