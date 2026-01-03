@@ -59,40 +59,36 @@ export function CustomVisualizerGenerator({
     generateRandomParams(generateRandomSeed())
   );
   
-  // User preferences (optional filters)
-  const [shapeFilter, setShapeFilter] = useState<BaseShape | 'any'>('any');
-  const [animationFilter, setAnimationFilter] = useState<AnimationStyle | 'any'>('any');
+  // User preferences - no random options, always explicit selection
+  const [shapeFilter, setShapeFilter] = useState<BaseShape>('orb');
+  const [animationFilter, setAnimationFilter] = useState<AnimationStyle>('pulsing');
   const [elementCount, setElementCount] = useState<number>(20);
-  const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect | 'any'>('any');
+  const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect>('none');
   const [threadingEnabled, setThreadingEnabled] = useState(false);
 
-  // Generate new random visualizer
+  // Generate new random visualizer with more variation
   const handleGenerate = useCallback(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>> = {
+    const newSeed = generateRandomSeed();
+    const newParams = generateRandomParams(newSeed, {
+      baseShape: shapeFilter,
+      animationStyle: animationFilter,
+      backgroundEffect: backgroundEffectFilter,
       elementCount,
       connectionLines: threadingEnabled,
-    };
-    if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
-    if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
-    if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
-    
-    const newSeed = generateRandomSeed();
-    const newParams = generateRandomParams(newSeed, preferences);
+    });
     setCurrentParams(newParams);
   }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
 
   // Update preview in real-time when filters change
   useEffect(() => {
-    const preferences: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>> = {
-      elementCount,
-      connectionLines: threadingEnabled,
-    };
-    if (shapeFilter !== 'any') preferences.baseShape = shapeFilter;
-    if (animationFilter !== 'any') preferences.animationStyle = animationFilter;
-    if (backgroundEffectFilter !== 'any') preferences.backgroundEffect = backgroundEffectFilter;
-    
     setCurrentParams(prev => {
-      const updated = generateRandomParams(prev.seed, preferences);
+      const updated = generateRandomParams(prev.seed, {
+        baseShape: shapeFilter,
+        animationStyle: animationFilter,
+        backgroundEffect: backgroundEffectFilter,
+        elementCount,
+        connectionLines: threadingEnabled,
+      });
       return updated;
     });
   }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
@@ -158,10 +154,9 @@ export function CustomVisualizerGenerator({
                 <label className="text-xs text-white/70">Shape</label>
                 <select 
                   value={shapeFilter}
-                  onChange={(e) => setShapeFilter(e.target.value as BaseShape | 'any')}
+                  onChange={(e) => setShapeFilter(e.target.value as BaseShape)}
                   className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
                 >
-                  <option value="any">Random</option>
                   {BASE_SHAPES.map(shape => (
                     <option key={shape} value={shape}>
                       {shape.charAt(0).toUpperCase() + shape.slice(1)}
@@ -174,10 +169,9 @@ export function CustomVisualizerGenerator({
                 <label className="text-xs text-white/70">Animation</label>
                 <select 
                   value={animationFilter}
-                  onChange={(e) => setAnimationFilter(e.target.value as AnimationStyle | 'any')}
+                  onChange={(e) => setAnimationFilter(e.target.value as AnimationStyle)}
                   className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
                 >
-                  <option value="any">Random</option>
                   {ANIMATION_STYLES.map(style => (
                     <option key={style} value={style}>
                       {style.charAt(0).toUpperCase() + style.slice(1)}
@@ -209,10 +203,9 @@ export function CustomVisualizerGenerator({
                 <label className="text-xs text-white/70">Background Effect</label>
                 <select 
                   value={backgroundEffectFilter}
-                  onChange={(e) => setBackgroundEffectFilter(e.target.value as BackgroundEffect | 'any')}
+                  onChange={(e) => setBackgroundEffectFilter(e.target.value as BackgroundEffect)}
                   className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
                 >
-                  <option value="any">Random</option>
                   {BACKGROUND_EFFECTS.map(effect => (
                     <option key={effect} value={effect}>
                       {EFFECT_LABELS[effect]}
