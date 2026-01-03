@@ -62,6 +62,7 @@ export function CustomVisualizerGenerator({
   // User preferences - no random options, always explicit selection
   const [shapeFilter, setShapeFilter] = useState<BaseShape>('orb');
   const [animationFilter, setAnimationFilter] = useState<AnimationStyle>('pulsing');
+  const [layoutMode, setLayoutMode] = useState<'standalone' | 'multiple'>('multiple');
   const [elementCount, setElementCount] = useState<number>(20);
   const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect>('none');
   const [threadingEnabled, setThreadingEnabled] = useState(false);
@@ -73,11 +74,11 @@ export function CustomVisualizerGenerator({
       baseShape: shapeFilter,
       animationStyle: animationFilter,
       backgroundEffect: backgroundEffectFilter,
-      elementCount,
+      elementCount: layoutMode === 'standalone' ? 1 : elementCount,
       connectionLines: threadingEnabled,
     });
     setCurrentParams(newParams);
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
 
   // Update preview in real-time when filters change
   useEffect(() => {
@@ -86,12 +87,12 @@ export function CustomVisualizerGenerator({
         baseShape: shapeFilter,
         animationStyle: animationFilter,
         backgroundEffect: backgroundEffectFilter,
-        elementCount,
+        elementCount: layoutMode === 'standalone' ? 1 : elementCount,
         connectionLines: threadingEnabled,
       });
       return updated;
     });
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled]);
+  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -181,21 +182,50 @@ export function CustomVisualizerGenerator({
               </div>
             </div>
 
-            {/* Row 2: Element Count Slider */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-white/70">Elements</label>
-                <span className="text-xs text-white/90 font-medium">{elementCount}</span>
+            {/* Row 2: Layout Mode Toggle */}
+            <div className="space-y-1">
+              <label className="text-xs text-white/70">Layout</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLayoutMode('standalone')}
+                  className={`flex-1 px-3 py-1.5 text-xs rounded border transition-colors ${
+                    layoutMode === 'standalone' 
+                      ? 'bg-purple-600 border-purple-500 text-white' 
+                      : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/15'
+                  }`}
+                >
+                  Standalone
+                </button>
+                <button
+                  onClick={() => setLayoutMode('multiple')}
+                  className={`flex-1 px-3 py-1.5 text-xs rounded border transition-colors ${
+                    layoutMode === 'multiple' 
+                      ? 'bg-purple-600 border-purple-500 text-white' 
+                      : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/15'
+                  }`}
+                >
+                  Multiple
+                </button>
               </div>
-              <Slider
-                value={[elementCount]}
-                onValueChange={(value) => setElementCount(value[0])}
-                min={1}
-                max={100}
-                step={1}
-                className="w-full"
-              />
             </div>
+
+            {/* Row 3: Element Count Slider (only for multiple mode) */}
+            {layoutMode === 'multiple' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-white/70">Elements</label>
+                  <span className="text-xs text-white/90 font-medium">{elementCount}</span>
+                </div>
+                <Slider
+                  value={[elementCount]}
+                  onValueChange={(value) => setElementCount(value[0])}
+                  min={2}
+                  max={100}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+            )}
 
             {/* Row 3: Background Effect & Connection Lines */}
             <div className="grid grid-cols-2 gap-3">
