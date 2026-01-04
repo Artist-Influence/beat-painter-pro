@@ -16,7 +16,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const startTimeRef = useRef<number>(0);
   const [isRecording, setIsRecording] = useState(false);
 
-  const startRecording = useCallback(async (startAtSeconds: number, backgroundColor: string, filenamePrefix: string) => {
+  const transparentRef = useRef<boolean>(false);
+  const backgroundColorRef = useRef<string>('#000000');
+
+  const startRecording = useCallback(async (startAtSeconds: number, backgroundColor: string, filenamePrefix: string, transparentBackground: boolean = false) => {
     if (!canvasRef.current || !audioElement) {
       toast.error("Canvas or audio not available");
       return;
@@ -27,13 +30,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = 1080;
       exportCanvas.height = 1080;
-      const ctx = exportCanvas.getContext("2d");
+      const ctx = exportCanvas.getContext("2d", { alpha: transparentBackground });
       if (!ctx) {
         toast.error("Failed to create export canvas");
         return;
       }
       exportCanvasRef.current = exportCanvas;
       ctxRef.current = ctx;
+      transparentRef.current = transparentBackground;
+      backgroundColorRef.current = backgroundColor;
 
       chunksRef.current = [];
       keepRenderingRef.current = true;
@@ -115,8 +120,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const ctx = ctxRef.current;
         const exportCanvas = exportCanvasRef.current;
 
-        ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        // Clear canvas first (needed for transparency)
+        ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+        
+        // Only fill background if NOT transparent
+        if (!transparentRef.current) {
+          ctx.fillStyle = backgroundColorRef.current;
+          ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        }
+        
         ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
         requestAnimationFrame(render);

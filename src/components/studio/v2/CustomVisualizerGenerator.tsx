@@ -57,6 +57,9 @@ export function CustomVisualizerGenerator({
     generateRandomParams(generateRandomSeed())
   );
   
+  // Custom name for the visualizer
+  const [customName, setCustomName] = useState<string>('');
+  
   // User preferences - no random options, always explicit selection
   const [shapeFilter, setShapeFilter] = useState<BaseShape>('orb');
   
@@ -67,6 +70,7 @@ export function CustomVisualizerGenerator({
 
   // Generate new random visualizer with more variation
   const handleGenerate = useCallback(() => {
+    setCustomName(''); // Reset custom name when generating new
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed, {
       // Only pass shape preference when in multiple mode
@@ -107,7 +111,7 @@ export function CustomVisualizerGenerator({
 
   // Save current visualizer
   const handleSave = async () => {
-    const result = await saveRandomVisualizer(currentParams);
+    const result = await saveRandomVisualizer(currentParams, customName.trim() || undefined);
     if (result) {
       onSuccess?.(result);
       onClose();
@@ -151,9 +155,22 @@ export function CustomVisualizerGenerator({
             <div className="absolute bottom-3 left-3 flex items-center gap-2">
               <span className="text-2xl">{currentEmoji}</span>
               <span className="text-white font-medium text-sm bg-black/60 px-2 py-1 rounded">
-                {currentName}
+                {customName || currentName}
               </span>
             </div>
+          </div>
+
+          {/* Custom Name Input */}
+          <div className="space-y-1">
+            <label className="text-xs text-white/70">Visualizer Name</label>
+            <input
+              type="text"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder={currentName}
+              className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-500"
+              maxLength={50}
+            />
           </div>
 
           {/* Controls Grid */}
