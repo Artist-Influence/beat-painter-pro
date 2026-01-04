@@ -4,8 +4,15 @@ import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from "../visualizer";
 import { useStudioStore } from "@/stores/studioStore";
+import { useVisualizerTexture, VisualizerTextureData } from "@/hooks/useVisualizerTexture";
 
-function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] }) {
+function ReactorCore({ 
+  audioData, 
+  textureData 
+}: { 
+  audioData: VisualizerProps["audioData"]; 
+  textureData: VisualizerTextureData;
+}) {
   const groupRef = useRef<THREE.Group>(null);
   const shellRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
@@ -21,40 +28,51 @@ function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] })
 
   const beamCount = 60;
 
-  // Create geometries and materials
+  // Extract colors from textureData
+  const primaryColor = textureData?.colors?.primary || '#ffffff';
+  const secondaryColor = textureData?.colors?.secondary || '#ffffff';
+  const accentColor = textureData?.colors?.accent || '#ffffff';
+  const isNeon = textureData?.colors?.isNeon || false;
+  const isMetallic = textureData?.colors?.isMetallic || false;
+
+  // Create geometries and materials with texture/style support
   const { shellGeo, coreGeo, beamGeo, shellMat, coreMat, beamMat } = useMemo(() => {
     const shellGeo = new THREE.IcosahedronGeometry(1.0, 3);
     const coreGeo = new THREE.OctahedronGeometry(0.4, 2);
     const beamGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.0, 8, 1, true);
 
     const shellMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#ffffff"),
-      roughness: 0.15,
-      metalness: 0.3,
-      emissive: new THREE.Color("#ffffff"),
-      emissiveIntensity: 0.15,
+      color: new THREE.Color(primaryColor),
+      roughness: isMetallic ? 0.1 : 0.15,
+      metalness: isMetallic ? 0.5 : 0.3,
+      emissive: new THREE.Color(primaryColor),
+      emissiveIntensity: isNeon ? 0.3 : 0.15,
       transparent: true,
       opacity: 0.88,
+      map: textureData?.texture || undefined,
+      emissiveMap: textureData?.texture || undefined,
     });
 
     const coreMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#ffffff"),
-      roughness: 0.25,
-      metalness: 0.7,
-      emissive: new THREE.Color("#ffffff"),
-      emissiveIntensity: 0.3,
+      color: new THREE.Color(accentColor),
+      roughness: isMetallic ? 0.15 : 0.25,
+      metalness: isMetallic ? 0.85 : 0.7,
+      emissive: new THREE.Color(accentColor),
+      emissiveIntensity: isNeon ? 0.5 : 0.3,
+      map: textureData?.texture || undefined,
+      emissiveMap: textureData?.texture || undefined,
     });
 
     const beamMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#ffffff"),
-      roughness: 0.2,
-      metalness: 0.85,
-      emissive: new THREE.Color("#ffffff"),
-      emissiveIntensity: 0.2,
+      color: new THREE.Color(secondaryColor),
+      roughness: isMetallic ? 0.1 : 0.2,
+      metalness: isMetallic ? 0.95 : 0.85,
+      emissive: new THREE.Color(secondaryColor),
+      emissiveIntensity: isNeon ? 0.4 : 0.2,
     });
 
     return { shellGeo, coreGeo, beamGeo, shellMat, coreMat, beamMat };
-  }, []);
+  }, [textureData.textureVersion, primaryColor, secondaryColor, accentColor, isNeon, isMetallic, textureData?.texture]);
 
   // Pre-place beam instances radially
   useEffect(() => {
@@ -107,12 +125,13 @@ function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] })
     const highsFinal = smoothedHighs.current * 0.7 + rawHighs * 0.3;
     const beatFinal = smoothedBeat.current * 0.7 + rawBeat * 0.3;
 
-    const animSpeed = animationSpeed;
+    // animationSpeed ONLY affects subtle ambient drift, NOT audio reactivity
+    const ambientDrift = dt * 0.02 * animationSpeed;
 
-    // Group rotation - AUDIO-DRIVEN ONLY (no constant spin)
+    // Group rotation - AUDIO-DRIVEN PRIMARY, ambient drift secondary
     if (groupRef.current) {
-      groupRef.current.rotation.y += dt * bassFinal * 0.5 * animSpeed;
-      groupRef.current.rotation.x = bassFinal * 0.1;
+      groupRef.current.rotation.y += bassFinal * 0.6 + ambientDrift;
+      groupRef.current.rotation.x = bassFinal * 0.15;
     }
 
     // Shell: scale driven by bass + beat pop, rotation ONLY when audio plays
@@ -121,36 +140,39 @@ function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] })
       const shellScale = (1 + bassFinal * 0.5) * beatPop;
       shellRef.current.scale.setScalar(shellScale);
       
-      // Rotation ONLY driven by audio (no base spin)
-      shellRef.current.rotation.y += dt * bassFinal * 1.2 * animSpeed;
-      shellRef.current.rotation.z += dt * bassFinal * 0.6 * animSpeed;
+      // Rotation ONLY driven by audio (no animSpeed dampening)
+      shellRef.current.rotation.y += bassFinal * 1.5;
+      shellRef.current.rotation.z += bassFinal * 0.8;
       
       // Emissive intensity driven by highs
-      (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1 + highsFinal * 1.2;
+      (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+        (isNeon ? 0.2 : 0.1) + highsFinal * 1.2;
     }
 
-    // Core: rotation ONLY driven by mids (no constant spin)
+    // Core: rotation ONLY driven by mids (no animSpeed dampening)
     if (coreRef.current) {
-      coreRef.current.rotation.y += dt * midsFinal * 5.0 * animSpeed;
-      coreRef.current.rotation.x += dt * midsFinal * 3.0 * animSpeed;
-      coreRef.current.rotation.z += dt * midsFinal * 2.0 * animSpeed;
+      coreRef.current.rotation.y += midsFinal * 6.0;
+      coreRef.current.rotation.x += midsFinal * 4.0;
+      coreRef.current.rotation.z += midsFinal * 2.5;
       
       // Scale pulse with mids + bass
       const coreScale = 1 + midsFinal * 0.4 + bassFinal * 0.3;
       coreRef.current.scale.setScalar(coreScale);
       
-      (coreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.2 + highsFinal * 1.0;
+      (coreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+        (isNeon ? 0.4 : 0.2) + highsFinal * 1.0;
     }
 
-    // Beams: rotation ONLY driven by mids (no constant spin)
+    // Beams: rotation ONLY driven by mids (no animSpeed dampening)
     if (beamsRef.current) {
-      beamsRef.current.rotation.y += dt * midsFinal * 6.0 * animSpeed;
-      beamsRef.current.rotation.x += dt * midsFinal * 2.5 * animSpeed;
+      beamsRef.current.rotation.y += midsFinal * 7.0;
+      beamsRef.current.rotation.x += midsFinal * 3.0;
       
       const beamScale = 1 + bassFinal * 0.4;
       beamsRef.current.scale.setScalar(beamScale);
       
-      (beamsRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1 + highsFinal * 1.2;
+      (beamsRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
+        (isNeon ? 0.3 : 0.1) + highsFinal * 1.2;
     }
   });
 
@@ -168,14 +190,14 @@ function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] })
       {/* Internal Beam Array */}
       <instancedMesh ref={beamsRef} args={[beamGeo, beamMat, beamCount]} />
 
-      {/* Sparkle Layer - driven by highs */}
+      {/* Sparkle Layer - driven by highs, uses accent color */}
       <Sparkles
         count={sparkleCount}
         size={1.5}
         speed={0.4}
         opacity={0.75}
         scale={2.0}
-        color="#ffffff"
+        color={accentColor}
       />
     </group>
   );
@@ -189,13 +211,15 @@ export default function DiamondOrbReactorVisualizer({
   zoomLevel,
   backgroundColor,
 }: VisualizerProps) {
+  const textureData = useVisualizerTexture();
+
   return (
     <>
       <ambientLight intensity={0.3} />
       <directionalLight position={[3, 4, 5]} intensity={0.9} />
       <directionalLight position={[-2, -3, -4]} intensity={0.3} />
       <Environment preset="city" />
-      <ReactorCore audioData={audioData} />
+      <ReactorCore audioData={audioData} textureData={textureData} />
     </>
   );
 }
