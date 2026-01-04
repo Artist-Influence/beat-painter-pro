@@ -15,14 +15,14 @@ export interface AudioSensitivity {
 }
 
 /**
- * Asymmetric audio smoothing - fast attack for immediate response, slow decay for smooth falloff
- * This creates punchy but smooth audio-reactive animations
+ * Asymmetric audio smoothing - fast attack for immediate response, fast decay for accurate beat tracking
+ * This creates punchy audio-reactive animations that accurately follow short gaps in the bass
  */
 export function smoothAudio(
   current: AudioValues,
   target: AudioValues,
-  attackFactor = 0.5,
-  decayFactor = 0.1
+  attackFactor = 0.55,
+  decayFactor = 0.35
 ): AudioValues {
   const lerp = (c: number, t: number) => {
     const factor = t > c ? attackFactor : decayFactor;
@@ -113,7 +113,7 @@ export function createAudioSmoother() {
     highsRef: { current: 0 },
     beatRef: { current: 0 },
     
-    update(target: AudioValues, attackFactor = 0.5, decayFactor = 0.1): AudioValues {
+    update(target: AudioValues, attackFactor = 0.55, decayFactor = 0.35): AudioValues {
       const lerp = (ref: { current: number }, t: number) => {
         const factor = t > ref.current ? attackFactor : decayFactor;
         ref.current = ref.current + (t - ref.current) * factor;

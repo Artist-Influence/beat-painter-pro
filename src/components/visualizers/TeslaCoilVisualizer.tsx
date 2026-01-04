@@ -88,17 +88,25 @@ function TeslaCoil({ audioData }: any) {
     const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
     const rawBeat = Math.max(beatStrength, rawBass);
     
-    const lerp = 0.12;
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, rawBass, lerp);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, rawMids, lerp);
-    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, rawHighs, lerp);
-    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, rawBeat, lerp);
+    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
+    const lerp = (current: number, target: number) => {
+      const factor = target > current ? 0.55 : 0.35;
+      return current + (target - current) * factor;
+    };
+    smoothedBass.current = lerp(smoothedBass.current, rawBass);
+    smoothedMids.current = lerp(smoothedMids.current, rawMids);
+    smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
+    smoothedBeat.current = lerp(smoothedBeat.current, rawBeat);
     
-    const isPeakMoment = smoothedBeat.current > 0.7;
+    // Transient blend: 30% raw for immediate punch on bass
+    const bassFinal = smoothedBass.current * 0.7 + rawBass * 0.3;
+    const beatFinal = smoothedBeat.current * 0.7 + rawBeat * 0.3;
+    
+    const isPeakMoment = beatFinal > 0.7;
     
     if (groupRef.current) {
       groupRef.current.rotation.y = time * 0.15 * animSpeed;
-      groupRef.current.scale.setScalar(0.8 + smoothedBass.current * 0.6 + (isPeakMoment ? 0.3 : 0));
+      groupRef.current.scale.setScalar(0.8 + bassFinal * 0.6 + (isPeakMoment ? 0.3 : 0));
     }
     
     // Animate electric arcs - SHOOT OUT dramatically on bass

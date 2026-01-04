@@ -7,6 +7,9 @@ import { VisualizerProps } from ".";
 function NeuralLattice({ audioData }: any) {
   const pointsRef = useRef<THREE.Points>(null);
   const groupRef = useRef<THREE.Group>(null);
+  const sphere1Ref = useRef<THREE.Mesh>(null);
+  const sphere2Ref = useRef<THREE.Mesh>(null);
+  const sphere3Ref = useRef<THREE.Mesh>(null);
 
   const extractedColors = (window as any).extractedColors;
   
@@ -60,29 +63,39 @@ function NeuralLattice({ audioData }: any) {
     return geo;
   }, [primaryColor, secondaryColor, accentColor]);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return sum / 86 / 255;
-  }, [frequency]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return sum / 85 / 255;
-  }, [frequency]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     
+    // Calculate audio per-frame
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const rawBass = bassSum / 86 / 255;
+    const rawMids = midsSum / 85 / 255;
+    const rawHighs = highsSum / 85 / 255;
+    
+    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35)
+    const lerp = (current: number, target: number) => {
+      const factor = target > current ? 0.55 : 0.35;
+      return current + (target - current) * factor;
+    };
+    smoothedBass.current = lerp(smoothedBass.current, rawBass);
+    smoothedMids.current = lerp(smoothedMids.current, rawMids);
+    smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
+    
+    // Transient blend: 30% raw for immediate punch
+    const bass = smoothedBass.current * 0.7 + rawBass * 0.3;
+    const mids = smoothedMids.current * 0.7 + rawMids * 0.3;
+    const highs = smoothedHighs.current * 0.7 + rawHighs * 0.3;
     if (groupRef.current) {
-      // Much smoother transitions using lerp-like behavior
+      // Faster scale response
       const targetScale = 1 + bass * 1.2 + 0.15 * Math.sin(t * 6);
       const currentScale = groupRef.current.scale.x;
       const smoothScale = currentScale + (targetScale - currentScale) * 0.05; // Slower smoothing
@@ -119,37 +132,48 @@ function NeuralLattice({ audioData }: any) {
       
       material.needsUpdate = true;
     }
+    
+    // Update sphere materials with audio reactivity
+    if (sphere1Ref.current?.material) {
+      (sphere1Ref.current.material as THREE.MeshStandardMaterial).opacity = 0.25 + mids * 0.4 + bass * 0.3;
+    }
+    if (sphere2Ref.current?.material) {
+      (sphere2Ref.current.material as THREE.MeshStandardMaterial).opacity = 0.15 + highs * 0.35;
+    }
+    if (sphere3Ref.current?.material) {
+      (sphere3Ref.current.material as THREE.MeshStandardMaterial).opacity = 0.1 + bass * 0.25;
+    }
   });
 
   return (
     <group ref={groupRef} scale={0.14}>
-      <mesh>
+      <mesh ref={sphere1Ref}>
         <sphereGeometry args={[2.0, 32, 32]} />
         <meshStandardMaterial 
           color={primaryColor} 
           wireframe 
           transparent 
-          opacity={0.25 + mids * 0.4 + bass * 0.3}
+          opacity={0.25}
           map={texture || undefined}
         />
       </mesh>
-      <mesh>
+      <mesh ref={sphere2Ref}>
         <sphereGeometry args={[2.8, 16, 16]} />
         <meshStandardMaterial 
           color={secondaryColor} 
           wireframe 
           transparent 
-          opacity={0.15 + highs * 0.35}
+          opacity={0.15}
           map={texture || undefined}
         />
       </mesh>
-      <mesh>
+      <mesh ref={sphere3Ref}>
         <sphereGeometry args={[3.5, 8, 8]} />
         <meshStandardMaterial 
           color={accentColor} 
           wireframe 
           transparent 
-          opacity={0.1 + bass * 0.25}
+          opacity={0.1}
           map={texture || undefined}
         />
       </mesh>
