@@ -1,7 +1,5 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { HfInference } from "https://esm.sh/@huggingface/inference@2.3.2";
 import { encode as b64encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
@@ -10,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,24 +24,44 @@ serve(async (req) => {
       );
     }
 
-    const hf = new HfInference(token);
-
-    // Basic way to include a negative prompt within a single text-to-image prompt
     const combinedPrompt = negativePrompt
       ? `${prompt}. Avoid: ${negativePrompt}`
       : prompt;
 
-    // Use a fast, high-quality model
-    const image = await hf.textToImage({
-      inputs: combinedPrompt,
-      model: "black-forest-labs/FLUX.1-schnell",
-      // Note: HfInference doesn't expose seed directly for all models.
-      // Include seed hints in the prompt to encourage variation.
-    });
+    console.log("Generating image with prompt:", combinedPrompt);
 
-    const arrayBuffer = await image.arrayBuffer();
+    // Use the NEW Hugging Face router endpoint directly
+    const response = await fetch(
+      "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: combinedPrompt,
+          parameters: {
+            seed: seed || Math.floor(Math.random() * 1000000),
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("HF API error:", response.status, errorText);
+      return new Response(
+        JSON.stringify({ error: "HF API error", details: errorText }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
     const base64 = b64encode(new Uint8Array(arrayBuffer));
     const dataUrl = `data:image/png;base64,${base64}`;
+
+    console.log("Image generated successfully");
 
     return new Response(
       JSON.stringify({ image: dataUrl }),
