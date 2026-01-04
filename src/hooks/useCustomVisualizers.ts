@@ -46,7 +46,7 @@ export function useCustomVisualizers() {
   }, [user, fetchVisualizers, checkUserRole, subscribeToRealtime, unsubscribeFromRealtime]);
 
   // Save a random visualizer (new system)
-  const saveRandomVisualizer = async (params: RandomVisualizerParams) => {
+  const saveRandomVisualizer = async (params: RandomVisualizerParams, customName?: string) => {
     if (!user) {
       toast({
         title: "Sign In Required",
@@ -68,7 +68,7 @@ export function useCustomVisualizers() {
 
     setIsSaving(true);
     try {
-      const name = paramsToName(params);
+      const name = customName || paramsToName(params);
       const emoji = paramsToEmoji(params);
       
       // Save to database with config JSON instead of jsx_code
