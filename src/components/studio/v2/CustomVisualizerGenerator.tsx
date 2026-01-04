@@ -12,10 +12,8 @@ import {
   paramsToName,
   paramsToEmoji,
   BASE_SHAPES,
-  ANIMATION_STYLES,
   BACKGROUND_EFFECTS,
   type BaseShape,
-  type AnimationStyle,
   type BackgroundEffect,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
@@ -61,7 +59,7 @@ export function CustomVisualizerGenerator({
   
   // User preferences - no random options, always explicit selection
   const [shapeFilter, setShapeFilter] = useState<BaseShape>('orb');
-  const [animationFilter, setAnimationFilter] = useState<AnimationStyle>('pulsing');
+  
   const [layoutMode, setLayoutMode] = useState<'standalone' | 'multiple'>('multiple');
   const [elementCount, setElementCount] = useState<number>(20);
   const [backgroundEffectFilter, setBackgroundEffectFilter] = useState<BackgroundEffect>('none');
@@ -73,13 +71,12 @@ export function CustomVisualizerGenerator({
     const newParams = generateRandomParams(newSeed, {
       // Only pass shape preference when in multiple mode
       ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-      animationStyle: animationFilter,
       backgroundEffect: backgroundEffectFilter,
       elementCount: layoutMode === 'standalone' ? 1 : elementCount,
       connectionLines: threadingEnabled,
     });
     setCurrentParams(newParams);
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
+  }, [shapeFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
 
   // Update preview in real-time when filters change
   useEffect(() => {
@@ -87,21 +84,19 @@ export function CustomVisualizerGenerator({
       const updated = generateRandomParams(prev.seed, {
         // Only apply shape filter in multiple mode
         ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-        animationStyle: animationFilter,
         backgroundEffect: backgroundEffectFilter,
         elementCount: layoutMode === 'standalone' ? 1 : elementCount,
         connectionLines: threadingEnabled,
       });
       return updated;
     });
-  }, [shapeFilter, animationFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
+  }, [shapeFilter, elementCount, backgroundEffectFilter, threadingEnabled, layoutMode]);
 
   // When switching to standalone, generate a fresh random visualizer with random shape
   useEffect(() => {
     if (layoutMode === 'standalone') {
       const newSeed = generateRandomSeed();
       const newParams = generateRandomParams(newSeed, {
-        animationStyle: animationFilter,
         backgroundEffect: backgroundEffectFilter,
         elementCount: 1,
         connectionLines: threadingEnabled,
@@ -165,10 +160,10 @@ export function CustomVisualizerGenerator({
           <div className="space-y-3">
             <p className="text-xs text-white/50">Customize your visualizer</p>
             
-            {/* Row 1: Shape (only for multiple mode) and Animation */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Row 1: Shape (only for multiple mode) */}
+            <div className="space-y-1">
               {layoutMode === 'multiple' ? (
-                <div className="space-y-1">
+                <>
                   <label className="text-xs text-white/70">Shape</label>
                   <select 
                     value={shapeFilter}
@@ -181,30 +176,15 @@ export function CustomVisualizerGenerator({
                       </option>
                     ))}
                   </select>
-                </div>
+                </>
               ) : (
-                <div className="space-y-1">
+                <>
                   <label className="text-xs text-white/70">Shape</label>
                   <div className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white/50 text-sm italic">
                     Auto-generated
                   </div>
-                </div>
+                </>
               )}
-              
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Animation</label>
-                <select 
-                  value={animationFilter}
-                  onChange={(e) => setAnimationFilter(e.target.value as AnimationStyle)}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  {ANIMATION_STYLES.map(style => (
-                    <option key={style} value={style}>
-                      {style.charAt(0).toUpperCase() + style.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {/* Row 2: Layout Mode Toggle */}

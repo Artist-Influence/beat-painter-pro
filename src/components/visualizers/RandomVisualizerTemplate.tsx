@@ -53,13 +53,11 @@ function StandaloneShape({
   variant, 
   audioData,
   seed,
-  animationStyle,
   audioSensitivity
 }: { 
   variant: StandaloneVariant;
   audioData: { frequency: number[]; amplitude: number; beatStrength: number };
   seed: number;
-  animationStyle: AnimationStyle;
   audioSensitivity: {
     bassMultiplier: number;
     midsMultiplier: number;
@@ -91,8 +89,6 @@ function StandaloneShape({
       targetHighs: Math.min(raw.highs * audioSensitivity.highsMultiplier, 1.5),
     };
   }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
-  
-  const animSpeed = audioSensitivity.animationSpeed;
   
   // Create texture-aware materials that respond to applied styles
   const mainMaterial = useMemo(() => {
@@ -183,10 +179,8 @@ function StandaloneShape({
     return pieces;
   }, [variant.fractured, variant.fracturedCount, seed]);
   
-  // Animation frame - now driven by animationStyle with audio sensitivity
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime() * animSpeed;
-    
+  // Animation frame - AUDIO-FIRST: no motion when audio is silent
+  useFrame(() => {
     // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
     const attackLerp = 0.55;
     const decayLerp = 0.35;
@@ -206,136 +200,69 @@ function StandaloneShape({
     const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
     const beat = smoothedBeatRef.current;
     
+    // Audio threshold - only animate when audio is actually playing
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    
     // Beat pop effect - spike on strong beats
     const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
     
     if (groupRef.current) {
       const g = groupRef.current;
       
-      // Apply animation based on selected animationStyle
-      switch (animationStyle) {
-        case 'rotating':
-          // Fast orbital rotation
-          g.rotation.y = t * 1.5;
-          g.rotation.x = Math.sin(t) * 0.4;
-          g.rotation.z = Math.cos(t * 0.7) * 0.2;
-          g.scale.setScalar(1.8 * (1 + bass * 0.2) * beatPop);
-          break;
-          
-        case 'pulsing':
-          // Sharp rhythmic pulses on beat
-          const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5;
-          const pulsePop = Math.pow(pulsePhase, 3);
-          const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
-          g.scale.setScalar(1.8 * pulseScale * beatPop);
-          g.rotation.y = t * 0.2;
-          if (variant.spinAxes[0]) g.rotation.x += Math.sin(t * 2) * 0.15;
-          break;
-          
-        case 'flowing':
-          // Smooth wave motion - whole shape undulates
-          g.position.y = Math.sin(t * 1.5) * 1.2;
-          g.position.x = Math.cos(t * 0.8) * 0.6;
-          g.rotation.z = Math.sin(t) * 0.3;
-          g.rotation.x = Math.cos(t * 0.6) * 0.15;
-          g.scale.setScalar(1.8 * (1 + mids * 0.15) * beatPop);
-          break;
-          
-        case 'chaotic':
-          // Wild, erratic movement
-          g.rotation.x = Math.sin(t * 3.7) * 0.8;
-          g.rotation.y = Math.cos(t * 2.3) * 0.9;
-          g.rotation.z = Math.sin(t * 4.1) * 0.6;
-          g.position.x = Math.sin(t * 2.9) * 0.5;
-          g.position.y = Math.cos(t * 3.3) * 0.5;
-          g.scale.setScalar(1.8 * (0.8 + Math.sin(t * 4) * 0.3 + bass * 0.3) * beatPop);
-          break;
-          
-        case 'breathing':
-          // Deep, slow inhale/exhale cycle
-          const breathCycle = Math.sin(t * 0.4);
-          const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15;
-          g.scale.setScalar(1.8 * breathScale * beatPop);
-          g.rotation.y = t * 0.05;
-          g.rotation.x = breathCycle * 0.1;
-          break;
-          
-        case 'explosive':
-          // Burst outward, then reset
-          const explosionCycle = (t * 0.8) % 3;
-          const burstPhase = explosionCycle < 0.5 
-            ? explosionCycle * 2 
-            : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
-          const explosiveScale = 0.6 + burstPhase * 0.8 + beat * 0.4;
-          g.scale.setScalar(1.8 * explosiveScale * beatPop);
-          g.rotation.y = t;
-          g.rotation.x = burstPhase * 0.5;
-          break;
-          
-        case 'smooth':
-        default:
-          // Zen-like minimal movement combined with variant's properties
-          g.rotation.y = t * 0.15;
-          if (variant.spinAxes[0]) g.rotation.x += 0.01 * variant.spinSpeeds[0];
-          if (variant.spinAxes[2]) g.rotation.z += 0.008 * variant.spinSpeeds[2];
-          
-          // Apply variant's wobble on top
-          if (variant.wobbleIntensity > 0) {
-            g.rotation.x += Math.sin(t * variant.wobbleSpeed) * variant.wobbleIntensity * 0.08;
-          }
-          
-          // Apply variant's pulse mode on top of smooth base
-          let variantPulse = 1;
-          switch (variant.pulseMode) {
-            case 'breathe':
-              variantPulse = 1 + Math.sin(t * 0.8) * variant.pulseIntensity;
-              break;
-            case 'heartbeat':
-              const heartbeat = Math.sin(t * 4);
-              variantPulse = 1 + (heartbeat > 0.7 ? variant.pulseIntensity * 1.5 : 0);
-              break;
-            case 'erratic':
-              variantPulse = 1 + Math.sin(t * 5) * Math.cos(t * 3.7) * variant.pulseIntensity;
-              break;
-          }
-          g.scale.setScalar(1.8 * variantPulse * (1 + bass * 0.1) * beatPop);
-          g.position.y = Math.sin(t * 0.2) * 0.1;
+      // Scale reacts to audio (returns to 1.8 when silent)
+      g.scale.setScalar(1.8 * (1 + bass * 0.3) * beatPop);
+      
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        g.rotation.y += bass * 0.08;
+        g.rotation.x += mids * 0.03;
+        g.rotation.z += highs * 0.02;
+      }
+      
+      // Position stays centered (no drift)
+      g.position.set(0, 0, 0);
+    }
+    
+    // Animate inner group for twist effect - only when audio present
+    if (innerGroupRef.current && variant.twisted > 0 && hasAudio) {
+      innerGroupRef.current.rotation.y += bass * variant.twisted * 0.1;
+    }
+    
+    // Animate orbit rings - only when audio present
+    ringRefs.current.forEach((ring, i) => {
+      if (!ring) return;
+      // Scale reacts to audio
+      const ringScale = 1 + bass * 0.15;
+      ring.scale.setScalar(ringScale);
+      // Rotation only when audio present
+      if (hasAudio) {
+        ring.rotation.z += mids * 0.05 * (i % 2 === 0 ? 1 : -1);
+      }
+    });
+    
+    // Animate particles - only when audio present
+    if (particlesRef.current && variant.hasParticleHalo) {
+      const material = particlesRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.3 + bass * 0.4 + highs * 0.2;
+      if (hasAudio) {
+        particlesRef.current.rotation.y += bass * 0.02;
+        particlesRef.current.rotation.x += mids * 0.01;
       }
     }
     
-    // Animate inner group for twist effect
-    if (innerGroupRef.current && variant.twisted > 0) {
-      innerGroupRef.current.rotation.y = Math.sin(t * 0.5) * variant.twisted * Math.PI;
-    }
-    
-    // Animate orbit rings
-    ringRefs.current.forEach((ring, i) => {
-      if (!ring) return;
-      ring.rotation.z = t * (0.3 + i * 0.1) * (i % 2 === 0 ? 1 : -1);
-      const ringScale = 1 + Math.sin(t * 2 + i) * 0.05 + bass * 0.1;
-      ring.scale.setScalar(ringScale);
-    });
-    
-    // Animate particles
-    if (particlesRef.current && variant.hasParticleHalo) {
-      particlesRef.current.rotation.y = t * 0.1;
-      particlesRef.current.rotation.x = Math.sin(t * 0.2) * 0.1;
-      const material = particlesRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.3 + bass * 0.4 + highs * 0.2;
-    }
-    
-    // Animate fractured pieces
-    if (variant.fractured && fracturedPieces) {
+    // Animate fractured pieces - only when audio present
+    if (variant.fractured && fracturedPieces && hasAudio) {
       meshRefs.current.forEach((mesh, i) => {
         if (!mesh || i >= fracturedPieces.length) return;
         const piece = fracturedPieces[i];
-        const explosionAmount = Math.sin(t * 0.5) * 0.3 + bass * 0.5;
+        const explosionAmount = bass * 0.5;
         const dir = new THREE.Vector3(...piece.position).normalize();
         mesh.position.x = piece.position[0] + dir.x * explosionAmount;
         mesh.position.y = piece.position[1] + dir.y * explosionAmount;
         mesh.position.z = piece.position[2] + dir.z * explosionAmount;
-        mesh.rotation.x = piece.rotation[0] + t * 0.5;
-        mesh.rotation.y = piece.rotation[1] + t * 0.7;
+        mesh.rotation.x += bass * 0.1;
+        mesh.rotation.y += mids * 0.15;
       });
     }
   });
@@ -1056,9 +983,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       wireframe: boolean;
     }> = [];
     
-    // Single-element shapes only render 1 element - also check if elementCount is explicitly 1
-    const isSingleElement = params.elementCount === 1 || 
-      ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+    // Single-element when elementCount is 1
+    const isSingleElement = params.elementCount === 1;
     const count = isSingleElement ? 1 : params.elementCount;
     const r = seededRandom(params.seed);
     
@@ -1386,11 +1312,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     };
   }, [meshConfigs, params.connectionLines, params.seed, colors]);
 
-  // Animation frame with audio sensitivity and per-frame smoothing
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime() * animSpeed;
-    const speed = params.rotationSpeed;
-    
+  // Animation frame - AUDIO-FIRST: no motion when audio is silent
+  useFrame(() => {
     // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
     const attackLerp = 0.55;
     const decayLerp = 0.35;
@@ -1410,83 +1333,31 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
     const beat = smoothedBeatRef.current;
     
+    // Audio threshold - only animate when audio is actually playing
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    
     // Beat pop effect - spike on strong beats
     const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
     
     if (groupRef.current) {
-      // Apply animation style - each style is dramatically different
-      switch (params.animationStyle) {
-        case 'rotating':
-          // Fast orbital rotation
-          groupRef.current.rotation.y = t * speed * 1.5;
-          groupRef.current.rotation.x = Math.sin(t * speed) * 0.4;
-          groupRef.current.rotation.z = Math.cos(t * speed * 0.7) * 0.2;
-          groupRef.current.scale.setScalar(beatPop);
-          break;
-          
-        case 'pulsing':
-          // Sharp rhythmic pulses on beat
-          const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5; // 0-1 wave
-          const pulsePop = Math.pow(pulsePhase, 3); // Sharp peaks
-          const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
-          groupRef.current.scale.setScalar(pulseScale * beatPop);
-          groupRef.current.rotation.y = t * speed * 0.2;
-          break;
-          
-        case 'flowing':
-          // Smooth wave motion - whole group undulates
-          groupRef.current.position.y = Math.sin(t * speed * 1.5) * 1.2;
-          groupRef.current.position.x = Math.cos(t * speed * 0.8) * 0.6;
-          groupRef.current.rotation.z = Math.sin(t * speed) * 0.3;
-          groupRef.current.rotation.x = Math.cos(t * speed * 0.6) * 0.15;
-          groupRef.current.scale.setScalar(beatPop);
-          break;
-          
-        case 'chaotic':
-          // Wild, erratic movement - group level
-          groupRef.current.rotation.x = Math.sin(t * 3.7) * 0.8;
-          groupRef.current.rotation.y = Math.cos(t * 2.3) * 0.9;
-          groupRef.current.rotation.z = Math.sin(t * 4.1) * 0.6;
-          groupRef.current.position.x = Math.sin(t * 2.9) * 0.5;
-          groupRef.current.position.y = Math.cos(t * 3.3) * 0.5;
-          groupRef.current.scale.setScalar(beatPop);
-          break;
-          
-        case 'breathing':
-          // Deep, slow inhale/exhale cycle
-          const breathCycle = Math.sin(t * 0.4); // Very slow
-          const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15; // 0.7 to 1.4
-          groupRef.current.scale.setScalar(breathScale * beatPop);
-          // Slight rotation during breath
-          groupRef.current.rotation.y = t * 0.05;
-          groupRef.current.rotation.x = breathCycle * 0.1;
-          break;
-          
-        case 'explosive':
-          // Burst outward, then reset
-          const explosionCycle = (t * 0.8) % 3; // 3 second cycle
-          const burstPhase = explosionCycle < 0.5 ? explosionCycle * 2 : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
-          const explosiveScale = 0.6 + burstPhase * 0.8 + beat * 0.4;
-          groupRef.current.scale.setScalar(explosiveScale * beatPop);
-          groupRef.current.rotation.y = t * speed;
-          groupRef.current.rotation.x = burstPhase * 0.5;
-          break;
-          
-        case 'smooth':
-        default:
-          // Zen-like minimal movement
-          groupRef.current.rotation.y = t * speed * 0.15;
-          groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.05;
-          groupRef.current.position.y = Math.sin(t * 0.2) * 0.1;
-          groupRef.current.scale.setScalar(beatPop);
+      // Scale reacts to audio (returns to 1 when silent)
+      groupRef.current.scale.setScalar((1 + bass * 0.25) * beatPop);
+      
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        groupRef.current.rotation.y += bass * 0.06;
+        groupRef.current.rotation.x += mids * 0.02;
       }
+      
+      // Position stays centered (no drift)
+      groupRef.current.position.set(0, 0, 0);
     }
 
-    // Check if we're using a single-element shape (explicit shapes OR elementCount is 1)
-    const isSingleElementShape = params.elementCount === 1 || 
-      ['membrane', 'pulsar', 'vortexCore', 'cosmicEye'].includes(params.baseShape);
+    // Check if we're using a single-element shape (elementCount is 1)
+    const isSingleElementShape = params.elementCount === 1;
 
-    // Animate individual meshes - style-specific behavior
+    // Animate individual meshes - AUDIO-FIRST
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
       
@@ -1499,171 +1370,45 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
       // Base scale from config
       const baseScale = config.scale || 0.3;
       
-      // Single-element shapes get dramatic wild animations regardless of style
+      // Single-element shapes get audio-reactive animations
       if (isSingleElementShape) {
         const intensity = 1 + bass * 0.8 + mids * 0.4;
         
-        switch (params.baseShape) {
-          case 'membrane':
-            // Organic pulsing blob - wild deformation
-            mesh.rotation.x = t * 0.5 + Math.sin(t * 2.3) * 0.5;
-            mesh.rotation.y = t * 0.7 + Math.cos(t * 1.8) * 0.5;
-            mesh.rotation.z = Math.sin(t * 1.5) * 0.3;
-            mesh.scale.x = baseScale * (1 + Math.sin(t * 3) * 0.3 * intensity);
-            mesh.scale.y = baseScale * (1 + Math.cos(t * 2.7) * 0.3 * intensity);
-            mesh.scale.z = baseScale * (1 + Math.sin(t * 2.1) * 0.3 * intensity);
-            break;
-            
-          case 'pulsar':
-            // Smooth pulsing star - no jumps
-            const pulsarWave = Math.sin(t * 3);
-            const pulsarScale = 1 + pulsarWave * 0.25 + bass * 0.35;
-            mesh.rotation.y = t * 1.5;
-            mesh.rotation.x = Math.sin(t * 0.8) * 0.4;
-            mesh.rotation.z = Math.cos(t * 0.5) * 0.2;
-            mesh.scale.setScalar(baseScale * pulsarScale * intensity);
-            break;
-            
-          case 'vortexCore':
-            // Wild spinning torusKnot
-            mesh.rotation.x = t * 2 + bass;
-            mesh.rotation.y = t * 3;
-            mesh.rotation.z = t * 1.5;
-            mesh.scale.setScalar(baseScale * (0.9 + Math.sin(t * 2) * 0.2) * intensity);
-            break;
-            
-          case 'cosmicEye':
-            // Hypnotic iris dilation
-            const eyePulse = Math.sin(t * 1.5);
-            mesh.rotation.z = t * 0.3;
-            mesh.scale.x = baseScale * (1 + eyePulse * 0.4 * intensity);
-            mesh.scale.y = baseScale * (1 + eyePulse * 0.4 * intensity);
-            mesh.scale.z = baseScale * (0.5 + bass * 0.5);
-            break;
-            
-          default:
-            // Generic intense animation for any shape in standalone mode
-            mesh.rotation.x = t * 0.6 + Math.sin(t * 2) * 0.4;
-            mesh.rotation.y = t * 0.8 + Math.cos(t * 1.5) * 0.4;
-            mesh.rotation.z = Math.sin(t * 0.7) * 0.3;
-            mesh.scale.x = baseScale * (1 + Math.sin(t * 2.5) * 0.25 * intensity);
-            mesh.scale.y = baseScale * (1 + Math.cos(t * 2.2) * 0.25 * intensity);
-            mesh.scale.z = baseScale * (1 + Math.sin(t * 1.8) * 0.25 * intensity);
-            break;
+        // Scale reacts to audio (returns to base when silent)
+        mesh.scale.setScalar(baseScale * intensity * beatPop);
+        
+        // Rotation ONLY when audio is present
+        if (hasAudio) {
+          mesh.rotation.x += bass * 0.08;
+          mesh.rotation.y += mids * 0.12;
+          mesh.rotation.z += highs * 0.04;
         }
-        return; // Skip normal animation processing for single elements
+        return;
       }
       
-      // Style-specific individual mesh animations
-      switch (params.animationStyle) {
-        case 'chaotic':
-          // Each element moves independently and erratically
-          const chaosX = Math.sin(t * 2.5 + i * 1.7) * 1.5;
-          const chaosY = Math.cos(t * 3.1 + i * 0.9) * 1.5;
-          const chaosZ = Math.sin(t * 1.9 + i * 2.3) * 1.5;
-          mesh.position.x = config.position[0] + chaosX;
-          mesh.position.y = config.position[1] + chaosY;
-          mesh.position.z = config.position[2] + chaosZ;
-          mesh.rotation.x = t * 2 + i;
-          mesh.rotation.y = t * 3 + i * 0.5;
-          mesh.scale.setScalar(baseScale * (0.8 + Math.sin(t * 4 + i) * 0.4));
-          break;
-          
-        case 'flowing':
-          // Wave propagation through elements
-          const waveOffset = Math.sin(t * 2 + i * 0.4) * 0.8;
-          const waveX = Math.sin(t * 1.5 + i * 0.3) * 0.4;
-          mesh.position.x = config.position[0] + waveX;
-          mesh.position.y = config.position[1] + waveOffset;
-          mesh.position.z = config.position[2];
-          mesh.rotation.z = Math.sin(t + i * 0.2) * 0.3;
-          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.3));
-          break;
-          
-        case 'explosive':
-          // Elements burst outward from center, then reset
-          const explosionCycle = (t * 0.8) % 3;
-          const burstAmount = explosionCycle < 0.5 ? explosionCycle * 4 : Math.max(0, 2 - (explosionCycle - 0.5) * 1.5);
-          const dir = new THREE.Vector3(...config.position).normalize();
-          mesh.position.x = config.position[0] + dir.x * burstAmount;
-          mesh.position.y = config.position[1] + dir.y * burstAmount;
-          mesh.position.z = config.position[2] + dir.z * burstAmount;
-          mesh.scale.setScalar(baseScale * (1 + burstAmount * 0.2 + freqValue * 0.3));
-          break;
-          
-        case 'breathing':
-          // All elements expand/contract together like lungs
-          const breathPhase = Math.sin(t * 0.4);
-          const breathExpand = (breathPhase + 1) * 0.3; // 0 to 0.6
-          const breathDir = new THREE.Vector3(...config.position).normalize();
-          mesh.position.x = config.position[0] + breathDir.x * breathExpand;
-          mesh.position.y = config.position[1] + breathDir.y * breathExpand;
-          mesh.position.z = config.position[2] + breathDir.z * breathExpand;
-          mesh.scale.setScalar(baseScale * (0.9 + breathPhase * 0.2 + freqValue * 0.2));
-          break;
-          
-        case 'pulsing':
-          // Sharp scale pops on rhythm
-          const pulseWave = Math.sin(t * 4 + i * 0.3);
-          const pulsePop = pulseWave > 0.7 ? 1.5 : 1;
-          mesh.scale.setScalar(baseScale * pulsePop * (1 + freqValue * 0.4));
-          mesh.position.set(...config.position);
-          break;
-          
-        case 'rotating':
-          // Elements orbit their original positions
-          const orbitRadius = 0.3;
-          const orbitSpeed = 1 + (i % 3) * 0.5;
-          mesh.position.x = config.position[0] + Math.cos(t * orbitSpeed + i) * orbitRadius;
-          mesh.position.y = config.position[1] + Math.sin(t * orbitSpeed * 0.7 + i) * orbitRadius;
-          mesh.position.z = config.position[2];
-          mesh.rotation.y = t * 2;
-          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.4));
-          break;
-          
-        case 'smooth':
-        default:
-          // Minimal, zen-like gentle drift
-          mesh.position.x = config.position[0] + Math.sin(t * 0.3 + i * 0.1) * 0.1;
-          mesh.position.y = config.position[1] + Math.cos(t * 0.2 + i * 0.15) * 0.1;
-          mesh.position.z = config.position[2];
-          mesh.scale.setScalar(baseScale * (1 + freqValue * 0.3));
-          break;
-      }
+      // Multi-element: keep position, scale reacts to audio
+      mesh.position.set(...config.position);
+      mesh.scale.setScalar(baseScale * (1 + freqValue * 0.4) * beatPop);
       
-      // Matrix falling effect - override position for matrix shape
-      if (params.baseShape === 'matrix') {
-        const fallSpeed = 2;
-        const range = 12;
-        const offset = (t * fallSpeed + config.position[1] + 6) % range;
-        mesh.position.y = offset - 6;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        mesh.rotation.y += mids * 0.03;
+        mesh.rotation.x += bass * 0.02;
       }
     });
 
-    // Animate particles
+    // Animate particles - only rotate when audio present
     if (particlesRef.current) {
-      particlesRef.current.rotation.y = t * speed * 0.2;
-      particlesRef.current.rotation.x = Math.sin(t * 0.3) * 0.1;
+      const material = particlesRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.3 + bass * 0.5 + highs * 0.2;
       
-      const positions = particlesRef.current.geometry.attributes.position;
-      if (positions && (params.animationStyle === 'chaotic' || params.baseShape === 'matrix')) {
-        for (let i = 0; i < Math.min(100, params.particleCount); i++) {
-          const y = positions.getY(i);
-          
-          if (params.baseShape === 'matrix') {
-            positions.setY(i, y - 0.05);
-            if (y < -8) positions.setY(i, 8);
-          } else {
-            const x = positions.getX(i);
-            positions.setY(i, y + Math.sin(t + i * 0.1) * 0.01);
-            positions.setX(i, x + Math.cos(t + i * 0.1) * 0.005);
-          }
-        }
-        positions.needsUpdate = true;
+      if (hasAudio) {
+        particlesRef.current.rotation.y += bass * 0.02;
+        particlesRef.current.rotation.x += mids * 0.01;
       }
     }
     
-    // Animate connection lines
+    // Animate connection lines - opacity reacts to audio
     if (linesRef.current && linePositions) {
       const material = linesRef.current.material as THREE.LineBasicMaterial;
       material.opacity = 0.3 + bass * 0.5;
@@ -1704,7 +1449,6 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           variant={params.standaloneVariant}
           audioData={audioData}
           seed={params.seed}
-          animationStyle={params.animationStyle}
           audioSensitivity={audioSensitivity}
         />
       </>
