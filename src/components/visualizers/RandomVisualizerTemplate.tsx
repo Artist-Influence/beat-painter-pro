@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { RandomVisualizerParams, StandaloneVariant, GeometryType, AnimationStyle } from '@/lib/randomVisualizerGenerator';
 import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
 import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
-
+import { useStudioStore } from '@/stores/studioStore';
 interface RandomVisualizerTemplateProps {
   params: RandomVisualizerParams;
   audioData: {
@@ -53,12 +53,19 @@ function StandaloneShape({
   variant, 
   audioData,
   seed,
-  animationStyle
+  animationStyle,
+  audioSensitivity
 }: { 
   variant: StandaloneVariant;
   audioData: { frequency: number[]; amplitude: number; beatStrength: number };
   seed: number;
   animationStyle: AnimationStyle;
+  audioSensitivity: {
+    bassMultiplier: number;
+    midsMultiplier: number;
+    highsMultiplier: number;
+    animationSpeed: number;
+  };
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const innerGroupRef = useRef<THREE.Group>(null);
@@ -69,7 +76,17 @@ function StandaloneShape({
   // Get applied texture and colors from style system
   const textureData = useVisualizerTexture();
   
-  const { bass, mids, highs } = useMemo(() => analyzeAudioData(audioData.frequency), [audioData.frequency]);
+  // Apply audio sensitivity multipliers
+  const { bass, mids, highs } = useMemo(() => {
+    const raw = analyzeAudioData(audioData.frequency);
+    return {
+      bass: Math.min(raw.bass * audioSensitivity.bassMultiplier, 1.5),
+      mids: Math.min(raw.mids * audioSensitivity.midsMultiplier, 1.5),
+      highs: Math.min(raw.highs * audioSensitivity.highsMultiplier, 1.5),
+    };
+  }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
+  
+  const animSpeed = audioSensitivity.animationSpeed;
   
   // Create texture-aware materials that respond to applied styles
   const mainMaterial = useMemo(() => {
@@ -160,9 +177,9 @@ function StandaloneShape({
     return pieces;
   }, [variant.fractured, variant.fracturedCount, seed]);
   
-  // Animation frame - now driven by animationStyle
+  // Animation frame - now driven by animationStyle with audio sensitivity
   useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+    const t = state.clock.getElapsedTime() * animSpeed;
     
     if (groupRef.current) {
       const g = groupRef.current;
@@ -956,19 +973,29 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     };
   }, [colors, textureData.texture, textureData.colors.isNeon, textureData.colors.isMetallic]);
 
-  // Analyze audio
+  // Get audio sensitivity settings from store
+  const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+
+  // Analyze audio WITH sensitivity multipliers
   const { bass, mids, highs } = useMemo(() => {
     const freq = audioData.frequency || [];
     const bassRange = freq.slice(0, Math.floor(freq.length * 0.2));
     const midRange = freq.slice(Math.floor(freq.length * 0.2), Math.floor(freq.length * 0.6));
     const highRange = freq.slice(Math.floor(freq.length * 0.6));
     
+    const rawBass = bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0;
+    const rawMids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
+    const rawHighs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
+    
     return {
-      bass: bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0,
-      mids: midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0,
-      highs: highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0,
+      bass: Math.min(rawBass * audioSensitivity.bassMultiplier, 1.5),
+      mids: Math.min(rawMids * audioSensitivity.midsMultiplier, 1.5),
+      highs: Math.min(rawHighs * audioSensitivity.highsMultiplier, 1.5),
     };
-  }, [audioData.frequency]);
+  }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
+  
+  // Animation speed from store
+  const animSpeed = audioSensitivity.animationSpeed;
 
   // Scale elements inversely with count (more elements = smaller each)
   const elementScale = useMemo(() => {
@@ -1320,9 +1347,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     };
   }, [meshConfigs, params.connectionLines, params.seed, colors]);
 
-  // Animation frame
+  // Animation frame with audio sensitivity
   useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+    const t = state.clock.getElapsedTime() * animSpeed;
     const speed = params.rotationSpeed;
     
     if (groupRef.current) {
@@ -1613,6 +1640,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           audioData={audioData}
           seed={params.seed}
           animationStyle={params.animationStyle}
+          audioSensitivity={audioSensitivity}
         />
       </>
     );
