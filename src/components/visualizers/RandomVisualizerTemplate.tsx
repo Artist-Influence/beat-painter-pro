@@ -445,37 +445,48 @@ function BackgroundEffects({
   const linesRef = useRef<THREE.LineSegments>(null);
   const shootingStarsRef = useRef<THREE.Points>(null);
   
+  // Get applied style texture and colors
+  const textureData = useVisualizerTexture();
+  
+  // Use applied style colors if available, otherwise fall back to palette
+  const styleColors = useMemo(() => ({
+    primary: new THREE.Color(textureData.colors.primary),
+    secondary: new THREE.Color(textureData.colors.secondary),
+    accent: new THREE.Color(textureData.colors.accent),
+    isNeon: textureData.colors.isNeon,
+  }), [textureData.colors]);
+  
   // Shooting star velocities for movingLines effect
   const shootingStarData = useRef<{
     velocities: Float32Array;
     startPositions: Float32Array;
   } | null>(null);
   
-  // Generate positions based on effect type
+  // Generate positions based on effect type - EXPANDED FOR FULL SCREEN COVERAGE
   const effectData = useMemo(() => {
     const r = seededRandom(seed + 999);
     
     if (effect === 'stars') {
-      const count = 300;
+      const count = 500; // Increased for full coverage
       const positions = new Float32Array(count * 3);
       const opacities = new Float32Array(count);
       
       for (let i = 0; i < count; i++) {
-        // Spread stars in a large sphere behind the visualizer
+        // Spread stars in a MUCH larger sphere to fill entire viewport
         const phi = r() * Math.PI * 2;
         const theta = r() * Math.PI;
-        const radius = 12 + r() * 8;
+        const radius = 15 + r() * 20; // Expanded from 12+8 to 15+20
         positions[i * 3] = Math.sin(theta) * Math.cos(phi) * radius;
         positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * radius;
-        positions[i * 3 + 2] = Math.cos(theta) * radius - 10; // Push back
+        positions[i * 3 + 2] = Math.cos(theta) * radius - 15; // Push back further
         opacities[i] = r();
       }
       return { positions, opacities, count };
     }
     
     if (effect === 'movingLines') {
-      // Pre-generate stable star configs - no buffer modification needed
-      const starCount = 20;
+      // Pre-generate stable star configs - EXPANDED for full screen
+      const starCount = 35; // Increased from 20
       const stars: Array<{
         speed: number;
         angle: number;
@@ -488,8 +499,8 @@ function BackgroundEffects({
         stars.push({
           speed: 0.15 + r() * 0.35,
           angle: -Math.PI / 4 + (r() - 0.5) * 0.4,
-          startX: (r() - 0.5) * 35,
-          startY: r() * 20 - 5,
+          startX: (r() - 0.5) * 60, // Expanded from 35 to 60
+          startY: r() * 35 - 10, // Expanded from 20 to 35
           phase: r() * 100,
         });
       }
@@ -497,8 +508,8 @@ function BackgroundEffects({
     }
     
     if (effect === 'energyField') {
-      // Concentric pulsing rings
-      const ringCount = 6;
+      // Concentric pulsing rings - EXPANDED for full screen
+      const ringCount = 10; // Increased from 6
       const rings: Array<{
         baseRadius: number;
         phase: number;
@@ -508,24 +519,25 @@ function BackgroundEffects({
       
       for (let i = 0; i < ringCount; i++) {
         rings.push({
-          baseRadius: 2 + i * 1.8,
+          baseRadius: 3 + i * 2.5, // Increased from 2 + i*1.8
           phase: r() * Math.PI * 2,
           speed: 0.3 + r() * 0.3,
-          thickness: 0.015 + r() * 0.01,
+          thickness: 0.02 + r() * 0.015, // Slightly thicker
         });
       }
       return { rings, count: ringCount };
     }
     
     if (effect === 'particles') {
-      const count = 150;
+      const count = 350; // Increased from 150 for full coverage
       const positions = new Float32Array(count * 3);
       const velocities = new Float32Array(count * 3);
       
       for (let i = 0; i < count; i++) {
-        positions[i * 3] = (r() - 0.5) * 16;
-        positions[i * 3 + 1] = (r() - 0.5) * 16;
-        positions[i * 3 + 2] = (r() - 0.5) * 8 - 5; // Push back
+        // EXPANDED volume to cover full screen
+        positions[i * 3] = (r() - 0.5) * 50; // Increased from 16 to 50
+        positions[i * 3 + 1] = (r() - 0.5) * 50; // Increased from 16 to 50
+        positions[i * 3 + 2] = (r() - 0.5) * 25 - 8; // Increased from 8 to 25, push back more
         velocities[i * 3] = (r() - 0.5) * 0.02;
         velocities[i * 3 + 1] = (r() - 0.5) * 0.02;
         velocities[i * 3 + 2] = (r() - 0.5) * 0.01;
@@ -534,8 +546,8 @@ function BackgroundEffects({
     }
     
     if (effect === 'lightRays') {
-      // Volumetric god rays - wide beams with glow effect
-      const count = 10;
+      // Volumetric god rays - EXPANDED for full screen coverage
+      const count = 16; // Increased from 10
       const rays: Array<{
         angle: number;
         width: number;
@@ -550,24 +562,24 @@ function BackgroundEffects({
         const angle = (i / count) * Math.PI * 2 + r() * 0.3;
         rays.push({
           angle,
-          width: 0.8 + r() * 1.2, // Varying widths for depth
-          length: 12 + r() * 8,
+          width: 1.2 + r() * 1.8, // Increased from 0.8+1.2
+          length: 22 + r() * 14, // Increased from 12+8 to 22+14
           phase: r() * Math.PI * 2,
           speed: 0.2 + r() * 0.4,
-          opacity: 0.15 + r() * 0.15,
+          opacity: 0.12 + r() * 0.12,
         });
       }
       return { rays, count };
     }
     
     if (effect === 'aurora') {
-      const count = 100;
+      const count = 250; // Increased from 100 for full coverage
       const positions = new Float32Array(count * 3);
       
       for (let i = 0; i < count; i++) {
-        positions[i * 3] = (i / count - 0.5) * 25;
-        positions[i * 3 + 1] = 6 + r() * 3;
-        positions[i * 3 + 2] = -12 + r() * 2; // Push further back
+        positions[i * 3] = (i / count - 0.5) * 60; // Increased from 25 to 60
+        positions[i * 3 + 1] = 8 + r() * 6; // Increased spread
+        positions[i * 3 + 2] = -15 + r() * 4; // Push further back
       }
       return { positions, count };
     }
@@ -613,9 +625,7 @@ function BackgroundEffects({
   
   if (!effectData || effect === 'none') return null;
   
-  const primaryColor = colors[0] || new THREE.Color('#ffffff');
-  
-  // Stars effect
+  // Stars effect - uses style accent color
   if (effect === 'stars' && effectData.positions) {
     return (
       <points ref={pointsRef}>
@@ -628,34 +638,34 @@ function BackgroundEffects({
           />
         </bufferGeometry>
         <pointsMaterial
-          color="#ffffff"
-          size={0.08}
+          color={styleColors.accent}
+          size={0.1}
           transparent
-          opacity={0.5}
+          opacity={0.6}
           sizeAttenuation
         />
       </points>
     );
   }
   
-  // Moving lines - use separate component to avoid buffer issues
+  // Moving lines - use separate component with style colors
   if (effect === 'movingLines' && effectData.stars) {
-    return <MovingLinesEffect stars={effectData.stars} bass={bass} color={primaryColor} />;
+    return <MovingLinesEffect stars={effectData.stars} bass={bass} color={styleColors.accent} />;
   }
   
-  // Energy field - pulsing rings
+  // Energy field - pulsing rings with style colors
   if (effect === 'energyField' && effectData.rings) {
-    return <EnergyFieldEffect rings={effectData.rings} bass={bass} color={primaryColor} />;
+    return <EnergyFieldEffect rings={effectData.rings} bass={bass} color={styleColors.primary} accentColor={styleColors.accent} />;
   }
   
-  // Light rays - volumetric glowing beams
+  // Light rays - volumetric glowing beams with style colors
   if (effect === 'lightRays' && effectData.rays) {
     return (
-      <LightRaysEffect rays={effectData.rays} bass={bass} />
+      <LightRaysEffect rays={effectData.rays} bass={bass} color={styleColors.primary} accentColor={styleColors.accent} />
     );
   }
   
-  // Ambient particles
+  // Ambient particles - uses style primary color
   if (effect === 'particles' && effectData.positions) {
     return (
       <points ref={pointsRef}>
@@ -668,17 +678,17 @@ function BackgroundEffects({
           />
         </bufferGeometry>
         <pointsMaterial
-          color={primaryColor}
-          size={0.05}
+          color={styleColors.primary}
+          size={0.06}
           transparent
-          opacity={0.3}
+          opacity={0.4}
           sizeAttenuation
         />
       </points>
     );
   }
   
-  // Aurora
+  // Aurora - uses style secondary color
   if (effect === 'aurora' && effectData.positions) {
     return (
       <points ref={pointsRef}>
@@ -691,10 +701,10 @@ function BackgroundEffects({
           />
         </bufferGeometry>
         <pointsMaterial
-          color={colors[1] || primaryColor}
-          size={0.3}
+          color={styleColors.secondary}
+          size={0.4}
           transparent
-          opacity={0.4}
+          opacity={0.5}
           sizeAttenuation
         />
       </points>
@@ -704,10 +714,12 @@ function BackgroundEffects({
   return null;
 }
 
-// Volumetric light rays component with glow effect
-function LightRaysEffect({ rays, bass }: { 
+// Volumetric light rays component with glow effect - now with style colors
+function LightRaysEffect({ rays, bass, color, accentColor }: { 
   rays: Array<{ angle: number; width: number; length: number; phase: number; speed: number; opacity: number }>;
   bass: number;
+  color: THREE.Color;
+  accentColor: THREE.Color;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
@@ -720,14 +732,14 @@ function LightRaysEffect({ rays, bass }: {
       const ray = rays[i];
       if (!ray) return;
       
-      // Animate rays sliding in and out of view
+      // Animate rays sliding in and out of view - expanded range
       const slidePhase = Math.sin(t * ray.speed + ray.phase);
-      const slideAmount = slidePhase * 4;
+      const slideAmount = slidePhase * 6; // Increased from 4
       
-      // Move along the ray direction (toward/away from center)
-      mesh.position.x = Math.cos(ray.angle) * (10 + slideAmount);
-      mesh.position.y = Math.sin(ray.angle) * (7 + slideAmount * 0.5);
-      mesh.position.z = -12 + slideAmount * 0.5;
+      // Move along the ray direction (toward/away from center) - expanded positions
+      mesh.position.x = Math.cos(ray.angle) * (14 + slideAmount); // Increased from 10
+      mesh.position.y = Math.sin(ray.angle) * (10 + slideAmount * 0.5); // Increased from 7
+      mesh.position.z = -15 + slideAmount * 0.5; // Pushed back from -12
       
       // Fade opacity based on slide position (more visible when "entering")
       const material = mesh.material as THREE.MeshBasicMaterial;
@@ -742,13 +754,13 @@ function LightRaysEffect({ rays, bass }: {
         <mesh
           key={i}
           ref={(el) => { if (el) meshRefs.current[i] = el; }}
-          position={[Math.cos(ray.angle) * 10, Math.sin(ray.angle) * 7, -12]}
+          position={[Math.cos(ray.angle) * 14, Math.sin(ray.angle) * 10, -15]}
           rotation={[0, 0, ray.angle - Math.PI / 2]}
         >
           {/* Cone for volumetric ray appearance */}
           <coneGeometry args={[ray.width, ray.length, 6, 1, true]} />
           <meshBasicMaterial
-            color="#ffffff"
+            color={color}
             transparent
             opacity={ray.opacity}
             side={THREE.DoubleSide}
@@ -756,18 +768,18 @@ function LightRaysEffect({ rays, bass }: {
           />
         </mesh>
       ))}
-      {/* Add softer glow layer */}
+      {/* Add softer glow layer with accent color */}
       {rays.map((ray, i) => (
         <mesh
           key={`glow-${i}`}
-          position={[Math.cos(ray.angle) * 10, Math.sin(ray.angle) * 7, -12.5]}
+          position={[Math.cos(ray.angle) * 14, Math.sin(ray.angle) * 10, -15.5]}
           rotation={[0, 0, ray.angle - Math.PI / 2]}
         >
-          <coneGeometry args={[ray.width * 2, ray.length * 0.8, 4, 1, true]} />
+          <coneGeometry args={[ray.width * 2.5, ray.length * 0.9, 4, 1, true]} />
           <meshBasicMaterial
-            color="#ffffff"
+            color={accentColor}
             transparent
-            opacity={ray.opacity * 0.3}
+            opacity={ray.opacity * 0.25}
             side={THREE.DoubleSide}
             depthWrite={false}
           />
@@ -843,15 +855,17 @@ function MovingLinesEffect({
   );
 }
 
-// Energy field effect - pulsing concentric rings
+// Energy field effect - pulsing concentric rings - now with style colors
 function EnergyFieldEffect({ 
   rings, 
   bass, 
-  color 
+  color,
+  accentColor
 }: { 
   rings: Array<{ baseRadius: number; phase: number; speed: number; thickness: number }>;
   bass: number;
   color: THREE.Color;
+  accentColor: THREE.Color;
 }) {
   const meshRefs = useRef<THREE.Mesh[]>([]);
   
@@ -871,8 +885,8 @@ function EnergyFieldEffect({
       
       // Fade opacity based on pulse
       const material = mesh.material as THREE.MeshBasicMaterial;
-      const baseOpacity = 0.08 + (i / rings.length) * 0.05;
-      material.opacity = baseOpacity + pulse * 0.05 + bass * 0.1;
+      const baseOpacity = 0.1 + (i / rings.length) * 0.06; // Slightly increased
+      material.opacity = baseOpacity + pulse * 0.06 + bass * 0.12;
       
       // Slow rotation
       mesh.rotation.z = t * 0.1 * (i % 2 === 0 ? 1 : -1);
@@ -880,7 +894,7 @@ function EnergyFieldEffect({
   });
   
   return (
-    <group position={[0, 0, -10]}>
+    <group position={[0, 0, -12]}>
       {rings.map((ring, i) => (
         <mesh
           key={i}
@@ -889,9 +903,9 @@ function EnergyFieldEffect({
         >
           <torusGeometry args={[ring.baseRadius, ring.thickness, 8, 64]} />
           <meshBasicMaterial
-            color={color}
+            color={i % 2 === 0 ? color : accentColor}
             transparent
-            opacity={0.1}
+            opacity={0.12}
             side={THREE.DoubleSide}
           />
         </mesh>
