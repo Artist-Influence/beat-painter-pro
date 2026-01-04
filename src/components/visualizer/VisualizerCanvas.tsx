@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -9,6 +9,7 @@ import type { AudioData } from "@/hooks/useAudioAnalysis";
 import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
 import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
 import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualizerLoader";
+import * as THREE from "three";
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -17,6 +18,8 @@ interface VisualizerCanvasProps {
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
+  const [isTransparentRecording, setIsTransparentRecording] = useState(false);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   
   const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
     if (isCustomVisualizer(selected)) {
@@ -130,11 +133,39 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     return () => window.removeEventListener("style:applied", handler);
   }, []);
 
+  // Listen for transparency recording events
+  useEffect(() => {
+    const handleTransparency = (e: Event) => {
+      const customEvent = e as CustomEvent<{ enabled: boolean }>;
+      setIsTransparentRecording(customEvent.detail.enabled);
+    };
+    window.addEventListener('recording:transparency', handleTransparency);
+    return () => window.removeEventListener('recording:transparency', handleTransparency);
+  }, []);
+
+  // Update renderer clear color when transparency mode changes
+  useEffect(() => {
+    if (rendererRef.current) {
+      if (isTransparentRecording) {
+        rendererRef.current.setClearColor(0x000000, 0); // Fully transparent
+      } else {
+        // Parse backgroundColor to set clear color
+        const color = new THREE.Color(backgroundColor);
+        rendererRef.current.setClearColor(color, 1);
+      }
+    }
+  }, [isTransparentRecording, backgroundColor]);
+
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
       (canvasRef as any).current = gl.domElement as HTMLCanvasElement;
     }
-  }, [canvasRef]);
+    // Store renderer reference for transparency control
+    rendererRef.current = gl;
+    // Set initial clear color
+    const color = new THREE.Color(backgroundColor);
+    gl.setClearColor(color, 1);
+  }, [canvasRef, backgroundColor]);
 
 
   
@@ -150,7 +181,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          backgroundColor 
+          // Hide background when recording with transparency
+          backgroundColor: isTransparentRecording ? 'transparent' : backgroundColor 
         }}
       >
         <Canvas
