@@ -11,15 +11,15 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  // Get audio intensity for this ribbon
-  const ribbonFreq = useMemo(() => {
-    const start = ribbonIndex * 30;
-    const end = Math.min(start + 30, 256);
-    let sum = 0;
-    for (let i = start; i < end; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 30 / 255, 1.0);
-  }, [freqData, ribbonIndex]);
+  // Smoothing refs
+  const smoothedFreq = useRef(0);
+  const smoothedBeat = useRef(0);
+  
+  // Frequency range for this ribbon
+  const freqStart = ribbonIndex * 30;
+  const freqEnd = Math.min(freqStart + 30, 256);
 
   // Create flowing ribbon geometry
   const geometry = useMemo(() => {
@@ -71,25 +71,47 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
     if (meshRef.current && materialRef.current) {
       const t = clock.getElapsedTime();
       
-      // Update ribbon wave positions - keep horizontal flow
+      // Calculate audio per-frame
+      let sum = 0;
+      for (let i = freqStart; i < freqEnd; i++) sum += freqData[i] || 0;
+      const rawFreq = Math.min(sum / 30 / 255, 1.5);
+      const rawBeat = Math.max(beatStrength, rawFreq * 0.6);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedFreq.current = lerpVal(smoothedFreq.current, rawFreq);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const ribbonFreq = smoothedFreq.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.6 : 1;
+      
+      // Update ribbon wave positions - AUDIO-FIRST
       const positions = meshRef.current.geometry.attributes.position;
       const array = positions.array as Float32Array;
       
       for (let i = 0; i < array.length; i += 3) {
         const x = array[i];
-        const baseY = array[i + 1];
-        const audioValue = Math.sin(t * 2 + x * 0.5 + ribbonIndex) * 0.5 + 0.5;
-        const offset = (audioValue + ribbonFreq) * 0.2 * (1 + ribbonIndex * 0.05); // Even smaller amplitude
+        // AUDIO-FIRST offset - audio dominates, time is subtle
+        const audioOffset = ribbonFreq * 0.4 * beatPop * Math.sin(x * 2 + t * 0.5);
+        const timeOffset = Math.sin(t * 0.5 + x * 0.2) * 0.05;
         
-        // Keep ribbons flowing horizontally with minimal vertical movement
-        array[i + 2] = Math.sin(t + x * 0.3) * offset;
+        array[i + 2] = audioOffset + timeOffset;
       }
       
       positions.needsUpdate = true;
       
-      // Update material properties with stronger reactivity
-      materialRef.current.emissiveIntensity = 0.5 + ribbonFreq * 4;
-      materialRef.current.opacity = (0.3 + ribbonIndex * 0.15) * (1 + ribbonFreq);
+      // Material reactivity
+      materialRef.current.emissiveIntensity = 0.5 + ribbonFreq * 3 + beat * 2;
+      materialRef.current.opacity = 0.4 + ribbonFreq * 0.4 + beat * 0.2;
     }
   });
 

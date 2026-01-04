@@ -32,9 +32,9 @@ interface StudioState {
 }
 
 const AUDIO_PRESETS: Record<'calm' | 'flow' | 'energy', Omit<AudioSensitivity, 'preset'>> = {
-  calm: { bassMultiplier: 0.3, midsMultiplier: 0.2, highsMultiplier: 0.1, animationSpeed: 0.6 },
-  flow: { bassMultiplier: 1.0, midsMultiplier: 0.7, highsMultiplier: 0.4, animationSpeed: 1.0 },
-  energy: { bassMultiplier: 4.0, midsMultiplier: 3.0, highsMultiplier: 2.0, animationSpeed: 2.5 },
+  calm: { bassMultiplier: 0.6, midsMultiplier: 0.4, highsMultiplier: 0.3, animationSpeed: 0.7 },
+  flow: { bassMultiplier: 1.8, midsMultiplier: 1.2, highsMultiplier: 0.8, animationSpeed: 1.0 },
+  energy: { bassMultiplier: 3.5, midsMultiplier: 2.8, highsMultiplier: 2.0, animationSpeed: 1.5 },
 };
 
 export const useStudioStore = create<StudioState>((set) => ({

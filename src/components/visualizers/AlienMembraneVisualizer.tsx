@@ -42,30 +42,41 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return (sum / 86 / 255) * audioSensitivity.bassMultiplier;
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return (sum / 85 / 255) * audioSensitivity.midsMultiplier;
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return (sum / 85 / 255) * audioSensitivity.highsMultiplier;
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Smoothing refs for shader
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
 
   useFrame(({ clock }) => {
     if (shaderRef.current) {
-      shaderRef.current.uniforms.uTime.value = clock.getElapsedTime() * audioSensitivity.animationSpeed;
-      shaderRef.current.uniforms.uBass.value = bass;
-      shaderRef.current.uniforms.uMids.value = mids;
-      shaderRef.current.uniforms.uHighs.value = highs;
+      const t = clock.getElapsedTime() * audioSensitivity.animationSpeed;
+      
+      // Calculate audio per-frame
+      let bassSum = 0, midsSum = 0, highsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+      for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+      
+      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier;
+      const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
+      const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
+      
+      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      
+      shaderRef.current.uniforms.uTime.value = t;
+      shaderRef.current.uniforms.uBass.value = smoothedBass.current;
+      shaderRef.current.uniforms.uMids.value = smoothedMids.current;
+      shaderRef.current.uniforms.uHighs.value = smoothedHighs.current;
     }
   });
 
@@ -179,59 +190,78 @@ function AlienMembrane({ audioData }: any) {
   const extractedColors = (window as any).extractedColors;
   const accentColor = extractedColors?.accent || '#ffffff';
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return (sum / 86 / 255) * audioSensitivity.bassMultiplier;
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return (sum / 85 / 255) * audioSensitivity.midsMultiplier;
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return (sum / 85 / 255) * audioSensitivity.highsMultiplier;
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
+  const smoothedBeat = useRef(0);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
       
-      // Balanced organic movement - strong bass response, subtle mids/highs
-      groupRef.current.position.y = Math.sin(t * 3.0 * speed) * 0.8 + bass * 3.0 + mids * 0.5;
-      groupRef.current.rotation.y = t * 1.2 * speed + bass * 4.0 + mids * 0.8;
+      // Calculate audio per-frame
+      let bassSum = 0, midsSum = 0, highsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+      for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      groupRef.current.rotation.x = Math.sin(t * 2.0 * speed) * 0.4 + bass * 2.5 + mids * 0.3;
-      groupRef.current.rotation.z = Math.cos(t * 1.5 * speed) * 0.3 + bass * 1.8 + highs * 0.2;
+      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier;
+      const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
+      const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
+      const rawBeat = Math.max(safeAudioData.beatStrength || 0, rawBass * 0.8);
       
-      // Smoother bass response with controlled scaling
-      const beatScale = 1 + Math.min(bass * 0.8, 0.4) + Math.sin(t * 4.0 * speed) * 0.05;
-      const midsScale = 1 + Math.min(mids * 0.3, 0.2);
-      groupRef.current.scale.setScalar(0.5 * beatScale * midsScale);
+      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
       
-      // Subtle position shifts for organic feel
-      groupRef.current.position.x = Math.sin(t * 1.5 * speed) * 0.2 + bass * 0.6;
-      groupRef.current.position.z = Math.cos(t * 1.2 * speed) * 0.2 + highs * 0.3;
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const bass = smoothedBass.current;
+      const mids = smoothedMids.current;
+      const highs = smoothedHighs.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      
+      // AUDIO-FIRST movement - time subtle, audio dominates
+      groupRef.current.position.y = bass * 2.0 * Math.sin(t * 0.5 * speed) + Math.sin(t * speed) * 0.3;
+      groupRef.current.rotation.y = t * 0.2 * speed + bass * Math.PI * 0.6;
+      
+      groupRef.current.rotation.x = bass * Math.PI * 0.3 + Math.sin(t * 0.5 * speed) * 0.15;
+      groupRef.current.rotation.z = mids * Math.PI * 0.2 + Math.cos(t * 0.3 * speed) * 0.1;
+      
+      // AUDIO-FIRST scale with beat pop
+      const beatScale = (1 + bass * 0.5 + mids * 0.2) * beatPop;
+      groupRef.current.scale.setScalar(0.5 * beatScale);
+      
+      // Position shifts
+      groupRef.current.position.x = bass * 0.4 * Math.sin(t * 0.4 * speed);
+      groupRef.current.position.z = highs * 0.2 * Math.cos(t * 0.3 * speed);
     }
   });
 
   return (
     <group ref={groupRef} scale={0.6}>
-      <mesh ref={meshRef} scale={1 + Math.min(bass * 0.3, 0.2)}>
+      <mesh ref={meshRef}>
         <icosahedronGeometry args={[1.2, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />
       </mesh>
       <Sparkles
-        count={4 + highs * 15}
+        count={20}
         scale={[1, 1, 1]}
-        size={1 + highs * 2 + bass * 1.5}
-        speed={0.3 + highs * 0.8 + bass * 0.6}
-        opacity={0.01 + highs * 0.04}
+        size={2}
+        speed={1}
+        opacity={0.05}
         color={accentColor}
       />
     </group>
