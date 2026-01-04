@@ -73,16 +73,22 @@ function StandaloneShape({
   const ringRefs = useRef<THREE.Mesh[]>([]);
   const particlesRef = useRef<THREE.Points>(null);
   
+  // Per-frame smoothing refs for butter-smooth transitions
+  const smoothedBassRef = useRef(0);
+  const smoothedMidsRef = useRef(0);
+  const smoothedHighsRef = useRef(0);
+  const smoothedBeatRef = useRef(0);
+  
   // Get applied texture and colors from style system
   const textureData = useVisualizerTexture();
   
-  // Apply audio sensitivity multipliers
-  const { bass, mids, highs } = useMemo(() => {
+  // Apply audio sensitivity multipliers (raw target values)
+  const { targetBass, targetMids, targetHighs } = useMemo(() => {
     const raw = analyzeAudioData(audioData.frequency);
     return {
-      bass: Math.min(raw.bass * audioSensitivity.bassMultiplier, 1.5),
-      mids: Math.min(raw.mids * audioSensitivity.midsMultiplier, 1.5),
-      highs: Math.min(raw.highs * audioSensitivity.highsMultiplier, 1.5),
+      targetBass: Math.min(raw.bass * audioSensitivity.bassMultiplier, 1.5),
+      targetMids: Math.min(raw.mids * audioSensitivity.midsMultiplier, 1.5),
+      targetHighs: Math.min(raw.highs * audioSensitivity.highsMultiplier, 1.5),
     };
   }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
   
@@ -181,6 +187,27 @@ function StandaloneShape({
   useFrame((state) => {
     const t = state.clock.getElapsedTime() * animSpeed;
     
+    // Per-frame smoothing with asymmetric lerp (fast attack, slow decay)
+    const attackLerp = 0.35;
+    const decayLerp = 0.12;
+    const lerpAudio = (current: number, target: number) => {
+      const factor = target > current ? attackLerp : decayLerp;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBassRef.current = lerpAudio(smoothedBassRef.current, targetBass);
+    smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, targetMids);
+    smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
+    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
+    
+    const bass = smoothedBassRef.current;
+    const mids = smoothedMidsRef.current;
+    const highs = smoothedHighsRef.current;
+    const beat = smoothedBeatRef.current;
+    
+    // Beat pop effect - spike on strong beats
+    const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
+    
     if (groupRef.current) {
       const g = groupRef.current;
       
@@ -191,7 +218,7 @@ function StandaloneShape({
           g.rotation.y = t * 1.5;
           g.rotation.x = Math.sin(t) * 0.4;
           g.rotation.z = Math.cos(t * 0.7) * 0.2;
-          g.scale.setScalar(1.8 * (1 + bass * 0.2));
+          g.scale.setScalar(1.8 * (1 + bass * 0.2) * beatPop);
           break;
           
         case 'pulsing':
@@ -199,7 +226,7 @@ function StandaloneShape({
           const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5;
           const pulsePop = Math.pow(pulsePhase, 3);
           const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
-          g.scale.setScalar(1.8 * pulseScale);
+          g.scale.setScalar(1.8 * pulseScale * beatPop);
           g.rotation.y = t * 0.2;
           if (variant.spinAxes[0]) g.rotation.x += Math.sin(t * 2) * 0.15;
           break;
@@ -210,7 +237,7 @@ function StandaloneShape({
           g.position.x = Math.cos(t * 0.8) * 0.6;
           g.rotation.z = Math.sin(t) * 0.3;
           g.rotation.x = Math.cos(t * 0.6) * 0.15;
-          g.scale.setScalar(1.8 * (1 + mids * 0.15));
+          g.scale.setScalar(1.8 * (1 + mids * 0.15) * beatPop);
           break;
           
         case 'chaotic':
@@ -220,14 +247,14 @@ function StandaloneShape({
           g.rotation.z = Math.sin(t * 4.1) * 0.6;
           g.position.x = Math.sin(t * 2.9) * 0.5;
           g.position.y = Math.cos(t * 3.3) * 0.5;
-          g.scale.setScalar(1.8 * (0.8 + Math.sin(t * 4) * 0.3 + bass * 0.3));
+          g.scale.setScalar(1.8 * (0.8 + Math.sin(t * 4) * 0.3 + bass * 0.3) * beatPop);
           break;
           
         case 'breathing':
           // Deep, slow inhale/exhale cycle
           const breathCycle = Math.sin(t * 0.4);
           const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15;
-          g.scale.setScalar(1.8 * breathScale);
+          g.scale.setScalar(1.8 * breathScale * beatPop);
           g.rotation.y = t * 0.05;
           g.rotation.x = breathCycle * 0.1;
           break;
@@ -238,8 +265,8 @@ function StandaloneShape({
           const burstPhase = explosionCycle < 0.5 
             ? explosionCycle * 2 
             : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
-          const explosiveScale = 0.6 + burstPhase * 0.8 + audioData.beatStrength * 0.4;
-          g.scale.setScalar(1.8 * explosiveScale);
+          const explosiveScale = 0.6 + burstPhase * 0.8 + beat * 0.4;
+          g.scale.setScalar(1.8 * explosiveScale * beatPop);
           g.rotation.y = t;
           g.rotation.x = burstPhase * 0.5;
           break;
@@ -263,14 +290,14 @@ function StandaloneShape({
               variantPulse = 1 + Math.sin(t * 0.8) * variant.pulseIntensity;
               break;
             case 'heartbeat':
-              const beat = Math.sin(t * 4);
-              variantPulse = 1 + (beat > 0.7 ? variant.pulseIntensity * 1.5 : 0);
+              const heartbeat = Math.sin(t * 4);
+              variantPulse = 1 + (heartbeat > 0.7 ? variant.pulseIntensity * 1.5 : 0);
               break;
             case 'erratic':
               variantPulse = 1 + Math.sin(t * 5) * Math.cos(t * 3.7) * variant.pulseIntensity;
               break;
           }
-          g.scale.setScalar(1.8 * variantPulse * (1 + bass * 0.1));
+          g.scale.setScalar(1.8 * variantPulse * (1 + bass * 0.1) * beatPop);
           g.position.y = Math.sin(t * 0.2) * 0.1;
       }
     }
@@ -937,6 +964,12 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
   const particlesRef = useRef<THREE.Points>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
   
+  // Per-frame smoothing refs for butter-smooth transitions
+  const smoothedBassRef = useRef(0);
+  const smoothedMidsRef = useRef(0);
+  const smoothedHighsRef = useRef(0);
+  const smoothedBeatRef = useRef(0);
+  
   const random = useMemo(() => seededRandom(params.seed), [params.seed]);
   
   // Get applied visual style texture and colors
@@ -976,8 +1009,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
   // Get audio sensitivity settings from store
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
 
-  // Analyze audio WITH sensitivity multipliers
-  const { bass, mids, highs } = useMemo(() => {
+  // Analyze audio WITH sensitivity multipliers (raw target values for smoothing)
+  const { targetBass, targetMids, targetHighs } = useMemo(() => {
     const freq = audioData.frequency || [];
     const bassRange = freq.slice(0, Math.floor(freq.length * 0.2));
     const midRange = freq.slice(Math.floor(freq.length * 0.2), Math.floor(freq.length * 0.6));
@@ -988,11 +1021,16 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     const rawHighs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
     
     return {
-      bass: Math.min(rawBass * audioSensitivity.bassMultiplier, 1.5),
-      mids: Math.min(rawMids * audioSensitivity.midsMultiplier, 1.5),
-      highs: Math.min(rawHighs * audioSensitivity.highsMultiplier, 1.5),
+      targetBass: Math.min(rawBass * audioSensitivity.bassMultiplier, 1.5),
+      targetMids: Math.min(rawMids * audioSensitivity.midsMultiplier, 1.5),
+      targetHighs: Math.min(rawHighs * audioSensitivity.highsMultiplier, 1.5),
     };
   }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
+  
+  // Expose target values for JSX usage (smoothing happens inside useFrame)
+  const bass = targetBass;
+  const mids = targetMids;
+  const highs = targetHighs;
   
   // Animation speed from store
   const animSpeed = audioSensitivity.animationSpeed;
@@ -1347,10 +1385,31 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     };
   }, [meshConfigs, params.connectionLines, params.seed, colors]);
 
-  // Animation frame with audio sensitivity
+  // Animation frame with audio sensitivity and per-frame smoothing
   useFrame((state) => {
     const t = state.clock.getElapsedTime() * animSpeed;
     const speed = params.rotationSpeed;
+    
+    // Per-frame smoothing with asymmetric lerp (fast attack, slow decay)
+    const attackLerp = 0.35;
+    const decayLerp = 0.12;
+    const lerpAudio = (current: number, target: number) => {
+      const factor = target > current ? attackLerp : decayLerp;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBassRef.current = lerpAudio(smoothedBassRef.current, targetBass);
+    smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, targetMids);
+    smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
+    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
+    
+    const bass = smoothedBassRef.current;
+    const mids = smoothedMidsRef.current;
+    const highs = smoothedHighsRef.current;
+    const beat = smoothedBeatRef.current;
+    
+    // Beat pop effect - spike on strong beats
+    const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
     
     if (groupRef.current) {
       // Apply animation style - each style is dramatically different
@@ -1360,6 +1419,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           groupRef.current.rotation.y = t * speed * 1.5;
           groupRef.current.rotation.x = Math.sin(t * speed) * 0.4;
           groupRef.current.rotation.z = Math.cos(t * speed * 0.7) * 0.2;
+          groupRef.current.scale.setScalar(beatPop);
           break;
           
         case 'pulsing':
@@ -1367,7 +1427,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           const pulsePhase = Math.sin(t * 4) * 0.5 + 0.5; // 0-1 wave
           const pulsePop = Math.pow(pulsePhase, 3); // Sharp peaks
           const pulseScale = 0.85 + pulsePop * 0.4 + bass * 0.35;
-          groupRef.current.scale.setScalar(pulseScale);
+          groupRef.current.scale.setScalar(pulseScale * beatPop);
           groupRef.current.rotation.y = t * speed * 0.2;
           break;
           
@@ -1377,6 +1437,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           groupRef.current.position.x = Math.cos(t * speed * 0.8) * 0.6;
           groupRef.current.rotation.z = Math.sin(t * speed) * 0.3;
           groupRef.current.rotation.x = Math.cos(t * speed * 0.6) * 0.15;
+          groupRef.current.scale.setScalar(beatPop);
           break;
           
         case 'chaotic':
@@ -1386,13 +1447,14 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           groupRef.current.rotation.z = Math.sin(t * 4.1) * 0.6;
           groupRef.current.position.x = Math.sin(t * 2.9) * 0.5;
           groupRef.current.position.y = Math.cos(t * 3.3) * 0.5;
+          groupRef.current.scale.setScalar(beatPop);
           break;
           
         case 'breathing':
           // Deep, slow inhale/exhale cycle
           const breathCycle = Math.sin(t * 0.4); // Very slow
           const breathScale = 0.7 + (breathCycle + 1) * 0.35 + bass * 0.15; // 0.7 to 1.4
-          groupRef.current.scale.setScalar(breathScale);
+          groupRef.current.scale.setScalar(breathScale * beatPop);
           // Slight rotation during breath
           groupRef.current.rotation.y = t * 0.05;
           groupRef.current.rotation.x = breathCycle * 0.1;
@@ -1402,8 +1464,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           // Burst outward, then reset
           const explosionCycle = (t * 0.8) % 3; // 3 second cycle
           const burstPhase = explosionCycle < 0.5 ? explosionCycle * 2 : Math.max(0, 1 - (explosionCycle - 0.5) * 0.8);
-          const explosiveScale = 0.6 + burstPhase * 0.8 + audioData.beatStrength * 0.4;
-          groupRef.current.scale.setScalar(explosiveScale);
+          const explosiveScale = 0.6 + burstPhase * 0.8 + beat * 0.4;
+          groupRef.current.scale.setScalar(explosiveScale * beatPop);
           groupRef.current.rotation.y = t * speed;
           groupRef.current.rotation.x = burstPhase * 0.5;
           break;
@@ -1414,6 +1476,7 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           groupRef.current.rotation.y = t * speed * 0.15;
           groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.05;
           groupRef.current.position.y = Math.sin(t * 0.2) * 0.1;
+          groupRef.current.scale.setScalar(beatPop);
       }
     }
 
