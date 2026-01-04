@@ -109,48 +109,48 @@ function ReactorCore({ audioData }: { audioData: VisualizerProps["audioData"] })
 
     const animSpeed = animationSpeed;
 
-    // Group rotation (subtle overall movement)
+    // Group rotation - AUDIO-DRIVEN ONLY (no constant spin)
     if (groupRef.current) {
-      groupRef.current.rotation.y += dt * (0.12 + bassFinal * 0.25) * animSpeed;
-      groupRef.current.rotation.x = Math.sin(groupRef.current.rotation.y * 0.3) * 0.08;
+      groupRef.current.rotation.y += dt * bassFinal * 0.5 * animSpeed;
+      groupRef.current.rotation.x = bassFinal * 0.1;
     }
 
-    // Shell: scale driven by bass + beat pop, rotation jitter for "noise" effect
+    // Shell: scale driven by bass + beat pop, rotation ONLY when audio plays
     if (shellRef.current) {
-      const beatPop = beatFinal > 0.4 ? 1 + (beatFinal - 0.4) * 0.8 : 1;
-      const shellScale = (1 + bassFinal * 0.25) * beatPop;
+      const beatPop = beatFinal > 0.4 ? 1 + (beatFinal - 0.4) * 1.5 : 1;
+      const shellScale = (1 + bassFinal * 0.5) * beatPop;
       shellRef.current.scale.setScalar(shellScale);
       
-      // Rotation jitter simulates surface noise/refraction
-      shellRef.current.rotation.y += dt * (0.15 + bassFinal * 0.6) * animSpeed;
-      shellRef.current.rotation.z += dt * (0.08 + bassFinal * 0.3) * animSpeed;
+      // Rotation ONLY driven by audio (no base spin)
+      shellRef.current.rotation.y += dt * bassFinal * 1.2 * animSpeed;
+      shellRef.current.rotation.z += dt * bassFinal * 0.6 * animSpeed;
       
       // Emissive intensity driven by highs
-      (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15 + highsFinal * 0.7;
+      (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1 + highsFinal * 1.2;
     }
 
-    // Core: rotation driven by mids
+    // Core: rotation ONLY driven by mids (no constant spin)
     if (coreRef.current) {
-      coreRef.current.rotation.y += dt * (0.5 + midsFinal * 2.8) * animSpeed;
-      coreRef.current.rotation.x += dt * (0.35 + midsFinal * 1.8) * animSpeed;
-      coreRef.current.rotation.z += dt * (0.2 + midsFinal * 1.2) * animSpeed;
+      coreRef.current.rotation.y += dt * midsFinal * 5.0 * animSpeed;
+      coreRef.current.rotation.x += dt * midsFinal * 3.0 * animSpeed;
+      coreRef.current.rotation.z += dt * midsFinal * 2.0 * animSpeed;
       
-      // Scale pulse with mids
-      const coreScale = 1 + midsFinal * 0.15;
+      // Scale pulse with mids + bass
+      const coreScale = 1 + midsFinal * 0.4 + bassFinal * 0.3;
       coreRef.current.scale.setScalar(coreScale);
       
-      (coreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3 + highsFinal * 0.6;
+      (coreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.2 + highsFinal * 1.0;
     }
 
-    // Beams: rotation driven by mids, scale by bass
+    // Beams: rotation ONLY driven by mids (no constant spin)
     if (beamsRef.current) {
-      beamsRef.current.rotation.y += dt * (0.7 + midsFinal * 3.5) * animSpeed;
-      beamsRef.current.rotation.x += dt * (0.3 + midsFinal * 1.5) * animSpeed;
+      beamsRef.current.rotation.y += dt * midsFinal * 6.0 * animSpeed;
+      beamsRef.current.rotation.x += dt * midsFinal * 2.5 * animSpeed;
       
-      const beamScale = 1 + bassFinal * 0.15;
+      const beamScale = 1 + bassFinal * 0.4;
       beamsRef.current.scale.setScalar(beamScale);
       
-      (beamsRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.2 + highsFinal * 0.85;
+      (beamsRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1 + highsFinal * 1.2;
     }
   });
 
