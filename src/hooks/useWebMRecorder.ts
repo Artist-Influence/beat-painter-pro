@@ -2,6 +2,8 @@ import { useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+type ExportQuality = '1080p' | '4k';
+
 interface UseRecorderProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   audioElement: HTMLAudioElement | null;
@@ -19,17 +21,27 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const transparentRef = useRef<boolean>(false);
   const backgroundColorRef = useRef<string>('#000000');
 
-  const startRecording = useCallback(async (startAtSeconds: number, backgroundColor: string, filenamePrefix: string, transparentBackground: boolean = false) => {
+  const startRecording = useCallback(async (
+    startAtSeconds: number, 
+    backgroundColor: string, 
+    filenamePrefix: string, 
+    transparentBackground: boolean = false,
+    quality: ExportQuality = '4k'
+  ) => {
     if (!canvasRef.current || !audioElement) {
       toast.error("Canvas or audio not available");
       return;
     }
 
     try {
+      // Set resolution based on quality
+      const resolution = quality === '4k' ? 2160 : 1080;
+      const bitrate = quality === '4k' ? 50_000_000 : 15_000_000; // 50 Mbps for 4K, 15 Mbps for 1080p
+
       const srcCanvas = canvasRef.current;
       const exportCanvas = document.createElement("canvas");
-      exportCanvas.width = 1080;
-      exportCanvas.height = 1080;
+      exportCanvas.width = resolution;
+      exportCanvas.height = resolution;
       const ctx = exportCanvas.getContext("2d", { alpha: transparentBackground });
       if (!ctx) {
         toast.error("Failed to create export canvas");
@@ -39,6 +51,11 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       ctxRef.current = ctx;
       transparentRef.current = transparentBackground;
       backgroundColorRef.current = backgroundColor;
+
+      // Emit transparency event to tell Three.js renderer to use transparent background
+      if (transparentBackground) {
+        window.dispatchEvent(new CustomEvent('recording:transparency', { detail: { enabled: true } }));
+      }
 
       chunksRef.current = [];
       keepRenderingRef.current = true;
@@ -55,8 +72,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
       const mediaRecorder = new MediaRecorder(combinedStream, {
         mimeType: "video/webm;codecs=vp9,opus",
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 192_000,
+        videoBitsPerSecond: bitrate,
+        audioBitsPerSecond: 320_000, // Higher audio quality
       });
       mediaRecorderRef.current = mediaRecorder;
 
@@ -145,13 +162,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   const stopRecording = useCallback(() => {
     keepRenderingRef.current = false;
+    // Emit event to restore non-transparent rendering
+    window.dispatchEvent(new CustomEvent('recording:transparency', { detail: { enabled: false } }));
     try {
       mediaRecorderRef.current?.stop();
       // Don't pause audio when stopping recording - let it continue playing
     } catch (e) {
       console.error("Stop recording error:", e);
     }
-  }, [audioElement]);
+  }, []);
 
   return { startRecording, stopRecording, isRecording };
 };

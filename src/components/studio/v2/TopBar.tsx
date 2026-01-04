@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { useStudioStore } from '@/stores/studioStore';
 import { useWebMRecorder } from '@/hooks/useWebMRecorder';
 
+type ExportQuality = '1080p' | '4k';
+
 interface TopBarProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
@@ -12,12 +14,13 @@ export function TopBar({ canvasRef }: TopBarProps) {
   const { audioElement, backgroundColor } = useStudioStore();
   const { isRecording, startRecording, stopRecording } = useWebMRecorder({ canvasRef, audioElement });
   const [transparentExport, setTransparentExport] = useState(false);
+  const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
   const handleRecord = () => {
     if (isRecording) {
       stopRecording();
     } else {
-      startRecording(0, backgroundColor, 'visualizer', transparentExport);
+      startRecording(0, backgroundColor, 'visualizer', transparentExport, exportQuality);
     }
   };
 
@@ -34,6 +37,17 @@ export function TopBar({ canvasRef }: TopBarProps) {
 
         {/* Record Controls - Center */}
         <div className="pointer-events-auto flex items-center gap-3">
+          {/* Quality selector */}
+          <select
+            value={exportQuality}
+            onChange={(e) => setExportQuality(e.target.value as ExportQuality)}
+            className="px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 text-white/70 text-xs appearance-none cursor-pointer"
+            disabled={isRecording}
+          >
+            <option value="1080p">1080p</option>
+            <option value="4k">4K</option>
+          </select>
+          
           {/* Transparent BG toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
             <input
