@@ -66,7 +66,62 @@ function StandaloneShape({
   const ringRefs = useRef<THREE.Mesh[]>([]);
   const particlesRef = useRef<THREE.Points>(null);
   
+  // Get applied texture and colors from style system
+  const textureData = useVisualizerTexture();
+  
   const { bass, mids, highs } = useMemo(() => analyzeAudioData(audioData.frequency), [audioData.frequency]);
+  
+  // Create texture-aware materials that respond to applied styles
+  const mainMaterial = useMemo(() => {
+    const colors = textureData.colors;
+    const primaryColor = new THREE.Color(colors.primary);
+    const secondaryColor = new THREE.Color(colors.secondary);
+    
+    const mat = new THREE.MeshStandardMaterial({
+      color: primaryColor,
+      emissive: primaryColor,
+      emissiveIntensity: colors.isNeon ? variant.emissiveIntensity * 1.5 : variant.emissiveIntensity,
+      metalness: colors.isMetallic ? 0.9 : 0.7,
+      roughness: colors.isMetallic ? 0.1 : 0.3,
+      wireframe: variant.wireframeMix === 1,
+      transparent: variant.wireframeMix > 0,
+      opacity: variant.wireframeMix === 1 ? 0.9 : 1,
+    });
+    
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData, variant]);
+  
+  const secondaryMaterial = useMemo(() => {
+    const colors = textureData.colors;
+    const secondaryColor = new THREE.Color(colors.secondary);
+    
+    const mat = new THREE.MeshStandardMaterial({
+      color: secondaryColor,
+      emissive: new THREE.Color(colors.accent),
+      emissiveIntensity: variant.emissiveIntensity * 0.5,
+      metalness: colors.isMetallic ? 0.9 : 0.8,
+      roughness: colors.isMetallic ? 0.15 : 0.2,
+      transparent: true,
+      opacity: 0.6,
+    });
+    
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData, variant]);
+  
+  const accentColor = useMemo(() => new THREE.Color(textureData.colors.accent), [textureData.colors.accent]);
+  const primaryColor = useMemo(() => new THREE.Color(textureData.colors.primary), [textureData.colors.primary]);
   
   // Generate particle halo positions
   const particlePositions = useMemo(() => {
@@ -240,8 +295,6 @@ function StandaloneShape({
     }
   });
   
-  const baseColor = new THREE.Color('#ffffff');
-  
   return (
     <group ref={groupRef}>
       <group ref={innerGroupRef}>
@@ -249,16 +302,7 @@ function StandaloneShape({
         {!variant.fractured && (
           <mesh scale={[variant.stretchX, variant.stretchY, variant.stretchZ]}>
             {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
-            <meshStandardMaterial
-              color={baseColor}
-              emissive={baseColor}
-              emissiveIntensity={variant.emissiveIntensity}
-              metalness={0.7}
-              roughness={0.3}
-              wireframe={variant.wireframeMix === 1}
-              transparent={variant.wireframeMix > 0}
-              opacity={variant.wireframeMix === 1 ? 0.9 : 1}
-            />
+            <primitive object={mainMaterial} attach="material" />
           </mesh>
         )}
         
@@ -266,7 +310,7 @@ function StandaloneShape({
         {variant.wireframeMix === 0.5 && !variant.fractured && (
           <mesh scale={[variant.stretchX * 1.02, variant.stretchY * 1.02, variant.stretchZ * 1.02]}>
             {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
-            <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
+            <meshBasicMaterial color={accentColor} wireframe transparent opacity={0.4} />
           </mesh>
         )}
         
@@ -284,15 +328,7 @@ function StandaloneShape({
               ]}
             >
               {getStandaloneGeometry(i % 2 === 0 ? variant.primaryGeometry : variant.secondaryGeometry, variant.detailLevel)}
-              <meshStandardMaterial
-                color="#cccccc"
-                emissive="#ffffff"
-                emissiveIntensity={variant.emissiveIntensity * 0.5}
-                metalness={0.8}
-                roughness={0.2}
-                transparent
-                opacity={0.6 - i * 0.15}
-              />
+              <primitive object={secondaryMaterial.clone()} attach="material" />
             </mesh>
           );
         })}
@@ -301,7 +337,7 @@ function StandaloneShape({
         {variant.hasInnerCore && !variant.fractured && (
           <mesh scale={[variant.innerCoreScale, variant.innerCoreScale, variant.innerCoreScale]}>
             {getStandaloneGeometry(variant.secondaryGeometry, 2)}
-            <meshBasicMaterial color="#ffffff" />
+            <meshBasicMaterial color={accentColor} />
           </mesh>
         )}
         
@@ -310,7 +346,7 @@ function StandaloneShape({
           <mesh scale={[variant.stretchX * 1.3, variant.stretchY * 1.3, variant.stretchZ * 1.3]}>
             {getStandaloneGeometry(variant.primaryGeometry, 1)}
             <meshBasicMaterial 
-              color="#ffffff" 
+              color={primaryColor} 
               wireframe 
               transparent 
               opacity={variant.outerShellOpacity}
@@ -328,13 +364,7 @@ function StandaloneShape({
             scale={piece.scale}
           >
             {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel)}
-            <meshStandardMaterial
-              color={baseColor}
-              emissive={baseColor}
-              emissiveIntensity={variant.emissiveIntensity}
-              metalness={0.7}
-              roughness={0.3}
-            />
+            <primitive object={mainMaterial.clone()} attach="material" />
           </mesh>
         ))}
       </group>
@@ -351,7 +381,7 @@ function StandaloneShape({
           >
             <torusGeometry args={[ringRadius, 0.02, 8, 64]} />
             <meshBasicMaterial 
-              color="#ffffff" 
+              color={accentColor} 
               transparent 
               opacity={0.4 - i * 0.08}
             />
@@ -366,13 +396,7 @@ function StandaloneShape({
           scale={[-variant.stretchX * 0.7, variant.stretchY * 0.7, variant.stretchZ * 0.7]}
         >
           {getStandaloneGeometry(variant.primaryGeometry, variant.detailLevel - 1)}
-          <meshStandardMaterial 
-            color="#888888" 
-            emissive="#666666"
-            emissiveIntensity={0.3}
-            transparent 
-            opacity={0.5}
-          />
+          <primitive object={secondaryMaterial.clone()} attach="material" />
         </mesh>
       )}
       
@@ -388,7 +412,7 @@ function StandaloneShape({
             />
           </bufferGeometry>
           <pointsMaterial
-            color="#ffffff"
+            color={accentColor}
             size={0.05}
             transparent
             opacity={0.4}
@@ -399,8 +423,8 @@ function StandaloneShape({
       
       {/* Lights for standalone shape */}
       <ambientLight intensity={0.4} />
-      <pointLight position={[4, 4, 4]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[-3, -2, 2]} intensity={0.6} color="#aaaaff" />
+      <pointLight position={[4, 4, 4]} intensity={1.2} color={primaryColor} />
+      <pointLight position={[-3, -2, 2]} intensity={0.6} color={accentColor} />
     </group>
   );
 }
