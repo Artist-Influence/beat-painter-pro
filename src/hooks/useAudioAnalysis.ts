@@ -27,9 +27,9 @@ export const useAudioAnalysis = (
   useEffect(() => {
     if (!analyser) return;
 
-    // Optimize analyser for smoother visuals with less smoothing for better transient response
+    // Optimize analyser for responsive visuals - low smoothing for punchy transient response
     analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.6; // Reduced from 0.8 for faster response
+    analyser.smoothingTimeConstant = 0.4; // Very low for punchy response to kicks/808s
     dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
     const updateAudioData = () => {
@@ -64,22 +64,22 @@ export const useAudioAnalysis = (
       const energyRatio = instantEnergy / (avgEnergy + 0.001);
       const now = performance.now();
       
-      // Trigger beat if energy spike detected (>1.5x average) and cooldown passed (>80ms)
-      const isBeatOnset = energyRatio > 1.5 && (now - lastBeatTimeRef.current) > 80;
+      // Trigger beat if energy spike detected (>1.3x average) and cooldown passed (>70ms)
+      const isBeatOnset = energyRatio > 1.3 && (now - lastBeatTimeRef.current) > 70;
       if (isBeatOnset) {
         beatPeakRef.current = 1.0;
         lastBeatTimeRef.current = now;
       }
       
       // Decay beat peak quickly (asymmetric: instant attack, fast decay)
-      beatPeakRef.current *= 0.88; // Decay by 12% per frame
+      beatPeakRef.current *= 0.82; // Decay by 18% per frame for sharper pulses
       
       // beatStrength combines peak detection with instant energy for responsiveness
       const newBeatStrength = Math.max(beatPeakRef.current, instantEnergy * 0.6);
       
-      // Asymmetric smoothing: fast attack (0.4), slower decay (0.15)
-      const attackFactor = 0.4;
-      const decayFactor = 0.15;
+      // Asymmetric smoothing: very fast attack (0.6), moderate decay (0.12)
+      const attackFactor = 0.6;
+      const decayFactor = 0.12;
       
       const lerpValue = (current: number, target: number) => {
         const factor = target > current ? attackFactor : decayFactor;

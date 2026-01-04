@@ -255,32 +255,45 @@ export default function FluidBloomVisualizer({
       const frequency = safeAudioData.frequency || Array(256).fill(0);
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Calculate frequency bands per-frame
+      // Calculate frequency bands per-frame (NOT in useMemo)
       let bassSum = 0, midsSum = 0, highsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-      const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-      const rawBeat = Math.max(safeAudioData.beatStrength || 0, rawBass);
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+      const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
+      const rawBeat = Math.max(safeAudioData.beatStrength || 0, rawBass * 0.8);
       
-      // Smooth with fast lerp
-      const lerp = 0.12;
-      smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, rawBass, lerp);
-      smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, rawMids, lerp);
-      smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, rawHighs, lerp);
-      smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, rawBeat, lerp);
+      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
       
-      // Overall breathing - much stronger
-      const baseBreath = 1 + Math.sin(t * 3 * animSpeed) * 0.08;
-      const audioBreath = Math.min(1 + smoothedBass.current * 0.8 + smoothedBeat.current * 1.2, 2.5);
-      groupRef.current.scale.setScalar(baseBreath * audioBreath);
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
       
-      // Rotation - faster with audio
-      groupRef.current.rotation.y = t * (0.2 + smoothedMids.current * 2.5) * animSpeed;
-      groupRef.current.rotation.x = Math.sin(t * animSpeed) * (0.25 + smoothedBeat.current * 1.8);
+      const bass = smoothedBass.current;
+      const mids = smoothedMids.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop effect - THE KEY for kicks/808s
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
+      
+      // AUDIO-FIRST breathing - bass and beat dominate, time is subtle
+      const baseBreath = 1 + Math.sin(t * 2 * animSpeed) * 0.05;
+      const audioBreath = 1 + bass * 0.5;
+      groupRef.current.scale.setScalar(baseBreath * audioBreath * beatPop);
+      
+      // AUDIO-FIRST rotation - time subtle, audio dominant
+      groupRef.current.rotation.y = t * 0.1 * animSpeed + mids * Math.PI * 0.4;
+      groupRef.current.rotation.x = bass * Math.PI * 0.2 + Math.sin(t * 0.5 * animSpeed) * 0.1;
     }
   });
 

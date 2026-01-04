@@ -13,39 +13,61 @@ function FlowerOfLife({ audioData, textureData }) {
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
   
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Balanced sacred rotation with strong bass response
-      groupRef.current.rotation.z = t * 0.6 * animSpeed + bass * 1.8 + mids * 0.4;
+      // Calculate audio per-frame
+      let bassSum = 0, midsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       
-      // Strong bass breathing with subtle baseline
-      const breathe = 1 + Math.sin(t * 1.0 * animSpeed) * (0.3 + bass * 1.0 + mids * 0.2);
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const bass = smoothedBass.current;
+      const mids = smoothedMids.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
+      
+      // AUDIO-FIRST rotation - time subtle, bass dominates
+      groupRef.current.rotation.z = t * 0.1 * animSpeed + bass * Math.PI * 0.6 + mids * Math.PI * 0.2;
+      
+      // AUDIO-FIRST breathing with beat pop
+      const breathe = (1 + bass * 0.5 + mids * 0.2) * beatPop;
       groupRef.current.scale.setScalar(breathe);
       
-      // Minimal position movement for subtle organic feel
-      groupRef.current.position.y = Math.sin(t * 1.5 * animSpeed) * bass * 0.4;
-      groupRef.current.position.x = Math.cos(t * 1.2 * animSpeed) * bass * 0.2;
+      // Position driven by audio
+      groupRef.current.position.y = bass * 0.3 * Math.sin(t * 0.5 * animSpeed);
+      groupRef.current.position.x = mids * 0.15 * Math.cos(t * 0.4 * animSpeed);
     }
     
-    // Strong bass emissive intensity
+    // Emissive intensity driven by beat
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = 1.0 + bass * 2.5 + mids * 0.5;
+      materialRef.current.emissiveIntensity = 1.0 + smoothedBass.current * 3.0 + smoothedBeat.current * 2.0;
     }
   });
 
@@ -107,35 +129,58 @@ function Metatron({ audioData, textureData }) {
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Smoothing refs
+  const smoothedHighs = useRef(0);
+  const smoothedBeat = useRef(0);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Enhanced Metatron's cube rotation with stronger audio response
-      meshRef.current.rotation.x = t * 1.0 * animSpeed + highs * 3.0;
-      meshRef.current.rotation.y = t * 1.4 * animSpeed + highs * 4.0;
-      meshRef.current.rotation.z = t * 0.6 * animSpeed + highs * 2.0;
+      // Calculate audio per-frame
+      let highsSum = 0;
+      for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      // Enhanced frequency expansion with bass interaction
-      const expand = 1 + highs * 1.2 + Math.sin(t * 8 * animSpeed) * 0.3;
+      const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
+      const rawBeat = Math.max(beatStrength, rawHighs * 0.5);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const highs = smoothedHighs.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      
+      // AUDIO-FIRST rotation - time subtle, highs dominate
+      meshRef.current.rotation.x = t * 0.2 * animSpeed + highs * Math.PI * 0.8;
+      meshRef.current.rotation.y = t * 0.25 * animSpeed + highs * Math.PI * 1.0;
+      meshRef.current.rotation.z = t * 0.1 * animSpeed + highs * Math.PI * 0.5;
+      
+      // AUDIO-FIRST scale with beat pop
+      const expand = (1 + highs * 0.8) * beatPop;
       meshRef.current.scale.setScalar(expand);
       
-      // Add position movement for dynamic effect
-      meshRef.current.position.x = Math.sin(t * 4 * animSpeed) * highs * 0.3;
-      meshRef.current.position.y = Math.cos(t * 3.5 * animSpeed) * highs * 0.2;
+      // Position movement driven by audio
+      meshRef.current.position.x = highs * 0.25 * Math.sin(t * animSpeed);
+      meshRef.current.position.y = highs * 0.15 * Math.cos(t * 0.8 * animSpeed);
     }
     
-    // Enhanced emissive intensity based on audio
+    // Emissive driven by highs and beat
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = 1.2 + highs * 4.0;
+      materialRef.current.emissiveIntensity = 1.2 + smoothedHighs.current * 4.0 + smoothedBeat.current * 2.0;
     }
   });
 
@@ -170,37 +215,61 @@ export default function SacredGeometryPulseVisualizer({
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   
   useFrame(({ clock }) => {
     if (containerRef.current) {
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
-      // Enhanced 432Hz inspired rotation with audio response
-      containerRef.current.rotation.z = t * (0.8 + bass * 1.5) * animSpeed;
       
-      // Add breathing effect to the whole container
-      const breathe = 1 + Math.sin(t * 1.0 * animSpeed) * (0.1 + bass * 0.5);
+      // Calculate audio per-frame
+      let bassSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const bass = smoothedBass.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      
+      // AUDIO-FIRST rotation - time subtle, bass dominates
+      containerRef.current.rotation.z = t * 0.1 * animSpeed + bass * Math.PI * 0.4;
+      
+      // AUDIO-FIRST breathing with beat pop
+      const breathe = (1 + bass * 0.4) * beatPop;
       containerRef.current.scale.setScalar(breathe);
       
-      // Add subtle movement
-      containerRef.current.position.y = Math.sin(t * 1.5 * animSpeed) * bass * 0.3;
+      // Position movement
+      containerRef.current.position.y = bass * 0.2 * Math.sin(t * 0.5 * animSpeed);
     }
   });
 
-  // Create particle material that updates with texture changes
+  // Static material for particles
   const particleMaterial = useMemo(() => {
     return new THREE.MeshBasicMaterial({
       color: new THREE.Color(textureData.colors?.primary || '#ffd700'),
       transparent: true,
-      opacity: 0.8 + bass * 0.2,
+      opacity: 0.8,
     });
-  }, [textureData.textureVersion, textureData.colors?.primary, bass]);
+  }, [textureData.textureVersion, textureData.colors?.primary]);
   
   return (
     <>

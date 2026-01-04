@@ -12,47 +12,65 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-  
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-  
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
-      // Much more dramatic rotation response  
-      meshRef.current.rotation.z = t * (1.0 + depth * 0.3) * speed + bass * 6.0 + mids * 2.0;
       
-      // Reduced bass pulsing to prevent overflow
-      const pulse = 1 + Math.sin(t * 8 * speed) * 0.2 + bass * 1.8 + mids * 0.8;
+      // Calculate audio per-frame (NOT in useMemo)
+      let bassSum = 0, midsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+      
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      
+      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const bass = smoothedBass.current;
+      const mids = smoothedMids.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop effect
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
+      
+      // AUDIO-FIRST rotation - time is subtle, audio dominates
+      meshRef.current.rotation.z = t * 0.1 * speed + bass * Math.PI * 0.8 + mids * Math.PI * 0.3;
+      
+      // AUDIO-FIRST scale with beat pop
+      const pulse = (1 + bass * 0.6) * beatPop;
       meshRef.current.scale.setScalar(pulse);
       
-      // More dramatic depth movement
-      meshRef.current.position.z = Math.sin(t * 2 * speed + depth) * (bass * 2.0 + highs * 0.8);
-      
-      // Enhanced X-Y movement for dramatic organic feel
-      meshRef.current.position.x = Math.cos(t * 1.5 * speed + depth) * bass * 1.2;
-      meshRef.current.position.y = Math.sin(t * 1.2 * speed + depth) * bass * 1.0;
+      // Position driven by audio
+      meshRef.current.position.z = bass * 1.5 + Math.sin(t * 0.5 * speed + depth) * 0.2;
+      meshRef.current.position.x = mids * 0.8 * Math.cos(t * 0.3 * speed + depth);
+      meshRef.current.position.y = bass * 0.6 * Math.sin(t * 0.4 * speed + depth);
     }
   });
   
   const primaryColor = textureData.colors.primary;
   const accentColor = textureData.colors.accent;
+  
+  // Create material using current smoothed bass value
+  const getMaterialEmissive = () => 2.0 + smoothedBass.current * 6.0 + smoothedBeat.current * 4.0;
   
   return (
     <group ref={meshRef}>
@@ -66,7 +84,7 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
           textureData,
           {
             emissive: i % 2 === 0 ? primaryColor : accentColor,
-            emissiveIntensity: 2.0 + bass * 8.0,
+            emissiveIntensity: 2.0,
             metalness: 0.8,
             roughness: 0.2,
           }
@@ -97,33 +115,56 @@ export default function PsychedelicMandalaVisualizer({
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
-      // Much more dramatic rotation response
-      groupRef.current.rotation.z = t * (0.2 + bass * 3.0) * speed;
       
-      // Clamped breathing to prevent overflow
-      const breathe = Math.min(Math.max(1 + Math.sin(t * 1.0 * speed) * (0.15 + bass * 1.2 + mids * 0.5), 0.85), 1.25);
-      groupRef.current.scale.setScalar(breathe);
+      // Calculate audio per-frame
+      let bassSum = 0, midsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       
-      // Enhanced movement for dramatic organic feel
-      groupRef.current.position.y = Math.sin(t * 1.5 * speed) * bass * 1.2;
-      groupRef.current.rotation.x = Math.sin(t * 1.0 * speed) * bass * 0.8;
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const bass = smoothedBass.current;
+      const mids = smoothedMids.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      
+      // AUDIO-FIRST rotation - time subtle, bass dominates
+      groupRef.current.rotation.z = t * 0.1 * speed + bass * Math.PI * 0.5;
+      
+      // AUDIO-FIRST breathing with beat pop
+      const breathe = (1 + bass * 0.4) * beatPop;
+      groupRef.current.scale.setScalar(Math.min(breathe, 1.4));
+      
+      // Position driven by audio
+      groupRef.current.position.y = bass * 0.8 * Math.sin(t * 0.5 * speed);
+      groupRef.current.rotation.x = mids * Math.PI * 0.15;
     }
   });
   
@@ -147,7 +188,7 @@ export default function PsychedelicMandalaVisualizer({
             textureData,
             {
               emissive: textureData.colors.primary,
-              emissiveIntensity: 4.0 + bass * 10.0,
+              emissiveIntensity: 4.0,
               wireframe: true,
             }
           )}
@@ -156,10 +197,10 @@ export default function PsychedelicMandalaVisualizer({
         </mesh>
         
         <Sparkles
-          count={100 + bass * 200}
+          count={150}
           scale={[5, 5, 5]}
-          size={2 + bass * 5}
-          speed={2 + bass * 3}
+          size={3}
+          speed={3}
           opacity={0.8}
           color={textureData.colors.accent}
         />

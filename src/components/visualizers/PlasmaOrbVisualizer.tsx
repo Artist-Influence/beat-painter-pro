@@ -75,91 +75,110 @@ function PlasmaOrb({ audioData }: any) {
     const time = state.clock.elapsedTime;
     const animSpeed = audioSensitivity.animationSpeed;
     
-    // Calculate frequency bands per-frame
+    // Calculate frequency bands per-frame (NOT in useMemo)
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-    const rawBeat = Math.max(beatStrength, rawBass);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
+    const rawBeat = Math.max(beatStrength, rawBass * 0.8);
     
-    const lerp = 0.12;
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, rawBass, lerp);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, rawMids, lerp);
-    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, rawHighs, lerp);
-    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, rawBeat, lerp);
+    // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
+    const attackLerp = 0.5;
+    const decayLerp = 0.1;
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? attackLerp : decayLerp;
+      return current + (target - current) * factor;
+    };
     
-    const isPeakMoment = smoothedBeat.current > 0.7;
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
     
-    // Animate outer orb - significant breathing
+    const bass = smoothedBass.current;
+    const mids = smoothedMids.current;
+    const highs = smoothedHighs.current;
+    const beat = smoothedBeat.current;
+    
+    // Beat pop effect - THE KEY for kicks/808s
+    const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.2 : 1;
+    
+    // Animate outer orb - AUDIO-FIRST (time is subtle, audio dominates)
     if (orbRef.current) {
-      orbRef.current.rotation.x = time * 0.15 * animSpeed;
-      orbRef.current.rotation.y = time * 0.2 * animSpeed;
+      // Time component subtle (0.1x), audio component strong
+      orbRef.current.rotation.x = time * 0.1 * animSpeed + bass * Math.PI * 0.3;
+      orbRef.current.rotation.y = time * 0.15 * animSpeed + mids * Math.PI * 0.2;
       
-      const scale = 1 + smoothedBass.current * 1.0 + (isPeakMoment ? 0.5 : 0);
+      // Scale with strong bass response and beat pop
+      const scale = (1 + bass * 0.6) * beatPop;
       orbRef.current.scale.setScalar(scale);
       
       if (orbRef.current.material) {
         const mat = orbRef.current.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = 0.2 + smoothedMids.current * 1.0;
-        mat.opacity = 0.2 + Math.sin(time * 6) * smoothedBeat.current * 0.4;
+        mat.emissiveIntensity = 0.3 + mids * 1.5 + beat * 0.8;
+        mat.opacity = 0.3 + beat * 0.4;
       }
     }
     
-    // Animate inner core - INTENSE pulsing
+    // Animate inner core - INTENSE beat-reactive pulsing
     if (innerCoreRef.current) {
-      const rotSpeed = 1 + smoothedBass.current * 5;
-      innerCoreRef.current.rotation.x = -time * 0.4 * animSpeed * rotSpeed;
-      innerCoreRef.current.rotation.y = -time * 0.3 * animSpeed * rotSpeed;
+      // Rotation speed driven by audio
+      const rotSpeed = 1 + bass * 3;
+      innerCoreRef.current.rotation.x = time * 0.2 * animSpeed + bass * Math.PI * 0.5;
+      innerCoreRef.current.rotation.y = time * 0.15 * animSpeed * rotSpeed;
       
-      const coreScale = 0.2 + smoothedBeat.current * 1.5 + smoothedHighs.current * 0.8 + (isPeakMoment ? 0.6 : 0);
+      // Core scale driven by beat with strong pop
+      const coreScale = (0.3 + beat * 1.2 + highs * 0.5) * beatPop;
       innerCoreRef.current.scale.setScalar(coreScale);
       
       if (innerCoreRef.current.material) {
         (innerCoreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-          0.5 + smoothedBeat.current * 5.0 + (isPeakMoment ? 2.0 : 0);
+          0.8 + beat * 4.0 + bass * 2.0;
       }
     }
     
-    // Animate plasma streams - LANCE outward dramatically (6x multiplier)
+    // Animate plasma streams - AUDIO-FIRST with beat pops
     plasmaStreamsRef.current.forEach((stream, i) => {
       if (stream) {
         const offset = i * 0.3;
-        const wave = Math.sin(time * 4 * animSpeed + offset) * 0.5 + 0.5;
         
         const bandIndex = Math.floor((i / plasmaStreamsRef.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
-        // Dramatic extension - 6x multiplier
-        const baseScale = 0.2 + bandValue * 6.0 + smoothedBass.current * 2.0 + (isPeakMoment ? 2.0 : 0);
-        stream.scale.x = baseScale;
-        stream.scale.z = baseScale;
-        stream.scale.y = baseScale * (1 + bandValue * 3); // Length extends more
+        // AUDIO-FIRST extension - bass and beat dominate, time is subtle
+        const audioScale = 0.3 + bandValue * 4.0 + bass * 2.0;
+        const streamScale = audioScale * beatPop;
+        stream.scale.x = streamScale;
+        stream.scale.z = streamScale;
+        stream.scale.y = streamScale * (1 + bass * 2); // Length extends with bass
         
-        // Whipping motion at tips - stronger
-        const whipAngle = Math.sin(time * 5 * animSpeed + offset) * bandValue * 0.8;
+        // Whipping motion driven by audio
+        const whipAngle = bass * Math.PI * 0.4 + Math.sin(time * 3 + offset) * 0.2;
         stream.rotation.x = whipAngle;
-        stream.rotation.z = Math.cos(time * 4 * animSpeed + offset) * bandValue * 0.4;
+        stream.rotation.z = mids * Math.PI * 0.2;
         
         if (stream.material) {
-          (stream.material as THREE.MeshStandardMaterial).opacity = 0.5 + wave * 0.4 + bandValue * 0.5;
-          (stream.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + bandValue * 2.0;
+          (stream.material as THREE.MeshStandardMaterial).opacity = 0.5 + beat * 0.4;
+          (stream.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + beat * 3.0;
         }
         
+        // Position expansion driven by bass
         const pos = streamPositions[i];
-        const positionMultiplier = 1 + Math.sin(time * 3 * animSpeed + offset) * smoothedBass.current * 0.8;
+        const positionMultiplier = 1 + bass * 0.6 * beatPop;
         stream.position.x = pos.x * positionMultiplier;
         stream.position.y = pos.y * positionMultiplier;
         stream.position.z = pos.z * positionMultiplier;
       }
     });
     
-    // Animate particle field - EXPLODE outward chaotically (3x distortion)
+    // Animate particle field - AUDIO-FIRST explosion
     if (fieldLinesRef.current) {
-      fieldLinesRef.current.rotation.y = time * 0.08 * animSpeed * (1 + smoothedBass.current * 3);
+      // Rotation speed driven by bass
+      fieldLinesRef.current.rotation.y = time * 0.05 * animSpeed + bass * Math.PI * 0.3;
       
       const positions = fieldLinesRef.current.geometry.attributes.position.array as Float32Array;
       const originalPositions = particleField.positions;
@@ -168,20 +187,20 @@ function PlasmaOrb({ audioData }: any) {
         const audioIndex = Math.floor((i / 3 / 1000) * frequency.length);
         const audioValue = (frequency[audioIndex] || 0) / 255;
         
-        // Chaotic explosion - 3x distortion
-        const distortion = 1 + audioValue * 3.0 + smoothedBass.current * 1.5;
-        const chaos = Math.sin(time * 6 * animSpeed + i) * smoothedBeat.current * 0.6;
+        // AUDIO-FIRST distortion - bass and beat dominate
+        const distortion = (1 + audioValue * 2.0 + bass * 1.2) * beatPop;
+        const chaos = beat * 0.4 * Math.sin(time * 4 + i * 0.01);
         
         positions[i] = originalPositions[i] * distortion + chaos;
-        positions[i + 1] = originalPositions[i + 1] * distortion + chaos * 0.7;
+        positions[i + 1] = originalPositions[i + 1] * distortion + chaos * 0.5;
         positions[i + 2] = originalPositions[i + 2] * distortion + chaos;
       }
       
       fieldLinesRef.current.geometry.attributes.position.needsUpdate = true;
       
-      // Update particle size
+      // Particle size driven by beat
       if (fieldLinesRef.current.material) {
-        (fieldLinesRef.current.material as THREE.PointsMaterial).size = 0.015 * (1 + smoothedBeat.current * 4);
+        (fieldLinesRef.current.material as THREE.PointsMaterial).size = 0.02 * (1 + beat * 3);
       }
     }
   });

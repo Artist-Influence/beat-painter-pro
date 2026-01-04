@@ -11,12 +11,11 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const pathIntensity = useMemo(() => {
-    let sum = 0;
-    for (let i = 50; i < 150; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 100 / 255 * 2.5, 1.0); // Increase sensitivity
-  }, [freqData]);
+  // Smoothing refs
+  const smoothedIntensity = useRef(0);
+  const smoothedBeat = useRef(0);
 
   const pathMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
@@ -37,20 +36,45 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
   }, [textureData.textureVersion, textureData.colors?.secondary]);
 
   useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    
+    // Calculate audio per-frame
+    let sum = 0;
+    for (let i = 50; i < 150; i++) sum += freqData[i] || 0;
+    const rawIntensity = Math.min(sum / 100 / 255 * 2.5, 1.5);
+    const rawBeat = Math.max(beatStrength, rawIntensity * 0.6);
+    
+    // ASYMMETRIC smoothing
+    const attackLerp = 0.5;
+    const decayLerp = 0.1;
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? attackLerp : decayLerp;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedIntensity.current = lerpVal(smoothedIntensity.current, rawIntensity);
+    smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+    
+    const pathIntensity = smoothedIntensity.current;
+    const beat = smoothedBeat.current;
+    
+    // Beat pop
+    const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+    
     if (lineRef.current && pathMaterial) {
-      pathMaterial.emissiveIntensity = 0.3 + pathIntensity * 2;
+      // AUDIO-FIRST emissive
+      pathMaterial.emissiveIntensity = 0.3 + pathIntensity * 3 + beat * 2;
     }
     
     if (pulsesRef.current) {
-      const t = clock.getElapsedTime();
-      
       pulsesRef.current.children.forEach((pulse, i) => {
         const x = ((t * pulseSpeed + i * 2) % 8) - 4;
         pulse.position.x = x;
         
-        // Fade pulse at edges
+        // AUDIO-FIRST scale with beat pop
         const edgeDistance = Math.min(Math.abs(x + 4), Math.abs(x - 4));
-        pulse.scale.setScalar((edgeDistance / 4) * (0.5 + pathIntensity));
+        const audioScale = (edgeDistance / 4) * (0.5 + pathIntensity * 1.5) * beatPop;
+        pulse.scale.setScalar(audioScale);
       });
     }
   });
@@ -81,14 +105,11 @@ function CircuitNode({ position, index, audioData, textureData }) {
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
+  const beatStrength = safeAudioData.beatStrength || 0;
   
-  const nodeIntensity = useMemo(() => {
-    const start = index * 10;
-    const end = Math.min(start + 10, 256);
-    let sum = 0;
-    for (let i = start; i < end; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 10 / 255, 1.0);
-  }, [freqData, index]);
+  // Smoothing refs
+  const smoothedIntensity = useRef(0);
+  const smoothedBeat = useRef(0);
 
   const nodeMaterial = useMemo(() => {
     return createVisualizerMaterial(textureData.colors?.primary || '#ffffff', textureData, {
@@ -110,19 +131,47 @@ function CircuitNode({ position, index, audioData, textureData }) {
   useFrame(({ clock }) => {
     if (nodeRef.current) {
       const t = clock.getElapsedTime();
-      const scale = 0.8 + nodeIntensity * 1.5;
+      
+      // Calculate audio per-frame
+      const start = index * 10;
+      const end = Math.min(start + 10, 256);
+      let sum = 0;
+      for (let i = start; i < end; i++) sum += freqData[i] || 0;
+      const rawIntensity = Math.min(sum / 10 / 255, 1.5);
+      const rawBeat = Math.max(beatStrength, rawIntensity * 0.6);
+      
+      // ASYMMETRIC smoothing
+      const attackLerp = 0.5;
+      const decayLerp = 0.1;
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? attackLerp : decayLerp;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedIntensity.current = lerpVal(smoothedIntensity.current, rawIntensity);
+      smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
+      
+      const nodeIntensity = smoothedIntensity.current;
+      const beat = smoothedBeat.current;
+      
+      // Beat pop
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      
+      // AUDIO-FIRST scale with beat pop
+      const scale = (0.8 + nodeIntensity * 1.2) * beatPop;
       nodeRef.current.scale.setScalar(scale);
       
-      // Keep node position stable - no Y movement for horizontal layout
       nodeRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2]));
       
       if (coreRef.current && nodeMaterial) {
-        nodeMaterial.emissiveIntensity = 0.5 + nodeIntensity * 2;
+        // AUDIO-FIRST emissive
+        nodeMaterial.emissiveIntensity = 0.5 + nodeIntensity * 3 + beat * 2;
       }
       
       if (ringRef.current) {
-        ringRef.current.rotation.z = t + index;
-        const ringScale = 1 + Math.sin(t * 2 + index) * 0.1; // Reduced scale animation
+        // AUDIO-FIRST rotation
+        ringRef.current.rotation.z = t * 0.3 + nodeIntensity * Math.PI * 0.5;
+        const ringScale = (1 + nodeIntensity * 0.5) * beatPop;
         ringRef.current.scale.setScalar(ringScale);
       }
     }
