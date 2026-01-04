@@ -922,11 +922,39 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
   
   const random = useMemo(() => seededRandom(params.seed), [params.seed]);
   
-  // Always use mono (white) color palette for clean layering of aesthetics
+  // Get applied visual style texture and colors
+  const textureData = useVisualizerTexture();
+  
+  // Use applied style colors, falling back to mono palette if no style applied
   const colors = useMemo(() => {
-    const palette = COLOR_PALETTES.mono;
-    return palette.map(c => new THREE.Color(c));
-  }, []);
+    return [
+      new THREE.Color(textureData.colors.primary),
+      new THREE.Color(textureData.colors.secondary),
+      new THREE.Color(textureData.colors.accent),
+    ];
+  }, [textureData.colors.primary, textureData.colors.secondary, textureData.colors.accent]);
+  
+  // Create texture-aware material for meshes
+  const createStyledMaterial = useMemo(() => {
+    return (colorIndex: number, wireframe: boolean, emissiveIntensity: number) => {
+      const mat = new THREE.MeshStandardMaterial({
+        color: colors[colorIndex % colors.length],
+        emissive: colors[colorIndex % colors.length],
+        emissiveIntensity: textureData.colors.isNeon ? 0.8 + emissiveIntensity : 0.5 + emissiveIntensity,
+        metalness: textureData.colors.isMetallic ? 0.9 : 0.7,
+        roughness: textureData.colors.isMetallic ? 0.1 : 0.3,
+        wireframe,
+      });
+      
+      if (textureData.texture) {
+        mat.map = textureData.texture;
+        mat.emissiveMap = textureData.texture;
+        mat.needsUpdate = true;
+      }
+      
+      return mat;
+    };
+  }, [colors, textureData.texture, textureData.colors.isNeon, textureData.colors.isMetallic]);
 
   // Analyze audio
   const { bass, mids, highs } = useMemo(() => {
@@ -1609,16 +1637,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
             position={config.position}
             rotation={config.rotation}
             scale={config.scale}
+            material={createStyledMaterial(config.colorIndex, config.wireframe, bass * 0.4)}
           >
             {getGeometry(config.geometry)}
-            <meshStandardMaterial
-              color={colors[config.colorIndex]}
-              emissive={colors[config.colorIndex]}
-              emissiveIntensity={0.5 + bass * 0.4}
-              metalness={0.7}
-              roughness={0.3}
-              wireframe={config.wireframe}
-            />
           </mesh>
         ))}
         
@@ -1677,8 +1698,8 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         
         {/* Lights */}
         <ambientLight intensity={0.3} />
-        <pointLight position={[5, 5, 5]} intensity={1 + bass * 0.5} color={colors[0]} />
-        <pointLight position={[-5, -3, 3]} intensity={0.5 + mids * 0.3} color={colors[colors.length > 1 ? 1 : 0]} />
+        <pointLight position={[5, 5, 5]} intensity={1 + bass * 0.5} color={textureData.colors.primary} />
+        <pointLight position={[-5, -3, 3]} intensity={0.5 + mids * 0.3} color={textureData.colors.accent} />
       </group>
     </>
   );
