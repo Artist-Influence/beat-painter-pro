@@ -187,9 +187,9 @@ function StandaloneShape({
   useFrame((state) => {
     const t = state.clock.getElapsedTime() * animSpeed;
     
-    // Per-frame smoothing with asymmetric lerp (fast attack, slow decay)
-    const attackLerp = 0.35;
-    const decayLerp = 0.12;
+    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
+    const attackLerp = 0.55;
+    const decayLerp = 0.35;
     const lerpAudio = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -200,9 +200,10 @@ function StandaloneShape({
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
     smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
     
-    const bass = smoothedBassRef.current;
-    const mids = smoothedMidsRef.current;
-    const highs = smoothedHighsRef.current;
+    // Transient blend: 30% raw audio for immediate punch
+    const bass = smoothedBassRef.current * 0.7 + targetBass * 0.3;
+    const mids = smoothedMidsRef.current * 0.7 + targetMids * 0.3;
+    const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
     const beat = smoothedBeatRef.current;
     
     // Beat pop effect - spike on strong beats
@@ -1390,9 +1391,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     const t = state.clock.getElapsedTime() * animSpeed;
     const speed = params.rotationSpeed;
     
-    // Per-frame smoothing with asymmetric lerp (fast attack, slow decay)
-    const attackLerp = 0.35;
-    const decayLerp = 0.12;
+    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
+    const attackLerp = 0.55;
+    const decayLerp = 0.35;
     const lerpAudio = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -1403,9 +1404,10 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
     smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
     
-    const bass = smoothedBassRef.current;
-    const mids = smoothedMidsRef.current;
-    const highs = smoothedHighsRef.current;
+    // Transient blend: 30% raw audio for immediate punch
+    const bass = smoothedBassRef.current * 0.7 + targetBass * 0.3;
+    const mids = smoothedMidsRef.current * 0.7 + targetMids * 0.3;
+    const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
     const beat = smoothedBeatRef.current;
     
     // Beat pop effect - spike on strong beats

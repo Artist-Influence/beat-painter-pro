@@ -1127,14 +1127,18 @@ CRITICAL STRUCTURE REQUIREMENTS:
    const midsRaw = audioData.frequency.slice(86, 170).reduce((a, b) => a + b, 0) / 84 / 255;
    const highsRaw = audioData.frequency.slice(171, 255).reduce((a, b) => a + b, 0) / 84 / 255;
 
-4. Use smoothing with refs for natural motion:
+4. Use ASYMMETRIC smoothing with refs for punchy, accurate beat response:
    const smoothedBass = useRef(0);
-   smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bassRaw, 0.12);
+   // Fast attack (0.55), fast decay (0.35) for accurate beat tracking
+   const lerpFactor = bassRaw > smoothedBass.current ? 0.55 : 0.35;
+   smoothedBass.current = smoothedBass.current + (bassRaw - smoothedBass.current) * lerpFactor;
+   // Add 30% raw audio for transient punch
+   const bass = smoothedBass.current * 0.7 + bassRaw * 0.3;
 
-5. Apply audioSensitivity multipliers:
-   const bass = smoothedBass.current * audioSensitivity.bassMultiplier;
-   const mids = smoothedMids.current * audioSensitivity.midsMultiplier;
-   const highs = smoothedHighs.current * audioSensitivity.highsMultiplier;
+5. Apply audioSensitivity multipliers after smoothing:
+   const finalBass = bass * audioSensitivity.bassMultiplier;
+   const finalMids = mids * audioSensitivity.midsMultiplier;
+   const finalHighs = highs * audioSensitivity.highsMultiplier;
    
 6. Use createVisualizerMaterial() for ALL materials - NO colors allowed
    const material = createVisualizerMaterial();
@@ -1154,11 +1158,12 @@ Create 50-200 individual mesh components for complex, detailed scenes.`;
 Requirements:
 - Create a recognizable, complex ${prompt} shape using multiple meshes (50-200 components)
 - All white materials via createVisualizerMaterial()
-- Bass (0-85): major movements, size pulses
+- Bass (0-85): major movements, size pulses, use beatStrength for kick detection
 - Mids (86-170): rotations, secondary animations  
 - Highs (171-255): fine details, particle effects
-- Use audioData.beatStrength for beat-synced effects
-- Smooth all values with THREE.MathUtils.lerp
+- Use audioData.beatStrength for beat-synced effects - this is critical for kick/808 response
+- Use ASYMMETRIC smoothing: attack 0.55, decay 0.35, plus 30% raw audio blend for transient punch
+- Make it visually impressive and clearly reactive to audio with obvious beat pops
 - Make it visually impressive and clearly reactive to audio`;
 
       const openaiApiKey = Deno.env.get('OPENAI_API_KEY');

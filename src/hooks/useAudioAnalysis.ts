@@ -72,14 +72,14 @@ export const useAudioAnalysis = (
       }
       
       // Decay beat peak quickly (asymmetric: instant attack, fast decay)
-      beatPeakRef.current *= 0.82; // Decay by 18% per frame for sharper pulses
+      beatPeakRef.current *= 0.75; // Decay by 25% per frame for sharper pulses
       
       // beatStrength combines peak detection with instant energy for responsiveness
       const newBeatStrength = Math.max(beatPeakRef.current, instantEnergy * 0.6);
       
-      // Asymmetric smoothing: very fast attack (0.6), moderate decay (0.12)
-      const attackFactor = 0.6;
-      const decayFactor = 0.12;
+      // Asymmetric smoothing: very fast attack (0.55), fast decay (0.35) for accurate beat tracking
+      const attackFactor = 0.55;
+      const decayFactor = 0.35;
       
       const lerpValue = (current: number, target: number) => {
         const factor = target > current ? attackFactor : decayFactor;

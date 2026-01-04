@@ -64,17 +64,24 @@ function CrackedCrystalOrb({ audioData }: any) {
     const amp = amplitude;
     const beat = Math.max(beatStrength, bass);
     
-    // Smooth audio interpolation for fluid movement
-    const lerp = 0.15;
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass, lerp);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids, lerp);
-    smoothedHighs.current = THREE.MathUtils.lerp(smoothedHighs.current, highs, lerp);
-    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, beat, lerp);
+    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
+    const lerp = (current: number, target: number) => {
+      const factor = target > current ? 0.55 : 0.35;
+      return current + (target - current) * factor;
+    };
+    smoothedBass.current = lerp(smoothedBass.current, bass);
+    smoothedMids.current = lerp(smoothedMids.current, mids);
+    smoothedHighs.current = lerp(smoothedHighs.current, highs);
+    smoothedBeat.current = lerp(smoothedBeat.current, beat);
     
-    const scalePulse = 1 + 0.5 * smoothedBeat.current + 0.15 * Math.sin(time * 6 * animSpeed);
+    // Transient blend: 30% raw for immediate punch
+    const finalBass = smoothedBass.current * 0.7 + bass * 0.3;
+    const finalBeat = smoothedBeat.current * 0.7 + beat * 0.3;
+    
+    const scalePulse = 1 + 0.5 * finalBeat + 0.15 * Math.sin(time * 6 * animSpeed);
     const baseScale = 0.7 + 0.4 * amp;
     
-    const beatExplosion = smoothedBeat.current > 0.5 ? 1 + smoothedBeat.current * 0.8 : 1;
+    const beatExplosion = finalBeat > 0.5 ? 1 + finalBeat * 0.8 : 1;
 
     if (group.current) {
       group.current.rotation.y = time * 1.2 * animSpeed + smoothedMids.current * 3.0;
