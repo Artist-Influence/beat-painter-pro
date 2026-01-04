@@ -73,7 +73,7 @@ function ElectricField({ audioData }: any) {
     return positions;
   }, []);
   
-  // Charge positions - smaller distances
+  // Base charge positions - smaller distances
   const chargePositions = [
     { x: 0, y: 1.3, z: 0, charge: 1 },
     { x: 0, y: -1.3, z: 0, charge: -1 },
@@ -96,9 +96,9 @@ function ElectricField({ audioData }: any) {
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
     const rawBeat = Math.max(beatStrength, rawBass);
     
     // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
@@ -113,67 +113,68 @@ function ElectricField({ audioData }: any) {
     
     // Transient blend: 30% raw for immediate punch on bass
     const bassFinal = smoothedBass.current * 0.7 + rawBass * 0.3;
+    const midsFinal = smoothedMids.current * 0.7 + rawMids * 0.3;
+    const highsFinal = smoothedHighs.current * 0.7 + rawHighs * 0.3;
     const beatFinal = smoothedBeat.current * 0.7 + rawBeat * 0.3;
     
     const isPeakMoment = beatFinal > 0.7;
     
-    // Rotate entire field
+    // Rotate entire field - subtle time-based rotation
     if (fieldGroupRef.current) {
-      fieldGroupRef.current.rotation.y = time * 0.15 * animSpeed;
+      fieldGroupRef.current.rotation.y = time * 0.1 * animSpeed;
       fieldGroupRef.current.scale.setScalar(0.7 + bassFinal * 0.7 + (isPeakMoment ? 0.3 : 0));
     }
     
-    // Animate charges - VIOLENT vibration (1.5x oscillation, 1.2x position)
+    // Animate charges - PURE AUDIO-REACTIVE MOVEMENT
     chargeRefs.current.forEach((charge, i) => {
       if (charge) {
         const pos = chargePositions[i];
         const chargeType = pos.charge;
         
-        // Violent oscillation - 1.5x
-        const oscillation = Math.sin(time * 3 * animSpeed + i) * smoothedMids.current * 1.5;
-        charge.position.x = pos.x + oscillation * chargeType;
-        charge.position.y = pos.y + Math.cos(time * 2 * animSpeed + i) * smoothedBass.current * 1.2;
+        // Pure audio-driven position offsets (no time-based oscillation)
+        const bassOffset = bassFinal * 1.2 * chargeType;
+        const midsOffset = midsFinal * 0.6 * (i % 2 === 0 ? 1 : -1);
+        const beatBurst = isPeakMoment ? (beatFinal - 0.5) * 2.0 * chargeType : 0;
         
-        // Arc between charges
-        const arcMotion = Math.sin(time * 4 * animSpeed) * smoothedBeat.current * 0.5;
-        charge.position.z = pos.z + arcMotion;
+        // Position driven entirely by audio
+        charge.position.x = pos.x * (1 + bassFinal * 0.4) + bassOffset + beatBurst;
+        charge.position.y = pos.y * (1 + midsFinal * 0.3) + midsOffset;
+        charge.position.z = pos.z + highsFinal * 0.5 * (i % 2 === 0 ? 1 : -1) + (isPeakMoment ? beatFinal * 0.8 : 0);
         
-        // Dramatic scale variation - 1.5x beat, 1.0x freq
-        const freqResponse = chargeType > 0 ? smoothedHighs.current : smoothedMids.current;
-        const pulseScale = 0.2 + smoothedBeat.current * 1.5 + freqResponse * 1.0 + (isPeakMoment ? 0.5 : 0);
+        // Scale driven entirely by audio
+        const freqResponse = chargeType > 0 ? highsFinal : midsFinal;
+        const pulseScale = 0.15 + bassFinal * 1.5 + freqResponse * 0.8 + (isPeakMoment ? 1.2 : 0);
         charge.scale.setScalar(pulseScale);
         
         if (charge.material) {
           (charge.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-            0.3 + smoothedBeat.current * 3.0 + (isPeakMoment ? 1.5 : 0);
+            0.3 + beatFinal * 3.0 + (isPeakMoment ? 2.0 : 0);
         }
       }
     });
     
-    // Animate field lines - pulse with energy and thickness (1.5x thickness)
+    // Animate field lines - pulse with energy and thickness
     fieldLineRefs.current.forEach((line, i) => {
       if (line) {
         const bandIndex = Math.floor((i / fieldLineRefs.current.length) * frequency.length);
         const bandValue = (frequency[bandIndex] || 0) / 255;
         
-        // Thickness pulse - 1.5x
-        const thicknessPulse = 1 + bandValue * 1.5 + smoothedBeat.current * 0.8 + (isPeakMoment ? 0.5 : 0);
+        // Thickness pulse driven by audio
+        const thicknessPulse = 1 + bandValue * 1.5 + beatFinal * 0.8 + (isPeakMoment ? 0.5 : 0);
         line.scale.x = thicknessPulse;
         line.scale.z = thicknessPulse;
         
-        // Wave propagation
-        const wave = Math.sin(time * 5 * animSpeed - i * 0.3) * 0.5 + 0.5;
-        
         if (line.material) {
           (line.material as THREE.MeshBasicMaterial).opacity = 
-            0.3 + bandValue * 1.0 + wave * smoothedBeat.current * 0.5;
+            0.3 + bandValue * 1.0 + bassFinal * 0.5;
         }
       }
     });
     
-    // Animate electron cloud - MORE chaotic swarming (1.5x drift, 1.0x highs, 2.5x scale)
+    // Animate electron cloud - chaotic audio-driven swarming
     if (electronCloudRef.current) {
-      const orbitSpeed = 1 + smoothedBass.current * 3;
+      // Rotation speed driven by audio
+      const orbitSpeed = 1 + bassFinal * 3;
       electronCloudRef.current.rotation.x = time * 0.3 * animSpeed * orbitSpeed;
       electronCloudRef.current.rotation.z = -time * 0.2 * animSpeed * orbitSpeed;
       
@@ -181,30 +182,33 @@ function ElectricField({ audioData }: any) {
       const originalPositions = electronPositions;
       
       for (let i = 0; i < positions.length; i += 3) {
-        const drift = Math.sin(time * 3 * animSpeed + i) * smoothedBeat.current * 1.5;
-        const chaos = Math.cos(time * 5 * animSpeed + i * 0.1) * smoothedBass.current * 0.8;
+        // Audio-driven particle displacement
+        const bassDisplace = bassFinal * 1.5 * Math.sin(i * 0.1);
+        const midsDisplace = midsFinal * 0.8 * Math.cos(i * 0.15);
+        const highsDisplace = highsFinal * 0.6 * Math.sin(i * 0.2);
+        const beatExpand = isPeakMoment ? beatFinal * 1.0 : 0;
         
-        positions[i] = originalPositions[i] + drift + chaos;
-        positions[i + 1] = originalPositions[i + 1] + Math.sin(time * 4 * animSpeed + i) * smoothedHighs.current * 1.0;
-        positions[i + 2] = originalPositions[i + 2] + drift - chaos;
+        positions[i] = originalPositions[i] * (1 + bassFinal * 0.3) + bassDisplace + beatExpand;
+        positions[i + 1] = originalPositions[i + 1] + highsDisplace + midsDisplace;
+        positions[i + 2] = originalPositions[i + 2] * (1 + midsFinal * 0.2) + bassDisplace - midsDisplace;
       }
       
       electronCloudRef.current.geometry.attributes.position.needsUpdate = true;
-      electronCloudRef.current.scale.setScalar(1 + smoothedHighs.current * 2.5 + smoothedBass.current * 1.0 + (isPeakMoment ? 0.8 : 0));
+      electronCloudRef.current.scale.setScalar(1 + highsFinal * 2.5 + bassFinal * 1.0 + (isPeakMoment ? 0.8 : 0));
       
       // Update particle size
       if (electronCloudRef.current.material) {
-        (electronCloudRef.current.material as THREE.PointsMaterial).size = 0.02 * (1 + smoothedHighs.current * 4);
+        (electronCloudRef.current.material as THREE.PointsMaterial).size = 0.02 * (1 + highsFinal * 4);
       }
     }
     
-    // Central conductor ring - intense glow (2.0x emissive, 0.5x scale)
+    // Central conductor ring - audio-driven glow
     if (conductorRingRef.current) {
       if (conductorRingRef.current.material) {
         (conductorRingRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
-          0.2 + smoothedBass.current * 2.0 + (isPeakMoment ? 1.0 : 0);
+          0.2 + bassFinal * 2.0 + (isPeakMoment ? 1.0 : 0);
       }
-      conductorRingRef.current.scale.setScalar(1 + smoothedBass.current * 0.5 + smoothedMids.current * 0.3);
+      conductorRingRef.current.scale.setScalar(1 + bassFinal * 0.5 + midsFinal * 0.3);
     }
   });
 

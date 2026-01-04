@@ -10,12 +10,8 @@ import SacredGeometryPulseVisualizer from "./SacredGeometryPulseVisualizer";
 import StroboscopicTunnelVisualizer from "./StroboscopicTunnelVisualizer";
 import WaveRibbonsVisualizer from "./WaveRibbonsVisualizer";
 import DNAHelixVisualizer from "./DNAHelixVisualizer";
-import DanasEyeVisualizer from "./DanasEyeVisualizer";
-import FluidBloomVisualizer from "./FluidBloomVisualizer";
 import CircuitPulseVisualizer from "./CircuitPulseVisualizer";
 import NeonSkylineVisualizer from "./NeonSkylineVisualizer";
-import TeslaCoilVisualizer from "./TeslaCoilVisualizer";
-import PlasmaOrbVisualizer from "./PlasmaOrbVisualizer";
 import ElectricFieldVisualizer from "./ElectricFieldVisualizer";
 import { CustomVisualizerLoader } from "./CustomVisualizerLoader";
 
@@ -34,12 +30,8 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   StroboscopicTunnelVisualizer: 0.3,
   WaveRibbonsVisualizer: 0.4,
   DNAHelixVisualizer: 0.3,
-  DanasEyeVisualizer: 0.12,
-  FluidBloomVisualizer: 0.15,
   CircuitPulseVisualizer: 0.4,
   NeonSkylineVisualizer: 0.3,
-  TeslaCoilVisualizer: 0.18,
-  PlasmaOrbVisualizer: 0.15,
   ElectricFieldVisualizer: 0.18,
 };
 
@@ -56,12 +48,8 @@ export const visualizerRegistry = {
   StroboscopicTunnelVisualizer,
   WaveRibbonsVisualizer,
   DNAHelixVisualizer,
-  DanasEyeVisualizer,
-  FluidBloomVisualizer,
   CircuitPulseVisualizer,
   NeonSkylineVisualizer,
-  TeslaCoilVisualizer,
-  PlasmaOrbVisualizer,
   ElectricFieldVisualizer,
   CustomVisualizerLoader,
 };
