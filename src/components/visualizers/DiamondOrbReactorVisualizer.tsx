@@ -125,37 +125,44 @@ function ReactorCore({
     const highsFinal = smoothedHighs.current * 0.7 + rawHighs * 0.3;
     const beatFinal = smoothedBeat.current * 0.7 + rawBeat * 0.3;
 
-    // animationSpeed ONLY affects subtle ambient drift, NOT audio reactivity
-    const ambientDrift = dt * 0.02 * animationSpeed;
+    // Audio threshold - only animate when audio is actually playing
+    const audioThreshold = 0.02;
+    const hasAudio = bassFinal > audioThreshold || midsFinal > audioThreshold || highsFinal > audioThreshold;
 
-    // Group rotation - AUDIO-DRIVEN PRIMARY, ambient drift secondary
+    // Group rotation - ONLY when audio is present
     if (groupRef.current) {
-      groupRef.current.rotation.y += bassFinal * 0.6 + ambientDrift;
-      groupRef.current.rotation.x = bassFinal * 0.15;
+      if (hasAudio) {
+        groupRef.current.rotation.y += bassFinal * 0.08;
+        groupRef.current.rotation.x = bassFinal * 0.15;
+      }
     }
 
-    // Shell: scale driven by bass + beat pop, rotation ONLY when audio plays
+    // Shell: scale reacts to audio (returns to 1 when silent), rotation ONLY when audio plays
     if (shellRef.current) {
       const beatPop = beatFinal > 0.4 ? 1 + (beatFinal - 0.4) * 1.5 : 1;
       const shellScale = (1 + bassFinal * 0.5) * beatPop;
       shellRef.current.scale.setScalar(shellScale);
       
-      // Rotation ONLY driven by audio (no animSpeed dampening)
-      shellRef.current.rotation.y += bassFinal * 1.5;
-      shellRef.current.rotation.z += bassFinal * 0.8;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        shellRef.current.rotation.y += bassFinal * 0.15;
+        shellRef.current.rotation.z += bassFinal * 0.08;
+      }
       
       // Emissive intensity driven by highs
       (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
         (isNeon ? 0.2 : 0.1) + highsFinal * 1.2;
     }
 
-    // Core: rotation ONLY driven by mids (no animSpeed dampening)
+    // Core: rotation ONLY when audio is present
     if (coreRef.current) {
-      coreRef.current.rotation.y += midsFinal * 6.0;
-      coreRef.current.rotation.x += midsFinal * 4.0;
-      coreRef.current.rotation.z += midsFinal * 2.5;
+      if (hasAudio) {
+        coreRef.current.rotation.y += midsFinal * 0.6;
+        coreRef.current.rotation.x += midsFinal * 0.4;
+        coreRef.current.rotation.z += midsFinal * 0.25;
+      }
       
-      // Scale pulse with mids + bass
+      // Scale pulse with mids + bass (returns to 1 when silent)
       const coreScale = 1 + midsFinal * 0.4 + bassFinal * 0.3;
       coreRef.current.scale.setScalar(coreScale);
       
@@ -163,11 +170,14 @@ function ReactorCore({
         (isNeon ? 0.4 : 0.2) + highsFinal * 1.0;
     }
 
-    // Beams: rotation ONLY driven by mids (no animSpeed dampening)
+    // Beams: rotation ONLY when audio is present
     if (beamsRef.current) {
-      beamsRef.current.rotation.y += midsFinal * 7.0;
-      beamsRef.current.rotation.x += midsFinal * 3.0;
+      if (hasAudio) {
+        beamsRef.current.rotation.y += midsFinal * 0.7;
+        beamsRef.current.rotation.x += midsFinal * 0.3;
+      }
       
+      // Scale (returns to 1 when silent)
       const beamScale = 1 + bassFinal * 0.4;
       beamsRef.current.scale.setScalar(beamScale);
       
