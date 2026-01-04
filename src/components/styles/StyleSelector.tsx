@@ -123,12 +123,32 @@ export function StyleSelector() {
 
   const applyStyle = async (previewIndex: number) => {
     const texture = previews[previewIndex];
-    const colors = getStyleColors(selectedStyles);
+    const colorsArray = getStyleColors(selectedStyles);
+    
+    // Transform to the expected object format for useVisualizerTexture
+    const colorsObject = {
+      primary: colorsArray[0] || "#ff00ff",
+      secondary: colorsArray[1] || "#cccccc",
+      accent: colorsArray[2] || "#00ffff",
+      isNeon: selectedStyles.some(s => 
+        s.toLowerCase().includes('neon') || 
+        s.toLowerCase().includes('electric') || 
+        s.toLowerCase().includes('cyberpunk') ||
+        s.toLowerCase().includes('holographic')
+      ),
+      isMetallic: selectedStyles.some(s => 
+        s.toLowerCase().includes('metal') || 
+        s.toLowerCase().includes('liquid metal') || 
+        s.toLowerCase().includes('chrome') ||
+        s.toLowerCase().includes('crystal')
+      ),
+    };
+    
     (window as any).appliedTexture = texture;
-    (window as any).extractedColors = colors;
+    (window as any).extractedColors = colorsObject;
     setAppliedIndex(previewIndex);
     // Notify visualizers to refresh
-    window.dispatchEvent(new CustomEvent('style:applied', { detail: { texture, colors } }));
+    window.dispatchEvent(new CustomEvent('style:applied', { detail: { texture, colors: colorsObject } }));
   };
 
   return (
