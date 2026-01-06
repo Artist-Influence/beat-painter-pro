@@ -5,7 +5,6 @@ import * as THREE from "three";
 import { VisualizerProps } from ".";
 
 function NeuralLattice({ audioData }: any) {
-  const pointsRef = useRef<THREE.Points>(null);
   const groupRef = useRef<THREE.Group>(null);
   const sphere1Ref = useRef<THREE.Mesh>(null);
   const sphere2Ref = useRef<THREE.Mesh>(null);
@@ -32,46 +31,11 @@ function NeuralLattice({ audioData }: any) {
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   const amplitude = safeAudioData.amplitude || 0;
 
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    const positions: number[] = [];
-    const colors: number[] = [];
-    
-    for (let i = 0; i < 2000; i++) {
-      const r = Math.random() * 2.5 + 0.2;
-      const theta = Math.random() * 2 * Math.PI;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
-      positions.push(x, y, z);
-
-      const colorChoice = Math.random();
-      let color: THREE.Color;
-      if (colorChoice < 0.4) {
-        color = new THREE.Color(primaryColor);
-      } else if (colorChoice < 0.7) {
-        color = new THREE.Color(secondaryColor);
-      } else {
-        color = new THREE.Color(accentColor);
-      }
-      colors.push(color.r, color.g, color.b);
-    }
-    
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-    return geo;
-  }, [primaryColor, secondaryColor, accentColor]);
-
-  // Smoothing refs
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    
-    // Calculate audio per-frame
+  useFrame(() => {
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
@@ -81,59 +45,30 @@ function NeuralLattice({ audioData }: any) {
     const rawMids = midsSum / 85 / 255;
     const rawHighs = highsSum / 85 / 255;
     
-    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35)
-    const lerp = (current: number, target: number) => {
-      const factor = target > current ? 0.55 : 0.35;
-      return current + (target - current) * factor;
-    };
+    const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.55 : 0.35);
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
     smoothedMids.current = lerp(smoothedMids.current, rawMids);
     smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
     
-    // Transient blend: 30% raw for immediate punch
     const bass = smoothedBass.current * 0.7 + rawBass * 0.3;
     const mids = smoothedMids.current * 0.7 + rawMids * 0.3;
     const highs = smoothedHighs.current * 0.7 + rawHighs * 0.3;
-    if (groupRef.current) {
-      // Faster scale response
-      const targetScale = 1 + bass * 1.2 + 0.15 * Math.sin(t * 6);
-      const currentScale = groupRef.current.scale.x;
-      const smoothScale = currentScale + (targetScale - currentScale) * 0.05; // Slower smoothing
-      groupRef.current.scale.setScalar(smoothScale);
-      
-      // Smoother rotation transitions
-      const targetRotY = t * 1.2 + mids * 4.0;
-      const currentRotY = groupRef.current.rotation.y;
-      groupRef.current.rotation.y = currentRotY + (targetRotY - currentRotY) * 0.1;
-      
-      const targetRotX = Math.sin(t * 1.5) * 1.0 + bass * 2.5;
-      const currentRotX = groupRef.current.rotation.x;
-      groupRef.current.rotation.x = currentRotX + (targetRotX - currentRotX) * 0.1;
-      
-      const targetRotZ = Math.cos(t * 0.8) * 0.8 + highs * 2.0;
-      const currentRotZ = groupRef.current.rotation.z;
-      groupRef.current.rotation.z = currentRotZ + (targetRotZ - currentRotZ) * 0.1;
-      
-      // Smoother position transitions
-      const targetPosY = Math.sin(t * 3.0) * 1.0 + amplitude * 2.0 + (bass > 0.7 ? bass * 3.0 : 0);
-      const currentPosY = groupRef.current.position.y;
-      groupRef.current.position.y = currentPosY + (targetPosY - currentPosY) * 0.08;
-    }
     
-    if (pointsRef.current && pointsRef.current.material) {
-      const material = pointsRef.current.material as THREE.PointsMaterial;
-      material.size = 0.012 + highs * 0.06 + bass * 0.04 + 0.02 * Math.sin(t * 10);
-      material.opacity = 0.22 + highs * 0.5 + bass * 0.3 + 0.1 * Math.sin(t * 6);
+    const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
+
+    if (groupRef.current) {
+      const targetScale = 1 + bass * 1.2;
+      groupRef.current.scale.setScalar(groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.05);
       
-      if (extractedColors?.isNeon) {
-        material.opacity = Math.min(material.opacity * 1.25, 0.85);
-        material.size *= 1.15;
+      if (hasAudio) {
+        groupRef.current.rotation.y += mids * 0.1;
+        groupRef.current.rotation.x += bass * 0.05;
+        groupRef.current.rotation.z += highs * 0.03;
       }
       
-      material.needsUpdate = true;
+      groupRef.current.position.y = bass * 2.0 + amplitude * 2.0;
     }
     
-    // Update sphere materials with audio reactivity
     if (sphere1Ref.current?.material) {
       (sphere1Ref.current.material as THREE.MeshStandardMaterial).opacity = 0.25 + mids * 0.4 + bass * 0.3;
     }
@@ -147,36 +82,9 @@ function NeuralLattice({ audioData }: any) {
 
   return (
     <group ref={groupRef} scale={0.14}>
-      <mesh ref={sphere1Ref}>
-        <sphereGeometry args={[2.0, 32, 32]} />
-        <meshStandardMaterial 
-          color={primaryColor} 
-          wireframe 
-          transparent 
-          opacity={0.25}
-          map={texture || undefined}
-        />
-      </mesh>
-      <mesh ref={sphere2Ref}>
-        <sphereGeometry args={[2.8, 16, 16]} />
-        <meshStandardMaterial 
-          color={secondaryColor} 
-          wireframe 
-          transparent 
-          opacity={0.15}
-          map={texture || undefined}
-        />
-      </mesh>
-      <mesh ref={sphere3Ref}>
-        <sphereGeometry args={[3.5, 8, 8]} />
-        <meshStandardMaterial 
-          color={accentColor} 
-          wireframe 
-          transparent 
-          opacity={0.1}
-          map={texture || undefined}
-        />
-      </mesh>
+      <mesh ref={sphere1Ref}><sphereGeometry args={[2.0, 32, 32]} /><meshStandardMaterial color={primaryColor} wireframe transparent opacity={0.25} map={texture || undefined} /></mesh>
+      <mesh ref={sphere2Ref}><sphereGeometry args={[2.8, 16, 16]} /><meshStandardMaterial color={secondaryColor} wireframe transparent opacity={0.15} map={texture || undefined} /></mesh>
+      <mesh ref={sphere3Ref}><sphereGeometry args={[3.5, 8, 8]} /><meshStandardMaterial color={accentColor} wireframe transparent opacity={0.1} map={texture || undefined} /></mesh>
     </group>
   );
 }
@@ -184,13 +92,8 @@ function NeuralLattice({ audioData }: any) {
 export default function NeuralLatticeVisualizer({
   audioData = { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 },
   styleAdjustments = { brightness: 100, saturation: 100, contrast: 100 },
-  width = 1080,
-  height = 1080,
-  zoomLevel = 1,
-  backgroundColor = '#00FF00',
-}: VisualizerProps & { 
-  styleAdjustments?: { brightness: number; saturation: number; contrast: number };
-}) {
+  width = 1080, height = 1080, zoomLevel = 1, backgroundColor = '#00FF00',
+}: VisualizerProps & { styleAdjustments?: { brightness: number; saturation: number; contrast: number }; }) {
   return (
     <>
       <ambientLight intensity={0.6} />

@@ -14,44 +14,65 @@ function StrobeRing({ distance, index, audioData, textureData }) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedHighs = useRef(0);
+  // Store current Z position
+  const currentZ = useRef(distance);
   
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (meshRef.current && materialRef.current) {
-      const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Strong bass-responsive strobing effect
-      const bassMultiplier = bass > 0.05 ? bass : 0.05;
-      const strobeFreq = 30 + bassMultiplier * 40; // Moderate strobing with bass
-      const strobe = Math.sin(t * strobeFreq * animSpeed + index * 2) > 0.2 ? 1 : 0;
+      // Calculate audio per-frame
+      let bassSum = 0, highsSum = 0;
+      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+      
+      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+      const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+      
+      // Asymmetric smoothing
+      const lerpVal = (current: number, target: number) => {
+        const factor = target > current ? 0.5 : 0.2;
+        return current + (target - current) * factor;
+      };
+      
+      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      
+      const bass = smoothedBass.current;
+      const highs = smoothedHighs.current;
+      
+      // Audio threshold check
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold || highs > audioThreshold;
+      
+      // Strobe effect driven by audio
+      const strobeFreq = hasAudio ? 30 + bass * 40 : 0;
+      const strobe = hasAudio && Math.sin(Date.now() * 0.001 * strobeFreq * animSpeed + index * 2) > 0.2 ? 1 : 0;
       materialRef.current.emissiveIntensity = strobe * (1.0 + bass * 3.0);
       
-      // Balanced Z-position movement for tunnel effect
-      const speed = (6 + bassMultiplier * 6) * animSpeed;
-      const z = ((t * speed + index * 2) % 20) - 10;
-      meshRef.current.position.z = z;
+      // Z-position movement ONLY when audio is present
+      if (hasAudio) {
+        const speed = (6 + bass * 6) * animSpeed * 0.016;
+        currentZ.current -= speed;
+        if (currentZ.current < -10) currentZ.current = 10;
+      }
+      meshRef.current.position.z = currentZ.current;
       
-      // Strong bass scale response
-      const scale = 1 + Math.abs(z) * 0.1 + bass * 1.2;
+      // Scale driven by audio (returns to 1 when silent)
+      const scale = 1 + Math.abs(currentZ.current) * 0.1 + bass * 1.2;
       meshRef.current.scale.setScalar(scale);
       
-      // Balanced hypnotic spiral rotation
-      meshRef.current.rotation.z = t * 3 * animSpeed + index * 0.6 + bass * 6.0;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        meshRef.current.rotation.z += bass * 0.15 * animSpeed;
+      }
       
-      // Minimal X-Y oscillation
-      meshRef.current.position.x = Math.sin(t * 4 * animSpeed + index) * bass * 0.2;
-      meshRef.current.position.y = Math.cos(t * 3.5 * animSpeed + index) * bass * 0.15;
+      // Position oscillation proportional to audio
+      meshRef.current.position.x = bass * 0.2;
+      meshRef.current.position.y = bass * 0.15;
     }
   });
   
@@ -97,56 +118,71 @@ export default function StroboscopicTunnelVisualizer({
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
   
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
   
-  useFrame(({ clock, camera }) => {
-    const t = clock.getElapsedTime();
+  useFrame(({ camera }) => {
     const animSpeed = audioSensitivity.animationSpeed;
     
+    // Calculate audio per-frame
+    let bassSum = 0, midsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+    
+    const bass = smoothedBass.current;
+    const mids = smoothedMids.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold;
+    
     if (tunnelRef.current) {
-      // Enhanced tunnel rotation with stronger audio response
-      const bassMultiplier = bass > 0.05 ? bass : 0.05;
-      tunnelRef.current.rotation.z = t * 1.0 * animSpeed + mids * bassMultiplier * 8;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        tunnelRef.current.rotation.z += mids * bass * 0.2 * animSpeed;
+      }
       
-      // Add tunnel scaling for breathing effect
-      const tunnelScale = 1 + Math.sin(t * 8 * animSpeed) * 0.1 + bass * 0.4;
+      // Scale driven by audio (returns to 1 when silent)
+      const tunnelScale = 1 + bass * 0.4;
       tunnelRef.current.scale.setScalar(tunnelScale);
     }
     
     if (cameraRef.current) {
-      // Enhanced camera shake with stronger response
-      const bassMultiplier = bass > 0.05 ? bass : 0.05;
+      // Camera shake ONLY when audio is strong
       if (bass > 0.5) {
-        camera.position.x = (Math.random() - 0.5) * bass * bassMultiplier * 0.6;
-        camera.position.y = (Math.random() - 0.5) * bass * bassMultiplier * 0.6;
+        camera.position.x = (Math.random() - 0.5) * bass * 0.6;
+        camera.position.y = (Math.random() - 0.5) * bass * 0.6;
       } else {
         camera.position.x *= 0.8;
         camera.position.y *= 0.8;
       }
       
-      // Enhanced forward movement with stronger illusion
-      camera.position.z = 6 + Math.sin(t * 2 * animSpeed) * 3 + bassMultiplier * Math.sin(t * 4 * animSpeed) * 2;
+      // Camera Z position driven by audio
+      camera.position.z = 6 + bass * 2;
       
-      // Add camera rotation for more disorienting effect
-      camera.rotation.z = Math.sin(t * 3 * animSpeed) * bass * 0.1;
+      // Camera rotation proportional to audio
+      camera.rotation.z = bass * 0.1;
     }
     
-    // Enhanced beam opacity with stronger response
+    // Beam opacity driven by audio
     if (beamMaterialRef.current) {
       beamMaterialRef.current.opacity = 0.5 + bass * 1.0;
     }
     
-    // Enhanced flash opacity with lower threshold
+    // Flash opacity driven by bass
     if (flashMaterialRef.current) {
       flashMaterialRef.current.opacity = Math.max(0, (bass - 0.4) * 3);
     }
@@ -202,7 +238,7 @@ export default function StroboscopicTunnelVisualizer({
       </group>
       
       {/* Enhanced strobe flashes with bass responsiveness */}
-      {bass > 0.6 && (
+      {smoothedBass.current > 0.6 && (
         <mesh position={[0, 0, -5]} material={flashMaterial}>
           <planeGeometry args={[20, 20]} />
         </mesh>

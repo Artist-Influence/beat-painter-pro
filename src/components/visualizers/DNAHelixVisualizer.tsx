@@ -10,11 +10,10 @@ function DNAStrand({ isTop, audioData, textureData }) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
-  const audioIntensity = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i < 128; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 128 / 255, 1.0);
-  }, [freqData]);
+  // Smoothing ref
+  const smoothedIntensity = useRef(0);
+  // Store current phase for each node
+  const nodePhases = useRef<number[]>(Array(40).fill(0));
 
   // Create DNA nodes
   const nodes = useMemo(() => {
@@ -40,19 +39,38 @@ function DNAStrand({ isTop, audioData, textureData }) {
     });
   }, [textureData.colors?.secondary, textureData.textureVersion]);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (groupRef.current) {
-      const t = clock.getElapsedTime();
+      // Calculate audio per-frame
+      let sum = 0;
+      for (let i = 0; i < 128; i++) sum += freqData[i] || 0;
+      const rawIntensity = Math.min(sum / 128 / 255, 1.0);
+      
+      // Asymmetric smoothing
+      const factor = rawIntensity > smoothedIntensity.current ? 0.5 : 0.2;
+      smoothedIntensity.current += (rawIntensity - smoothedIntensity.current) * factor;
+      
+      const audioIntensity = smoothedIntensity.current;
+      
+      // Audio threshold check
+      const audioThreshold = 0.02;
+      const hasAudio = audioIntensity > audioThreshold;
       
       groupRef.current.children.forEach((child, i) => {
         if (child.userData.type === 'node') {
-          const phase = t * 2 + (i / 40) * Math.PI * 2;
           const multiplier = isTop ? 1 : -1;
+          
+          // Phase advances ONLY when audio is present
+          if (hasAudio) {
+            nodePhases.current[i] += audioIntensity * 0.15;
+          }
+          
+          const phase = nodePhases.current[i] + (i / 40) * Math.PI * 2;
           const audioBoost = 1 + audioIntensity;
           
-          // Enhanced helix movement with audio reactivity
-          child.position.y = Math.sin(phase) * 0.4 * multiplier * audioBoost;
-          child.position.z = Math.cos(phase) * 0.2 * multiplier * audioBoost; // Add some Z movement
+          // Position driven by audio (returns to base when silent)
+          child.position.y = hasAudio ? Math.sin(phase) * 0.4 * multiplier * audioBoost : 0;
+          child.position.z = hasAudio ? Math.cos(phase) * 0.2 * multiplier * audioBoost : 0;
           child.scale.setScalar(0.5 + audioIntensity * 1.2);
         }
       });
@@ -102,15 +120,21 @@ export default function DNAHelixVisualizer({
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
-  const bassIntensity = useMemo(() => {
+  // Smoothing ref
+  const smoothedBass = useRef(0);
+
+  useFrame(() => {
+    // Calculate bass per-frame
     let sum = 0;
     for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [freqData]);
-
-  useFrame(({ clock }) => {
+    const rawBass = Math.min(sum / 86 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const factor = rawBass > smoothedBass.current ? 0.5 : 0.2;
+    smoothedBass.current += (rawBass - smoothedBass.current) * factor;
+    
     if (groupRef.current) {
-      // Keep horizontal orientation - no rotation on z-axis
+      // Keep horizontal orientation - no rotation
       groupRef.current.rotation.x = 0;
       groupRef.current.rotation.y = 0;
       groupRef.current.rotation.z = 0;
@@ -130,9 +154,9 @@ export default function DNAHelixVisualizer({
         <Sparkles
           count={100}
           scale={[6, 2, 2]}
-          size={1 + bassIntensity * 2}
-          speed={0.5 + bassIntensity}
-          opacity={0.3 + bassIntensity * 0.3}
+          size={1 + smoothedBass.current * 2}
+          speed={0.5 + smoothedBass.current}
+          opacity={0.3 + smoothedBass.current * 0.3}
           color={textureData.colors?.primary || "#ffffff"}
         />
       </group>
