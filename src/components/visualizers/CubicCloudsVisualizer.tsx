@@ -27,45 +27,65 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
+  const smoothedHighs = useRef(0);
+  // Store current orbit angle
+  const orbitAngle = useRef(angle);
 
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const animSpeed = audioSensitivity.animationSpeed;
+  useFrame(() => {
+    // Calculate audio per-frame
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    // Balanced audio-reactive movement - strong bass, subtle mids/highs
-    const speed = 1.0 + bass * 4.0 + mids * 1.0;
-    const spread = 0.6 + bass * 1.5 + mids * 0.5;
-    const x = Math.cos(angle + t * speed * animSpeed) * radius * spread;
-    const z = Math.sin(angle + t * speed * animSpeed) * radius * spread;
-    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.6 + bass * 2.0 + highs * 0.4;
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    
+    const bass = smoothedBass.current;
+    const mids = smoothedMids.current;
+    const highs = smoothedHighs.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
     
     if (meshRef.current) {
+      // Orbit movement ONLY when audio is present
+      if (hasAudio) {
+        const orbitSpeed = bass * 0.08 + mids * 0.03;
+        orbitAngle.current += orbitSpeed * audioSensitivity.animationSpeed;
+      }
+      
+      // Position based on current orbit angle and audio spread
+      const spread = 1 + bass * 1.5;
+      const x = Math.cos(orbitAngle.current) * radius * spread;
+      const z = Math.sin(orbitAngle.current) * radius * spread;
+      const y = bass * 2.0 + highs * 0.4;
       meshRef.current.position.set(x, y, z);
       
-      // Balanced rotation with strong bass response
-      meshRef.current.rotation.x = t * 2.0 + bass * 6.0;
-      meshRef.current.rotation.y = t * 1.8 + bass * 4.0 + mids * 1.5;
-      meshRef.current.rotation.z = t * 2.5 + bass * 5.0 + highs * 2.0;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        meshRef.current.rotation.x += bass * 0.15;
+        meshRef.current.rotation.y += bass * 0.1 + mids * 0.05;
+        meshRef.current.rotation.z += bass * 0.12 + highs * 0.05;
+      }
       
-      // Strong beat scaling with subtle baseline
-      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1 + Math.sin(t * 4) * 0.2;
+      // Scale reacts to audio (returns to 1 when silent)
+      const beatScale = bass > 0.3 ? 1 + bass * 2.5 : 1;
       const midsScale = mids > 0.2 ? 1 + mids * 0.8 : 1;
       meshRef.current.scale.setScalar(beatScale * midsScale);
     }
@@ -111,36 +131,60 @@ function OrbitingCubesVisualizer({ audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedHighs = useRef(0);
 
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+  useFrame(() => {
+    // Calculate audio per-frame
+    let bassSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    const rawHighs = Math.min(highsSum / 85 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    
+    const bass = smoothedBass.current;
+    const highs = smoothedHighs.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || highs > audioThreshold;
     
     if (groupRef.current) {
-      groupRef.current.rotation.y = t * 1.0 + bass * 2.0;
-      groupRef.current.rotation.x = Math.sin(t * 1.0) * 0.3 + bass * 0.6;
-      groupRef.current.position.y = Math.sin(t * 1.5) * 0.3 + bass * 1.0;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        groupRef.current.rotation.y += bass * 0.1;
+        groupRef.current.rotation.x += bass * 0.06;
+      }
       
+      // Position proportional to audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 1.0;
+      
+      // Scale reacts to audio (returns to 1 when silent)
       const beatScale = bass > 0.4 ? 1 + bass * 1.8 : 1;
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
-      const spherePulse = 1 + bass * 2.0 + highs * 0.5 + Math.sin(t * 6.0) * 0.2;
+      // Scale reacts to audio (returns to 1 when silent)
+      const spherePulse = 1 + bass * 2.0 + highs * 0.5;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
-      centerSphereRef.current.rotation.x = t * 2.0 + bass * 3.0;
-      centerSphereRef.current.rotation.y = t * 1.5 + bass * 2.5 + highs * 1.0;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        centerSphereRef.current.rotation.x += bass * 0.15;
+        centerSphereRef.current.rotation.y += bass * 0.12 + highs * 0.05;
+      }
     }
   });
 
@@ -160,7 +204,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         <meshStandardMaterial 
           color="#ffffff"
           emissive={primaryColor}
-          emissiveIntensity={6.0 + bass * 8.0}
+          emissiveIntensity={6.0 + smoothedBass.current * 8.0}
           metalness={extractedColors?.isMetallic ? 1 : 0}
           roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
           map={texture || undefined}
@@ -168,11 +212,11 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         />
       </mesh>
       <Sparkles
-        count={5 + highs * 15 + bass * 10}
+        count={5 + smoothedHighs.current * 15 + smoothedBass.current * 10}
         scale={[0.8, 0.8, 0.8]}
-        size={0.8 + highs * 1.5 + bass * 1}
-        speed={0.6 + highs * 1.2 + bass * 1}
-        opacity={0.015 + highs * 0.035}
+        size={0.8 + smoothedHighs.current * 1.5 + smoothedBass.current * 1}
+        speed={0.6 + smoothedHighs.current * 1.2 + smoothedBass.current * 1}
+        opacity={0.015 + smoothedHighs.current * 0.035}
         color={accentColor}
       />
     </group>

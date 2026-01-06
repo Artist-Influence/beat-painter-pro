@@ -29,24 +29,43 @@ function Feather({ index, side, audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+  // Smoothing refs
+  const smoothedMids = useRef(0);
+  const smoothedBass = useRef(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+  useFrame(() => {
+    // Calculate audio per-frame
+    let midsSum = 0, bassSum = 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    
+    const rawMids = Math.min(midsSum / 85 / 255, 1.0);
+    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    
+    const mids = smoothedMids.current;
+    const bass = smoothedBass.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold;
+    
     if (meshRef.current) {
-      meshRef.current.rotation.y = Math.sin(t * 3 + index * 0.8) * mids * 0.8 + bass * 1.0;
-      meshRef.current.rotation.z = Math.cos(t * 2 + index * 0.5) * mids * 0.4 + bass * 0.6;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        meshRef.current.rotation.y += bass * 0.15 + mids * 0.08;
+        meshRef.current.rotation.z += mids * 0.05 + bass * 0.06;
+      }
       
+      // Scale reacts to audio (returns to 1 when silent)
       const beatScale = bass > 0.5 ? 1 + bass * 1.2 : 1;
       meshRef.current.scale.setScalar(beatScale);
     }
@@ -64,7 +83,7 @@ function Feather({ index, side, audioData }: any) {
         roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
         metalness={extractedColors?.isMetallic ? 1 : 0.2}
           transparent
-          opacity={0.9 + mids * 0.5}
+          opacity={0.9 + smoothedMids.current * 0.5}
           side={THREE.DoubleSide}
           map={texture || undefined}
           emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
@@ -81,28 +100,48 @@ function Wing({ side, audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
+  // Smoothing refs
+  const smoothedBass = useRef(0);
+  const smoothedMids = useRef(0);
 
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+  useFrame(() => {
+    // Calculate audio per-frame
+    let bassSum = 0, midsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    const rawMids = Math.min(midsSum / 85 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
+    
+    const bass = smoothedBass.current;
+    const mids = smoothedMids.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold;
+    
     if (groupRef.current) {
-      groupRef.current.rotation.z = side * (Math.sin(t * 4) * 0.8 + bass * 1.5 + mids * 1.0);
-      groupRef.current.rotation.x = Math.cos(t * 2.5) * 0.3 + bass * 0.8;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        groupRef.current.rotation.z += side * bass * 0.15;
+        groupRef.current.rotation.x += bass * 0.08;
+      }
       
+      // Scale reacts to audio (returns to 1 when silent)
       const beatScale = bass > 0.6 ? 1 + bass * 2.0 : 1;
       groupRef.current.scale.setScalar(beatScale);
       
-      groupRef.current.position.y = 0.4 + Math.sin(t * 2) * 0.2 + bass * 0.8;
+      // Position proportional to audio (returns to base when silent)
+      groupRef.current.position.y = 0.4 + bass * 0.8;
     }
   });
 
@@ -124,24 +163,44 @@ function HologramWings({ audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 85 / 255, 1.0);
-  }, [frequency]);
+  // Smoothing refs
+  const smoothedHighs = useRef(0);
+  const smoothedBass = useRef(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min(sum / 86 / 255, 1.0);
-  }, [frequency]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+  useFrame(() => {
+    // Calculate audio per-frame
+    let highsSum = 0, bassSum = 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    
+    const rawHighs = Math.min(highsSum / 85 / 255, 1.0);
+    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const lerpVal = (current: number, target: number) => {
+      const factor = target > current ? 0.5 : 0.2;
+      return current + (target - current) * factor;
+    };
+    
+    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
+    
+    const highs = smoothedHighs.current;
+    const bass = smoothedBass.current;
+    
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || highs > audioThreshold;
+    
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(t * 2.5) * 0.4 + bass * 1.0;
-      groupRef.current.rotation.y = t * 0.8 + highs * 2.0;
-      groupRef.current.rotation.x = Math.sin(t * 1.5) * 0.2 + bass * 0.6;
+      // Position proportional to audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 1.0;
+      
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        groupRef.current.rotation.y += bass * 0.1 + highs * 0.05;
+        groupRef.current.rotation.x += bass * 0.06;
+      }
     }
   });
 
@@ -150,11 +209,11 @@ function HologramWings({ audioData }: any) {
       <Wing side={1} audioData={audioData} />
       <Wing side={-1} audioData={audioData} />
       <Sparkles
-        count={5 + highs * 12 + bass * 8}
+        count={5 + smoothedHighs.current * 12 + smoothedBass.current * 8}
         scale={[0.8, 0.8, 0.8]}
-        size={1 + highs * 2 + bass * 1.5}
-        speed={0.3 + highs * 0.8 + bass * 0.6}
-        opacity={0.01 + highs * 0.04}
+        size={1 + smoothedHighs.current * 2 + smoothedBass.current * 1.5}
+        speed={0.3 + smoothedHighs.current * 0.8 + smoothedBass.current * 0.6}
+        opacity={0.01 + smoothedHighs.current * 0.04}
         color={accentColor}
         position={[0, 0.8, 0]}
       />

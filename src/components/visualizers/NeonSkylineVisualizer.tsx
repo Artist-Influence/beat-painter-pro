@@ -13,13 +13,8 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
-  const buildingFreq = useMemo(() => {
-    const start = index * 8;
-    const end = Math.min(start + 8, 256);
-    let sum = 0;
-    for (let i = start; i < end; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 8 / 255, 1.0);
-  }, [freqData, index]);
+  // Smoothing ref
+  const smoothedFreq = useRef(0);
 
   // Use provided textureData for colors and texture mapping
   const primaryColor = textureData?.colors?.primary || '#ffffff';
@@ -54,13 +49,25 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
     });
   }, [secondaryColor]);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
+    // Calculate audio per-frame
+    const start = index * 8;
+    const end = Math.min(start + 8, 256);
+    let sum = 0;
+    for (let i = start; i < end; i++) sum += freqData[i] || 0;
+    const rawFreq = Math.min(sum / 8 / 255, 1.0);
+    
+    // Asymmetric smoothing
+    const factor = rawFreq > smoothedFreq.current ? 0.5 : 0.2;
+    smoothedFreq.current += (rawFreq - smoothedFreq.current) * factor;
+    
+    const buildingFreq = smoothedFreq.current;
+    
     if (buildingRef.current && buildingMaterial) {
-      const t = clock.getElapsedTime();
-      const height = Math.max(baseHeight + buildingFreq * 3.0, 0.1); // Prevent zero/negative height
-      const pulse = Math.sin(t * 4 + index * 0.5) * 0.5 + 0.5;
+      // Height driven by audio (returns to base when silent)
+      const height = Math.max(baseHeight + buildingFreq * 3.0, 0.1);
       
-      // Controlled audio response for width and depth
+      // Width driven by audio (returns to base when silent)
       const audioWidth = Math.max(width * (1 + buildingFreq * 1.5), 0.1);
       const audioDepth = Math.max(width * (1 + buildingFreq * 1.2), 0.1);
       
@@ -68,9 +75,9 @@ function NeonBuilding({ position, baseHeight, width, index, audioData, textureDa
       buildingRef.current.scale.set(audioWidth, height, audioDepth);
       buildingRef.current.position.set(position[0], height / 2, position[2]);
       
-      // Update material emissive intensity safely
+      // Update material emissive intensity
       if (buildingMaterial.emissiveIntensity !== undefined) {
-        buildingMaterial.emissiveIntensity = Math.min(1.2 + buildingFreq * 4.0 + pulse * 1.0, 10.0);
+        buildingMaterial.emissiveIntensity = Math.min(1.2 + buildingFreq * 4.0, 10.0);
       }
     }
     
@@ -132,11 +139,8 @@ export default function NeonSkylineVisualizer({
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
   
-  const bassIntensity = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    return Math.min(sum / 86 / 255 * 3, 1.0); // Increase sensitivity
-  }, [freqData]);
+  // Smoothing ref
+  const smoothedBass = useRef(0);
 
   const buildings = useMemo(() => {
     return Array(30).fill(null).map((_, i) => ({
@@ -147,13 +151,20 @@ export default function NeonSkylineVisualizer({
     }));
   }, []);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
+    // Calculate bass per-frame
+    let sum = 0;
+    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
+    const rawBass = Math.min(sum / 86 / 255 * 3, 1.0);
+    
+    // Asymmetric smoothing
+    const factor = rawBass > smoothedBass.current ? 0.5 : 0.2;
+    smoothedBass.current += (rawBass - smoothedBass.current) * factor;
+    
     if (groupRef.current) {
-      // Keep horizontal - remove vertical movement
+      // Keep horizontal - no movement, no breathing effect
       groupRef.current.position.y = -1;
-      // Add subtle breathing effect
-      const breathe = Math.sin(clock.getElapsedTime() * 0.5) * 0.05;
-      groupRef.current.scale.setScalar(1 + breathe);
+      groupRef.current.scale.setScalar(1);
     }
   });
 
@@ -180,9 +191,9 @@ export default function NeonSkylineVisualizer({
         <Sparkles
           count={200}
           scale={[12, 2, 2]} // Flatter sparkle area for horizontal layout
-          size={1 + bassIntensity * 2}
-          speed={0.3 + bassIntensity}
-          opacity={0.2 + bassIntensity * 0.3}
+          size={1 + smoothedBass.current * 2}
+          speed={0.3 + smoothedBass.current}
+          opacity={0.2 + smoothedBass.current * 0.3}
           color={textureData.colors.primary}
         />
       </group>

@@ -34,100 +34,109 @@ function CrackedCrystalOrb({ audioData }: any) {
   const secondaryColor = extractedColors?.secondary || '#ffffff';
   const accentColor = extractedColors?.accent || '#ffffff';
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
-
   // Smooth audio values with interpolation
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
 
-  useFrame((state) => {
-    const time = state.clock.getElapsedTime();
+  useFrame(() => {
     const animSpeed = audioSensitivity.animationSpeed;
-    const amp = amplitude;
-    const beat = Math.max(beatStrength, bass);
+    
+    // Calculate audio per-frame
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const rawBeat = Math.max(beatStrength, rawBass);
     
     // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
     const lerp = (current: number, target: number) => {
       const factor = target > current ? 0.55 : 0.35;
       return current + (target - current) * factor;
     };
-    smoothedBass.current = lerp(smoothedBass.current, bass);
-    smoothedMids.current = lerp(smoothedMids.current, mids);
-    smoothedHighs.current = lerp(smoothedHighs.current, highs);
-    smoothedBeat.current = lerp(smoothedBeat.current, beat);
+    smoothedBass.current = lerp(smoothedBass.current, rawBass);
+    smoothedMids.current = lerp(smoothedMids.current, rawMids);
+    smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
+    smoothedBeat.current = lerp(smoothedBeat.current, rawBeat);
     
     // Transient blend: 30% raw for immediate punch
-    const finalBass = smoothedBass.current * 0.7 + bass * 0.3;
-    const finalBeat = smoothedBeat.current * 0.7 + beat * 0.3;
+    const finalBass = smoothedBass.current * 0.7 + rawBass * 0.3;
+    const finalMids = smoothedMids.current * 0.7 + rawMids * 0.3;
+    const finalHighs = smoothedHighs.current * 0.7 + rawHighs * 0.3;
+    const finalBeat = smoothedBeat.current * 0.7 + rawBeat * 0.3;
     
-    const scalePulse = 1 + 0.5 * finalBeat + 0.15 * Math.sin(time * 6 * animSpeed);
-    const baseScale = 0.7 + 0.4 * amp;
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = finalBass > audioThreshold || finalMids > audioThreshold || finalHighs > audioThreshold;
     
     const beatExplosion = finalBeat > 0.5 ? 1 + finalBeat * 0.8 : 1;
+    const baseScale = 0.7 + 0.4 * amplitude;
+    const scalePulse = 1 + 0.5 * finalBeat;
 
     if (group.current) {
-      group.current.rotation.y = time * 1.2 * animSpeed + smoothedMids.current * 3.0;
-      group.current.rotation.x = Math.sin(time * 2.0 * animSpeed) * 0.6 + smoothedBeat.current * 1.5;
-      group.current.position.y = 0.8 * Math.sin(time * 3 * animSpeed) + smoothedBeat.current * 2.0;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        group.current.rotation.y += finalMids * 0.15 * animSpeed;
+        group.current.rotation.x += finalBeat * 0.1 * animSpeed;
+      }
+      
+      // Position proportional to audio (returns to 0 when silent)
+      group.current.position.y = finalBeat * 2.0;
+      
+      // Scale reacts to audio (returns to base when silent)
       group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
     }
 
     if (orb.current) {
-      const orbPulse = 1 + smoothedBeat.current * 1.2 + smoothedHighs.current * 0.9;
+      // Scale reacts to audio (returns to 1 when silent)
+      const orbPulse = 1 + finalBeat * 1.2 + finalHighs * 0.9;
       orb.current.scale.setScalar(orbPulse);
       
-      // Smoother shake effect
-      const shakeIntensity = smoothedBeat.current * 0.4;
-      orb.current.position.x = Math.sin(time * 20 * animSpeed) * shakeIntensity;
-      orb.current.position.z = Math.cos(time * 18 * animSpeed) * shakeIntensity;
+      // Shake effect proportional to audio (returns to 0 when silent)
+      const shakeIntensity = finalBeat * 0.4;
+      orb.current.position.x = hasAudio ? Math.sin(Date.now() * 0.02) * shakeIntensity : 0;
+      orb.current.position.z = hasAudio ? Math.cos(Date.now() * 0.018) * shakeIntensity : 0;
     }
 
     if (innerCore.current) {
-      innerCore.current.rotation.y = time * 4.0 * animSpeed + smoothedMids.current * 6.0;
-      innerCore.current.rotation.x = time * 3.5 * animSpeed + smoothedHighs.current * 5.0;
-      const coreScale = 0.4 + 0.5 * Math.sin(time * 6 * animSpeed) + smoothedBeat.current * 1.2;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        innerCore.current.rotation.y += finalMids * 0.3 * animSpeed;
+        innerCore.current.rotation.x += finalHighs * 0.25 * animSpeed;
+      }
+      // Scale reacts to audio
+      const coreScale = 0.4 + finalBeat * 1.2;
       innerCore.current.scale.setScalar(coreScale);
     }
 
     shards.current.forEach((shard, i) => {
       if (shard) {
-        const angle = (i / shards.current.length) * Math.PI * 2 + time * 3 * animSpeed;
-        const radius = 1.2 + 1.0 * Math.sin(time * 4 * animSpeed + i) + smoothedBeat.current * 2.0;
+        // Rotation ONLY when audio is present
+        if (hasAudio) {
+          shard.rotation.y += finalMids * 0.25 * animSpeed;
+          shard.rotation.x += finalBeat * 0.4 * animSpeed;
+          shard.rotation.z += finalHighs * 0.3 * animSpeed;
+        }
         
-        // Smoother orbital motion
-        const x = Math.cos(angle) * radius;
-        const z = Math.sin(angle) * radius;
-        const y = Math.sin(time * 4.0 * animSpeed + i * 0.5) * 0.8 + smoothedBeat.current * 1.5;
-        
-        // Smooth position interpolation
-        shard.position.x = THREE.MathUtils.lerp(shard.position.x, x, 0.1);
-        shard.position.z = THREE.MathUtils.lerp(shard.position.z, z, 0.1);
-        shard.position.y = THREE.MathUtils.lerp(shard.position.y, y, 0.1);
-        
-        shard.rotation.y = time * 5.0 * animSpeed + i * 0.8;
-        shard.rotation.x = time * 4.0 * animSpeed + smoothedBeat.current * 8.0;
-        shard.rotation.z = time * 3.0 * animSpeed + smoothedHighs.current * 10.0;
-        
-        const shardScale = 1.0 + smoothedBeat.current * 1.0 + smoothedHighs.current * 0.7;
+        // Scale reacts to audio
+        const shardScale = 1.0 + finalBeat * 1.0 + finalHighs * 0.7;
         shard.scale.setScalar(shardScale);
+        
+        // Position expansion proportional to audio
+        const angle = (i / shards.current.length) * Math.PI * 2;
+        const radius = 1.2 + finalBeat * 2.0;
+        const targetX = Math.cos(angle) * radius;
+        const targetZ = Math.sin(angle) * radius;
+        const targetY = finalBeat * 1.5;
+        
+        shard.position.x = THREE.MathUtils.lerp(shard.position.x, targetX, 0.1);
+        shard.position.z = THREE.MathUtils.lerp(shard.position.z, targetZ, 0.1);
+        shard.position.y = THREE.MathUtils.lerp(shard.position.y, targetY, 0.1);
       }
     });
   });
@@ -186,11 +195,11 @@ function CrackedCrystalOrb({ audioData }: any) {
         </mesh>
       ))}
       <Sparkles
-        count={8 + highs * 20}
+        count={8 + smoothedHighs.current * 20}
         scale={[1, 1, 1]}
-        size={1 + highs * 3 + Math.max(beatStrength, bass) * 2}
-        speed={0.4 + highs * 1 + Math.max(beatStrength, bass) * 1.5}
-        opacity={0.02 + 0.03 * highs + Math.max(beatStrength, bass) * 0.02}
+        size={1 + smoothedHighs.current * 3 + smoothedBeat.current * 2}
+        speed={0.4 + smoothedHighs.current * 1 + smoothedBeat.current * 1.5}
+        opacity={0.02 + 0.03 * smoothedHighs.current + smoothedBeat.current * 0.02}
         color={accentColor}
       />
     </group>

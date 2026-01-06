@@ -19,9 +19,8 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
   
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (meshRef.current) {
-      const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
       
       // Calculate audio per-frame (NOT in useMemo)
@@ -49,28 +48,31 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       const mids = smoothedMids.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      
       // Beat pop effect
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
       
-      // AUDIO-FIRST rotation - time is subtle, audio dominates
-      meshRef.current.rotation.z = t * 0.1 * speed + bass * Math.PI * 0.8 + mids * Math.PI * 0.3;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        meshRef.current.rotation.z += bass * 0.1 * speed;
+      }
       
-      // AUDIO-FIRST scale with beat pop
+      // Scale reacts to audio (returns to 1 when silent)
       const pulse = (1 + bass * 0.6) * beatPop;
       meshRef.current.scale.setScalar(pulse);
       
-      // Position driven by audio
-      meshRef.current.position.z = bass * 1.5 + Math.sin(t * 0.5 * speed + depth) * 0.2;
-      meshRef.current.position.x = mids * 0.8 * Math.cos(t * 0.3 * speed + depth);
-      meshRef.current.position.y = bass * 0.6 * Math.sin(t * 0.4 * speed + depth);
+      // Position driven by audio (returns to 0 when silent)
+      meshRef.current.position.z = bass * 1.5;
+      meshRef.current.position.x = mids * 0.8;
+      meshRef.current.position.y = bass * 0.6;
     }
   });
   
   const primaryColor = textureData.colors.primary;
   const accentColor = textureData.colors.accent;
-  
-  // Create material using current smoothed bass value
-  const getMaterialEmissive = () => 2.0 + smoothedBass.current * 6.0 + smoothedBeat.current * 4.0;
   
   return (
     <group ref={meshRef}>
@@ -122,9 +124,8 @@ export default function PsychedelicMandalaVisualizer({
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (groupRef.current) {
-      const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
       
       // Calculate audio per-frame
@@ -152,18 +153,24 @@ export default function PsychedelicMandalaVisualizer({
       const mids = smoothedMids.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // AUDIO-FIRST rotation - time subtle, bass dominates
-      groupRef.current.rotation.z = t * 0.1 * speed + bass * Math.PI * 0.5;
+      // Rotation ONLY when audio is present
+      if (hasAudio) {
+        groupRef.current.rotation.z += bass * 0.08 * speed;
+      }
       
-      // AUDIO-FIRST breathing with beat pop
+      // Scale reacts to audio (returns to 1 when silent)
       const breathe = (1 + bass * 0.4) * beatPop;
       groupRef.current.scale.setScalar(Math.min(breathe, 1.4));
       
-      // Position driven by audio
-      groupRef.current.position.y = bass * 0.8 * Math.sin(t * 0.5 * speed);
+      // Position driven by audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 0.8;
       groupRef.current.rotation.x = mids * Math.PI * 0.15;
     }
   });

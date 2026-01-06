@@ -67,14 +67,12 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
     return mat;
   }, [textureData.textureVersion, textureData.colors?.primary, ribbonIndex]);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (meshRef.current && materialRef.current) {
-      const t = clock.getElapsedTime();
-      
       // Calculate audio per-frame
       let sum = 0;
       for (let i = freqStart; i < freqEnd; i++) sum += freqData[i] || 0;
-      const rawFreq = Math.min(sum / 30 / 255, 1.5);
+      const rawFreq = Math.min(sum / 30 / 255 * 2.5, 1.5);
       const rawBeat = Math.max(beatStrength, rawFreq * 0.6);
       
       // ASYMMETRIC smoothing
@@ -91,20 +89,27 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
       const ribbonFreq = smoothedFreq.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check
+      const audioThreshold = 0.02;
+      const hasAudio = ribbonFreq > audioThreshold || beat > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.6 : 1;
       
-      // Update ribbon wave positions - AUDIO-FIRST
+      // Update ribbon wave positions - ONLY when audio present
       const positions = meshRef.current.geometry.attributes.position;
       const array = positions.array as Float32Array;
       
       for (let i = 0; i < array.length; i += 3) {
         const x = array[i];
-        // AUDIO-FIRST offset - audio dominates, time is subtle
-        const audioOffset = ribbonFreq * 0.4 * beatPop * Math.sin(x * 2 + t * 0.5);
-        const timeOffset = Math.sin(t * 0.5 + x * 0.2) * 0.05;
-        
-        array[i + 2] = audioOffset + timeOffset;
+        // Wave offset ONLY when audio is present
+        if (hasAudio) {
+          const audioOffset = ribbonFreq * 0.4 * beatPop * Math.sin(x * 2);
+          array[i + 2] = audioOffset;
+        } else {
+          // Return to flat when silent
+          array[i + 2] = 0;
+        }
       }
       
       positions.needsUpdate = true;
