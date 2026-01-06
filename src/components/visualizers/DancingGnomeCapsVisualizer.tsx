@@ -37,31 +37,37 @@ function GlassShard({ index, audioData, textureData }: any) {
     return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
   }, [frequency, audioSensitivity.highsMultiplier]);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const animSpeed = audioSensitivity.animationSpeed;
-
-    // Much more dramatic audio-reactive movement
-    const speed = 1.0 + bass * 6.0 + mids * 3.0;
-    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 2.5);
-    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 2.5);
-    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.4 + bass * 4.0 + highs * 2.0;
+  useFrame(() => {
+    // Audio threshold check - completely still when silent
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
 
     if (meshRef.current) {
-      meshRef.current.position.set(x, y, z);
+      // POSITION: Audio-reactive orbit (stays at base position when silent)
+      if (hasAudio) {
+        const x = Math.cos(angle) * radius * (1 + bass * 2.5);
+        const z = Math.sin(angle) * radius * (1 + bass * 2.5);
+        const y = bass * 2.0 + highs * 1.0;
+        meshRef.current.position.set(x, y, z);
+        
+        // ROTATION: Only when audio is present
+        meshRef.current.rotation.x += (mids * 0.08 + bass * 0.1);
+        meshRef.current.rotation.y += (mids * 0.06 + highs * 0.08);
+        meshRef.current.rotation.z += (bass * 0.04 + highs * 0.06);
+      } else {
+        // Return to base position when silent
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        meshRef.current.position.set(x, 0, z);
+      }
       
-      // Much more dramatic rotation with stronger audio response
-      meshRef.current.rotation.x += (mids * 2.0 + bass * 3.0) * 0.032 * animSpeed;
-      meshRef.current.rotation.y += (mids * 1.5 + highs * 2.5) * 0.032 * animSpeed;
-      meshRef.current.rotation.z += (bass * 1.0 + highs * 2.0) * 0.032 * animSpeed;
-      
-      // Clamped beat scaling to prevent overflow
-      const beatScale = Math.min(Math.max(bass > 0.3 ? 1 + bass * 5.0 : 1 + Math.sin(t * 8 * animSpeed) * 0.8, 0.7), 2.0);
+      // SCALE: Returns to default when silent (no time-based fallback)
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 3.0, 0.7), 2.0) : 1;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = 0.8 + highs * 4.0 + bass * 3.0;
+        material.emissiveIntensity = hasAudio ? (0.8 + highs * 4.0 + bass * 3.0) : 0.8;
       }
     }
   });
@@ -115,32 +121,39 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
     return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
   }, [frequency, audioSensitivity.highsMultiplier]);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const animSpeed = audioSensitivity.animationSpeed;
-
-    // Much more dramatic audio-reactive cap movement
-    const speed = 0.8 + bass * 5.0 + mids * 2.5;
-    const x = Math.cos(angle + t * speed * animSpeed) * radius * (1 + bass * 2.0);
-    const z = Math.sin(angle + t * speed * animSpeed) * radius * (1 + bass * 2.0);
-    const y = Math.sin((t + index) * 3.0 * animSpeed) * 0.3 + bass * 3.0 + mids * 1.5;
+  useFrame(() => {
+    // Audio threshold check - completely still when silent
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
 
     if (meshRef.current) {
-      meshRef.current.position.set(x, y, z);
+      // POSITION: Audio-reactive (stays at base position when silent)
+      if (hasAudio) {
+        const x = Math.cos(angle) * radius * (1 + bass * 2.0);
+        const z = Math.sin(angle) * radius * (1 + bass * 2.0);
+        const y = bass * 1.5 + mids * 0.8;
+        meshRef.current.position.set(x, y, z);
+        
+        // Face towards center for cap effect
+        meshRef.current.lookAt(0, y, 0);
+        
+        // ROTATION: Only when audio is present
+        meshRef.current.rotation.z += (bass * 0.06 + highs * 0.04);
+      } else {
+        // Return to base position when silent
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        meshRef.current.position.set(x, 0, z);
+        meshRef.current.lookAt(0, 0, 0);
+      }
       
-      // Face towards center for cap effect
-      meshRef.current.lookAt(0, y, 0);
-      
-      // Much more dramatic rotation
-      meshRef.current.rotation.z += (bass * 1.5 + highs * 1.0) * 0.032 * animSpeed;
-      
-      // Clamped beat scaling to prevent overflow
-      const beatScale = Math.min(Math.max(bass > 0.3 ? 1 + bass * 4.0 : 1 + Math.sin(t * 6 * animSpeed) * 0.5, 0.7), 2.0);
+      // SCALE: Returns to default when silent (no time-based fallback)
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 2.5, 0.7), 2.0) : 1;
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = 0.6 + highs * 3.5 + bass * 2.5;
+        material.emissiveIntensity = hasAudio ? (0.6 + highs * 3.5 + bass * 2.5) : 0.6;
       }
     }
   });
@@ -195,30 +208,37 @@ function GlassSphereVisualizer({ audioData }: any) {
     return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
   }, [frequency, audioSensitivity.highsMultiplier]);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const animSpeed = audioSensitivity.animationSpeed;
+  useFrame(() => {
+    // Audio threshold check - completely still when silent
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
     
     if (groupRef.current) {
-      // Much more dramatic group movement with stronger audio response
-      groupRef.current.rotation.y = t * 2.0 * animSpeed + bass * 10.0 + mids * 6.0;
-      groupRef.current.rotation.x = Math.sin(t * 3.0 * animSpeed) * 0.8 + bass * 4.0;
-      groupRef.current.position.y = Math.sin(t * 4.0 * animSpeed) * 1.2 + bass * 5.0;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        groupRef.current.rotation.y += bass * 0.15 + mids * 0.08;
+        groupRef.current.rotation.x += bass * 0.05;
+      }
       
-      // Clamped beat scaling to prevent overflow
-      const beatScale = Math.min(Math.max(bass > 0.4 ? 1 + bass * 6.0 : 1 + Math.sin(t * 8 * animSpeed) * 1.0, 0.7), 2.0);
+      // POSITION: Proportional to audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 2.0;
+      
+      // SCALE: Returns to default when silent (no time-based fallback)
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 3.0, 0.7), 2.0) : 1;
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
-      // Much more dramatic center sphere with stronger pulsing
-      const spherePulse = 1 + bass * 6.0 + highs * 4.0 + Math.sin(t * 10.0 * animSpeed) * 1.2;
+      // SCALE: Audio-reactive (returns to default when silent)
+      const spherePulse = hasAudio ? (1 + bass * 3.0 + highs * 2.0) : 1;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
-      // Much faster rotation with dramatic audio response
-      centerSphereRef.current.rotation.x = t * 6.0 * animSpeed + bass * 20.0;
-      centerSphereRef.current.rotation.y = t * 5.0 * animSpeed + highs * 24.0;
-      centerSphereRef.current.rotation.z = t * 4.0 * animSpeed + mids * 16.0;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        centerSphereRef.current.rotation.x += bass * 0.2;
+        centerSphereRef.current.rotation.y += highs * 0.15;
+        centerSphereRef.current.rotation.z += mids * 0.1;
+      }
     }
   });
 

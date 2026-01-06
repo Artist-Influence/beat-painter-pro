@@ -119,10 +119,18 @@ function ElectricField({ audioData }: any) {
     
     const isPeakMoment = beatFinal > 0.7;
     
-    // Rotate entire field - subtle time-based rotation
+    // Audio threshold check - completely still when silent
+    const audioThreshold = 0.02;
+    const hasAudio = bassFinal > audioThreshold || midsFinal > audioThreshold || highsFinal > audioThreshold;
+    
+    // Field group - rotation only when audio present
     if (fieldGroupRef.current) {
-      fieldGroupRef.current.rotation.y = time * 0.1 * animSpeed;
-      fieldGroupRef.current.scale.setScalar(0.7 + bassFinal * 0.7 + (isPeakMoment ? 0.3 : 0));
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        fieldGroupRef.current.rotation.y += bassFinal * 0.03;
+      }
+      // SCALE: Returns to default when silent
+      fieldGroupRef.current.scale.setScalar(hasAudio ? (0.7 + bassFinal * 0.7 + (isPeakMoment ? 0.3 : 0)) : 0.7);
     }
     
     // Animate charges - PURE AUDIO-REACTIVE MOVEMENT
@@ -173,10 +181,11 @@ function ElectricField({ audioData }: any) {
     
     // Animate electron cloud - chaotic audio-driven swarming
     if (electronCloudRef.current) {
-      // Rotation speed driven by audio
-      const orbitSpeed = 1 + bassFinal * 3;
-      electronCloudRef.current.rotation.x = time * 0.3 * animSpeed * orbitSpeed;
-      electronCloudRef.current.rotation.z = -time * 0.2 * animSpeed * orbitSpeed;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        electronCloudRef.current.rotation.x += bassFinal * 0.05;
+        electronCloudRef.current.rotation.z -= midsFinal * 0.03;
+      }
       
       const positions = electronCloudRef.current.geometry.attributes.position.array as Float32Array;
       const originalPositions = electronPositions;

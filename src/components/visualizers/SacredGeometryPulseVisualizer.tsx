@@ -50,19 +50,25 @@ function FlowerOfLife({ audioData, textureData }) {
       const mids = smoothedMids.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check - completely still when silent
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
       
-      // AUDIO-FIRST rotation - time subtle, bass dominates
-      groupRef.current.rotation.z = t * 0.1 * animSpeed + bass * Math.PI * 0.6 + mids * Math.PI * 0.2;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        groupRef.current.rotation.z += bass * 0.08 + mids * 0.04;
+      }
       
-      // AUDIO-FIRST breathing with beat pop
-      const breathe = (1 + bass * 0.5 + mids * 0.2) * beatPop;
+      // SCALE: Returns to default when silent
+      const breathe = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
       groupRef.current.scale.setScalar(breathe);
       
-      // Position driven by audio
-      groupRef.current.position.y = bass * 0.3 * Math.sin(t * 0.5 * animSpeed);
-      groupRef.current.position.x = mids * 0.15 * Math.cos(t * 0.4 * animSpeed);
+      // POSITION: Proportional to audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 0.3;
+      groupRef.current.position.x = mids * 0.15;
     }
     
     // Emissive intensity driven by beat
@@ -161,21 +167,27 @@ function Metatron({ audioData, textureData }) {
       const highs = smoothedHighs.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check - completely still when silent
+      const audioThreshold = 0.02;
+      const hasAudio = highs > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // AUDIO-FIRST rotation - time subtle, highs dominate
-      meshRef.current.rotation.x = t * 0.2 * animSpeed + highs * Math.PI * 0.8;
-      meshRef.current.rotation.y = t * 0.25 * animSpeed + highs * Math.PI * 1.0;
-      meshRef.current.rotation.z = t * 0.1 * animSpeed + highs * Math.PI * 0.5;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        meshRef.current.rotation.x += highs * 0.1;
+        meshRef.current.rotation.y += highs * 0.12;
+        meshRef.current.rotation.z += highs * 0.06;
+      }
       
-      // AUDIO-FIRST scale with beat pop
-      const expand = (1 + highs * 0.8) * beatPop;
+      // SCALE: Returns to default when silent
+      const expand = hasAudio ? (1 + highs * 0.8) * beatPop : 1;
       meshRef.current.scale.setScalar(expand);
       
-      // Position movement driven by audio
-      meshRef.current.position.x = highs * 0.25 * Math.sin(t * animSpeed);
-      meshRef.current.position.y = highs * 0.15 * Math.cos(t * 0.8 * animSpeed);
+      // POSITION: Proportional to audio (returns to 0 when silent)
+      meshRef.current.position.x = highs * 0.25;
+      meshRef.current.position.y = highs * 0.15;
     }
     
     // Emissive driven by highs and beat
@@ -247,18 +259,24 @@ export default function SacredGeometryPulseVisualizer({
       const bass = smoothedBass.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check - completely still when silent
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // AUDIO-FIRST rotation - time subtle, bass dominates
-      containerRef.current.rotation.z = t * 0.1 * animSpeed + bass * Math.PI * 0.4;
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        containerRef.current.rotation.z += bass * 0.05;
+      }
       
-      // AUDIO-FIRST breathing with beat pop
-      const breathe = (1 + bass * 0.4) * beatPop;
+      // SCALE: Returns to default when silent
+      const breathe = hasAudio ? (1 + bass * 0.4) * beatPop : 1;
       containerRef.current.scale.setScalar(breathe);
       
-      // Position movement
-      containerRef.current.position.y = bass * 0.2 * Math.sin(t * 0.5 * animSpeed);
+      // POSITION: Proportional to audio (returns to 0 when silent)
+      containerRef.current.position.y = bass * 0.2;
     }
   });
 

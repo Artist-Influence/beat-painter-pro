@@ -58,23 +58,34 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
     const pathIntensity = smoothedIntensity.current;
     const beat = smoothedBeat.current;
     
+    // Audio threshold check - completely still when silent
+    const audioThreshold = 0.02;
+    const hasAudio = pathIntensity > audioThreshold;
+    
     // Beat pop
     const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
     
     if (lineRef.current && pathMaterial) {
-      // AUDIO-FIRST emissive
-      pathMaterial.emissiveIntensity = 0.3 + pathIntensity * 3 + beat * 2;
+      // AUDIO-FIRST emissive (dim when silent)
+      pathMaterial.emissiveIntensity = hasAudio ? (0.3 + pathIntensity * 3 + beat * 2) : 0.1;
     }
     
     if (pulsesRef.current) {
       pulsesRef.current.children.forEach((pulse, i) => {
-        const x = ((t * pulseSpeed + i * 2) % 8) - 4;
-        pulse.position.x = x;
-        
-        // AUDIO-FIRST scale with beat pop
-        const edgeDistance = Math.min(Math.abs(x + 4), Math.abs(x - 4));
-        const audioScale = (edgeDistance / 4) * (0.5 + pathIntensity * 1.5) * beatPop;
-        pulse.scale.setScalar(audioScale);
+        if (hasAudio) {
+          // POSITION: Audio-driven movement
+          const basePos = (i * 2) - 4;
+          const audioOffset = pathIntensity * 2;
+          pulse.position.x = basePos + audioOffset;
+          
+          // SCALE: Audio-first with beat pop
+          const audioScale = (0.5 + pathIntensity * 1.5) * beatPop;
+          pulse.scale.setScalar(audioScale);
+        } else {
+          // STATIC: Return to evenly spaced positions when silent
+          pulse.position.x = (i * 2) - 3;
+          pulse.scale.setScalar(0.3);
+        }
       });
     }
   });
@@ -154,24 +165,30 @@ function CircuitNode({ position, index, audioData, textureData }) {
       const nodeIntensity = smoothedIntensity.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check - completely still when silent
+      const audioThreshold = 0.02;
+      const hasAudio = nodeIntensity > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // AUDIO-FIRST scale with beat pop
-      const scale = (0.8 + nodeIntensity * 1.2) * beatPop;
+      // SCALE: Returns to default when silent
+      const scale = hasAudio ? (0.8 + nodeIntensity * 1.2) * beatPop : 0.8;
       nodeRef.current.scale.setScalar(scale);
       
       nodeRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2]));
       
       if (coreRef.current && nodeMaterial) {
-        // AUDIO-FIRST emissive
-        nodeMaterial.emissiveIntensity = 0.5 + nodeIntensity * 3 + beat * 2;
+        // EMISSIVE: Dim when silent
+        nodeMaterial.emissiveIntensity = hasAudio ? (0.5 + nodeIntensity * 3 + beat * 2) : 0.3;
       }
       
       if (ringRef.current) {
-        // AUDIO-FIRST rotation
-        ringRef.current.rotation.z = t * 0.3 + nodeIntensity * Math.PI * 0.5;
-        const ringScale = (1 + nodeIntensity * 0.5) * beatPop;
+        // ROTATION: Only when audio is present (frozen when silent)
+        if (hasAudio) {
+          ringRef.current.rotation.z += nodeIntensity * 0.1;
+        }
+        const ringScale = hasAudio ? (1 + nodeIntensity * 0.5) * beatPop : 1;
         ringRef.current.scale.setScalar(ringScale);
       }
     }
