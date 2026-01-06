@@ -111,19 +111,23 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           vPosition = position;
           vUv = uv;
           
-          // Ant-like movement patterns under the skin
-          float antTrails1 = 0.4 * sin(uTime * 8.0 + position.x * 25.0 + position.y * 15.0 + uBass * 4.0);
-          float antTrails2 = 0.3 * sin(uTime * 12.0 + position.z * 20.0 + position.y * 18.0 + uMids * 3.0);
-          float antTrails3 = 0.2 * sin(uTime * 16.0 + position.x * 18.0 + position.z * 22.0 + uHighs * 5.0);
+          // Audio activity check - only animate when audio present
+          float audioActivity = uBass + uMids + uHighs;
+          float audioMult = audioActivity > 0.02 ? 1.0 : 0.0;
           
-          // Crawling surface movements
-          float surfaceCrawl = 0.15 * sin(uTime * 20.0 + position.x * 30.0 + position.z * 35.0);
-          float deepMovement = 0.25 * sin(uTime * 6.0 + position.y * 12.0 + uBass * 6.0);
+          // Ant-like movement patterns under the skin - GATED by audio
+          float antTrails1 = audioMult * 0.4 * sin(uTime * 8.0 + position.x * 25.0 + position.y * 15.0 + uBass * 4.0);
+          float antTrails2 = audioMult * 0.3 * sin(uTime * 12.0 + position.z * 20.0 + position.y * 18.0 + uMids * 3.0);
+          float antTrails3 = audioMult * 0.2 * sin(uTime * 16.0 + position.x * 18.0 + position.z * 22.0 + uHighs * 5.0);
           
-          // Enhanced audio-reactive pulsing
-          float extremeTopPulse = smoothstep(-0.8, 1.5, position.y) * 0.6 * sin(uTime * 8.0 + uBass * 4.0);
-          float violentSidePulse = 0.4 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
-          float chaoticDetailPulse = 0.3 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
+          // Crawling surface movements - GATED by audio
+          float surfaceCrawl = audioMult * 0.15 * sin(uTime * 20.0 + position.x * 30.0 + position.z * 35.0);
+          float deepMovement = audioMult * 0.25 * sin(uTime * 6.0 + position.y * 12.0 + uBass * 6.0);
+          
+          // Enhanced audio-reactive pulsing - GATED by audio
+          float extremeTopPulse = audioMult * smoothstep(-0.8, 1.5, position.y) * 0.6 * sin(uTime * 8.0 + uBass * 4.0);
+          float violentSidePulse = audioMult * 0.4 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
+          float chaoticDetailPulse = audioMult * 0.3 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
           
           // Enhanced beat explosion
           float beatExplosion = uBass > 0.4 ? (1.0 + uBass * 1.2) : 1.0;
@@ -230,23 +234,28 @@ function AlienMembrane({ audioData }: any) {
       const highs = smoothedHighs.current;
       const beat = smoothedBeat.current;
       
+      // Audio threshold check - completely still when silent
+      const audioThreshold = 0.02;
+      const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+      
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // AUDIO-FIRST movement - time subtle, audio dominates
-      groupRef.current.position.y = bass * 2.0 * Math.sin(t * 0.5 * speed) + Math.sin(t * speed) * 0.3;
-      groupRef.current.rotation.y = t * 0.2 * speed + bass * Math.PI * 0.6;
-      
-      groupRef.current.rotation.x = bass * Math.PI * 0.3 + Math.sin(t * 0.5 * speed) * 0.15;
-      groupRef.current.rotation.z = mids * Math.PI * 0.2 + Math.cos(t * 0.3 * speed) * 0.1;
-      
-      // AUDIO-FIRST scale with beat pop
-      const beatScale = (1 + bass * 0.5 + mids * 0.2) * beatPop;
+      // AUDIO-FIRST scale with beat pop (returns to default when silent)
+      const beatScale = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
       groupRef.current.scale.setScalar(0.5 * beatScale);
       
-      // Position shifts
-      groupRef.current.position.x = bass * 0.4 * Math.sin(t * 0.4 * speed);
-      groupRef.current.position.z = highs * 0.2 * Math.cos(t * 0.3 * speed);
+      // ROTATION: Only when audio is present (frozen when silent)
+      if (hasAudio) {
+        groupRef.current.rotation.y += bass * 0.08;
+        groupRef.current.rotation.x += mids * 0.04;
+        groupRef.current.rotation.z += highs * 0.02;
+      }
+      
+      // POSITION: Proportional to audio (returns to 0 when silent)
+      groupRef.current.position.y = bass * 0.5;
+      groupRef.current.position.x = mids * 0.2;
+      groupRef.current.position.z = highs * 0.1;
     }
   });
 
