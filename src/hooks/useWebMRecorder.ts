@@ -11,6 +11,8 @@ interface LogoState {
   position: { x: number; y: number };
   size: number;
   opacity: number;
+  layer: 'front' | 'behind';
+  colorMode: 'original' | 'invert';
 }
 
 interface BackgroundMedia {
@@ -49,12 +51,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
   const pngFramesRef = useRef<Blob[]>([]);
-  const filenamePrefixRef = useRef<string>('visualizer');
+
+  const songNameRef = useRef<string>('Untitled');
+  const visualizerNameRef = useRef<string>('Visualizer');
 
   const startRecording = useCallback(async (
     startAtSeconds: number, 
     background: BackgroundMedia, 
-    filenamePrefix: string, 
+    songName: string,
+    visualizerName: string,
     quality: ExportQuality = '4k',
     logo?: LogoState,
     exportMode: ExportMode = 'video'
@@ -69,7 +74,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       logoRef.current = logo || null;
       backgroundRef.current = background;
       exportModeRef.current = exportMode;
-      filenamePrefixRef.current = filenamePrefix;
+      songNameRef.current = songName || 'Untitled';
+      visualizerNameRef.current = visualizerName || 'Visualizer';
       pngFramesRef.current = [];
       setFrameCount(0);
 
@@ -171,9 +177,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           const blob = new Blob(chunksRef.current, { type: "video/webm" });
           const url = URL.createObjectURL(blob);
 
-          const mins = Math.floor(startTimeRef.current / 60).toString().padStart(2, "0");
-          const secs = Math.floor(startTimeRef.current % 60).toString().padStart(2, "0");
-          const filename = `${filenamePrefixRef.current}, ${mins}:${secs} Start.webm`;
+          const filename = `${songNameRef.current} - ${visualizerNameRef.current}.webm`;
 
           const a = document.createElement("a");
           a.href = url;
@@ -218,6 +222,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           if (!ctx || !exportCanvas) return;
 
           const bg = backgroundRef.current;
+          const logo = logoRef.current;
 
           // Draw background first
           if (exportModeRef.current === 'png-sequence') {
@@ -231,18 +236,17 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
           }
           
+          // Draw logo BEHIND visualizer if layer is 'behind'
+          if (logo?.url && logoImageRef.current && logo.layer === 'behind') {
+            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, srcCanvas);
+          }
+          
+          // Draw visualizer
           ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
           
-          // Draw logo overlay if present
-          if (logoRef.current?.url && logoImageRef.current) {
-            const { position, size, opacity } = logoRef.current;
-            ctx.globalAlpha = opacity / 100;
-            const logoWidth = size * (exportCanvas.width / srcCanvas.width);
-            const logoHeight = (logoImageRef.current.height / logoImageRef.current.width) * logoWidth;
-            const x = (position.x / 100) * exportCanvas.width - logoWidth / 2;
-            const y = (position.y / 100) * exportCanvas.height - logoHeight / 2;
-            ctx.drawImage(logoImageRef.current, x, y, logoWidth, logoHeight);
-            ctx.globalAlpha = 1;
+          // Draw logo IN FRONT of visualizer if layer is 'front'
+          if (logo?.url && logoImageRef.current && logo.layer === 'front') {
+            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, srcCanvas);
           }
 
           // Capture PNG frame for sequence mode
@@ -303,9 +307,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const zipBlob = await zip.generateAsync({ type: "blob" });
         const url = URL.createObjectURL(zipBlob);
         
-        const mins = Math.floor(startTimeRef.current / 60).toString().padStart(2, "0");
-        const secs = Math.floor(startTimeRef.current % 60).toString().padStart(2, "0");
-        const filename = `${filenamePrefixRef.current}_frames_60fps_${mins}-${secs}.zip`;
+        const filename = `${songNameRef.current} - ${visualizerNameRef.current}_frames.zip`;
         
         const a = document.createElement("a");
         a.href = url;
@@ -351,6 +353,41 @@ function drawBackgroundMedia(
   const y = -yRange * (positionY / 100);
   
   ctx.drawImage(media, x, y, scaledWidth, scaledHeight);
+}
+
+function drawLogoWithSettings(
+  ctx: CanvasRenderingContext2D,
+  logoImage: HTMLImageElement,
+  logo: { position: { x: number; y: number }; size: number; opacity: number; colorMode: 'original' | 'invert' },
+  exportCanvas: HTMLCanvasElement,
+  srcCanvas: HTMLCanvasElement
+) {
+  ctx.save();
+  ctx.globalAlpha = logo.opacity / 100;
+  
+  const logoWidth = logo.size * (exportCanvas.width / srcCanvas.width);
+  const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
+  const x = (logo.position.x / 100) * exportCanvas.width - logoWidth / 2;
+  const y = (logo.position.y / 100) * exportCanvas.height - logoHeight / 2;
+  
+  if (logo.colorMode === 'invert') {
+    // Draw logo to temp canvas, invert, then composite
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = logoWidth;
+    tempCanvas.height = logoHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) {
+      tempCtx.drawImage(logoImage, 0, 0, logoWidth, logoHeight);
+      tempCtx.globalCompositeOperation = 'difference';
+      tempCtx.fillStyle = 'white';
+      tempCtx.fillRect(0, 0, logoWidth, logoHeight);
+      ctx.drawImage(tempCanvas, x, y);
+    }
+  } else {
+    ctx.drawImage(logoImage, x, y, logoWidth, logoHeight);
+  }
+  
+  ctx.restore();
 }
 
 async function logVisualizerEvent() {
