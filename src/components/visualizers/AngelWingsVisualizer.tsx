@@ -74,13 +74,13 @@ function Feather({ index, side, audioData, totalFeathers }: any) {
       
       if (shouldAnimate) {
         // Organic breathing + audio-reactive motion
-        const breathe = Math.sin(t * 2 + rippleDelay) * 0.15;
-        const ripple = hasAudio ? Math.sin(t * 4 + rippleDelay) * bass * 0.4 : 0;
+      const breathe = Math.sin(t * 0.8 + rippleDelay) * 0.15;
+      const ripple = hasAudio ? Math.sin(t * 1.5 + rippleDelay) * bass * 0.4 : 0;
         
         // Y rotation with organic wave
         meshRef.current.rotation.y += (spinSpeed * 0.02 + (hasAudio ? bass * 0.08 : 0)) * animSpeed;
         meshRef.current.rotation.z = breathe + ripple + (hasAudio ? bass * 0.5 + mids * 0.3 : 0);
-        meshRef.current.rotation.x = Math.sin(t * 1.5 + rippleDelay * 0.5) * 0.1 * (hasAudio ? (1 + bass) : 0.3);
+        meshRef.current.rotation.x = Math.sin(t * 0.6 + rippleDelay * 0.5) * 0.1 * (hasAudio ? (1 + bass) : 0.3);
       }
       
       // Beat-reactive scale - more dramatic response
@@ -163,15 +163,15 @@ function Wing({ side, audioData }: any) {
     if (groupRef.current) {
       // More fluid, organic flapping with breathing
       const breatheAmplitude = 0.15;
-      const breathe = Math.sin(t * 1.5) * breatheAmplitude;
+      const breathe = Math.sin(t * 0.6) * breatheAmplitude;
       
       // Audio-reactive flap - dramatic on bass hits
       const flapAmplitude = hasAudio ? 0.3 + bass * 1.0 : breatheAmplitude;
-      const flapFrequency = hasAudio ? 3 + bass * 8 : 1.5;
+      const flapFrequency = hasAudio ? 1.2 + bass * 1.5 : 0.8;
       const flapAngle = Math.sin(t * flapFrequency) * flapAmplitude;
       
       groupRef.current.rotation.z = side * (shouldAnimate ? flapAngle : breathe * 0.5);
-      groupRef.current.rotation.x = (shouldAnimate ? Math.sin(t * 2) * 0.15 : 0) * animSpeed + (hasAudio ? bass * 0.4 : 0);
+      groupRef.current.rotation.x = (shouldAnimate ? Math.sin(t * 0.8) * 0.15 : 0) * animSpeed + (hasAudio ? bass * 0.4 : 0);
       
       // Only add Y rotation with spinSpeed
       if (spinSpeed > 0) {
@@ -180,11 +180,11 @@ function Wing({ side, audioData }: any) {
       }
       
       // Scale response - organic breathing + audio
-      const wingScale = hasAudio ? 1 + bass * 1.8 + mids * 0.6 : 1 + Math.sin(t * 1.2) * 0.05;
+      const wingScale = hasAudio ? 1 + bass * 1.8 + mids * 0.6 : 1 + Math.sin(t * 0.5) * 0.05;
       groupRef.current.scale.setScalar(wingScale);
       
       // Position bob - gentle breathing motion + audio
-      groupRef.current.position.y = 0.4 + (hasAudio ? bass * 0.8 + mids * 0.3 : Math.sin(t * 1.5) * 0.05);
+      groupRef.current.position.y = 0.4 + (hasAudio ? bass * 0.8 + mids * 0.3 : Math.sin(t * 0.6) * 0.05);
     }
   });
 
