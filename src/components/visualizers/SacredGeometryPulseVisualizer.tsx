@@ -20,6 +20,9 @@ function FlowerOfLife({ audioData, textureData }) {
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
   
+  // Base rotation for position-based rotation
+  const baseRotation = useRef(0);
+  
   useFrame(({ clock }) => {
     if (groupRef.current) {
       const t = clock.getElapsedTime();
@@ -57,10 +60,12 @@ function FlowerOfLife({ audioData, textureData }) {
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
       
-      // ROTATION: Only when audio is present (frozen when silent)
-      if (hasAudio) {
-        groupRef.current.rotation.z += bass * 0.08 + mids * 0.04;
-      }
+      // Base rotation advances slowly
+      baseRotation.current += 0.002 * animSpeed;
+      
+      // Audio offset for rotation
+      const audioOffset = hasAudio ? (bass * 0.15 + mids * 0.08) * Math.PI : 0;
+      groupRef.current.rotation.z = baseRotation.current + audioOffset;
       
       // SCALE: Returns to default when silent
       const breathe = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
@@ -141,6 +146,9 @@ function Metatron({ audioData, textureData }) {
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
   
+  // Base rotation for position-based rotation
+  const metatronBaseRotation = useRef({ x: 0, y: 0, z: 0 });
+  
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime();
@@ -174,12 +182,19 @@ function Metatron({ audioData, textureData }) {
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // ROTATION: Only when audio is present (frozen when silent)
-      if (hasAudio) {
-        meshRef.current.rotation.x += highs * 0.1;
-        meshRef.current.rotation.y += highs * 0.12;
-        meshRef.current.rotation.z += highs * 0.06;
-      }
+      // Base rotation advances slowly
+      metatronBaseRotation.current.x += 0.002 * animSpeed;
+      metatronBaseRotation.current.y += 0.0025 * animSpeed;
+      metatronBaseRotation.current.z += 0.0015 * animSpeed;
+      
+      // Audio offset for rotation
+      const offsetX = hasAudio ? highs * Math.PI * 0.2 : 0;
+      const offsetY = hasAudio ? highs * Math.PI * 0.25 : 0;
+      const offsetZ = hasAudio ? highs * Math.PI * 0.12 : 0;
+      
+      meshRef.current.rotation.x = metatronBaseRotation.current.x + offsetX;
+      meshRef.current.rotation.y = metatronBaseRotation.current.y + offsetY;
+      meshRef.current.rotation.z = metatronBaseRotation.current.z + offsetZ;
       
       // SCALE: Returns to default when silent
       const expand = hasAudio ? (1 + highs * 0.8) * beatPop : 1;
@@ -233,6 +248,9 @@ export default function SacredGeometryPulseVisualizer({
   const smoothedBass = useRef(0);
   const smoothedBeat = useRef(0);
   
+  // Base rotation for position-based rotation
+  const containerBaseRotation = useRef(0);
+  
   useFrame(({ clock }) => {
     if (containerRef.current) {
       const t = clock.getElapsedTime();
@@ -266,10 +284,12 @@ export default function SacredGeometryPulseVisualizer({
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // ROTATION: Only when audio is present (frozen when silent)
-      if (hasAudio) {
-        containerRef.current.rotation.z += bass * 0.05;
-      }
+      // Base rotation advances slowly
+      containerBaseRotation.current += 0.002 * animSpeed;
+      
+      // Audio offset for rotation
+      const audioOffset = hasAudio ? bass * Math.PI * 0.1 : 0;
+      containerRef.current.rotation.z = containerBaseRotation.current + audioOffset;
       
       // SCALE: Returns to default when silent
       const breathe = hasAudio ? (1 + bass * 0.4) * beatPop : 1;

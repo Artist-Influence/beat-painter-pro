@@ -16,7 +16,7 @@ interface AudioSensitivity {
 }
 
 type LogoLayer = 'front' | 'behind';
-type LogoColorMode = 'original' | 'invert' | 'light' | 'dark';
+type LogoColorMode = 'original' | 'invert';
 
 interface LogoState {
   url: string | null;

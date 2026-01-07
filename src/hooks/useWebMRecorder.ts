@@ -34,14 +34,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     }
 
     try {
-      // Set resolution based on quality
-      const resolution = quality === '4k' ? 2160 : 1080;
+      // Set resolution based on quality - 16:9 horizontal format
+      const height = quality === '4k' ? 2160 : 1080;
+      const width = quality === '4k' ? 3840 : 1920;  // 16:9 ratio
       const bitrate = quality === '4k' ? 50_000_000 : 15_000_000; // 50 Mbps for 4K, 15 Mbps for 1080p
 
       const srcCanvas = canvasRef.current;
       const exportCanvas = document.createElement("canvas");
-      exportCanvas.width = resolution;
-      exportCanvas.height = resolution;
+      exportCanvas.width = width;
+      exportCanvas.height = height;
       const ctx = exportCanvas.getContext("2d", { alpha: transparentBackground });
       if (!ctx) {
         toast.error("Failed to create export canvas");
