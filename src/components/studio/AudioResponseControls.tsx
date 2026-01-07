@@ -50,7 +50,9 @@ export const AudioResponseControls: React.FC = () => {
     filters,
     setFilters,
     zoomLevel,
-    setZoom
+    setZoom,
+    transparentExport,
+    setTransparentExport
   } = useStudioStore();
   
   const presets = [
@@ -187,11 +189,11 @@ export const AudioResponseControls: React.FC = () => {
         {/* Background Colors */}
         <div className="space-y-3">
           <span className="text-white/80 text-sm">Background</span>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <button
-              onClick={() => setBackground("#00FF00")}
+              onClick={() => { setTransparentExport(false); setBackground("#00FF00"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#00FF00"
+                !transparentExport && backgroundColor === "#00FF00"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -200,9 +202,9 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">Green</span>
             </button>
             <button
-              onClick={() => setBackground("#FFFFFF")}
+              onClick={() => { setTransparentExport(false); setBackground("#FFFFFF"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#FFFFFF"
+                !transparentExport && backgroundColor === "#FFFFFF"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -211,15 +213,33 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">White</span>
             </button>
             <button
-              onClick={() => setBackground("#000000")}
+              onClick={() => { setTransparentExport(false); setBackground("#000000"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#000000"
+                !transparentExport && backgroundColor === "#000000"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
             >
               <div className="w-4 h-4 bg-black rounded border" />
               <span className="text-xs text-white">Black</span>
+            </button>
+            <button
+              onClick={() => setTransparentExport(true)}
+              className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
+                transparentExport
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
+            >
+              <div 
+                className="w-4 h-4 rounded border border-white/30"
+                style={{ 
+                  backgroundImage: 'linear-gradient(45deg, #666 25%, transparent 25%), linear-gradient(-45deg, #666 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #666 75%), linear-gradient(-45deg, transparent 75%, #666 75%)', 
+                  backgroundSize: '6px 6px', 
+                  backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px' 
+                }} 
+              />
+              <span className="text-xs text-white">None</span>
             </button>
           </div>
         </div>

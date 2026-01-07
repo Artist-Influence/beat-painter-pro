@@ -62,7 +62,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       keepRenderingRef.current = true;
       startTimeRef.current = startAtSeconds;
 
-      audioElement.currentTime = startAtSeconds;
+      // Don't reset audio position - start recording from current playback position
 
       const videoStream = exportCanvas.captureStream(60);
       const audioStream = (audioElement as any).captureStream ? (audioElement as any).captureStream() : null;
