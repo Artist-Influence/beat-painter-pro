@@ -12,7 +12,7 @@ const AudioUploader: React.FC = () => {
     const url = URL.createObjectURL(file);
     const audio = new Audio(url);
     audio.crossOrigin = "anonymous";
-    setAudioElement(audio);
+    setAudioElement(audio, file.name);
     toast.success("Audio loaded. Press play to preview.");
   };
 

@@ -5,13 +5,13 @@ import { toast } from 'sonner';
 
 export function UploadSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setAudioElement, audioElement } = useStudioStore();
+  const { setAudioElement, audioElement, audioFileName } = useStudioStore();
 
   const handleFile = (file: File) => {
     const url = URL.createObjectURL(file);
     const audio = new Audio(url);
     audio.crossOrigin = "anonymous";
-    setAudioElement(audio);
+    setAudioElement(audio, file.name);
     toast.success("Audio loaded successfully!");
   };
 
@@ -69,7 +69,7 @@ export function UploadSection() {
             <Music className="w-4 h-4 text-purple-400" />
             <div className="flex-1 min-w-0">
               <p className="text-white/80 text-sm truncate">
-                Audio loaded
+                {audioFileName || "Audio loaded"}
               </p>
               <p className="text-white/40 text-xs">
                 Duration: {audioElement.duration ? `${Math.floor(audioElement.duration / 60)}:${Math.floor(audioElement.duration % 60).toString().padStart(2, '0')}` : 'Unknown'}
