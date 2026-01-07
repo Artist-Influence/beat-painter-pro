@@ -248,16 +248,29 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">Black</span>
             </button>
             <button
-              onClick={() => bgInputRef.current?.click()}
+              onClick={() => {
+                // If we already have an uploaded background, switch to it; otherwise open file picker
+                if (background.mediaUrl && background.mediaType) {
+                  setBackgroundMedia(background.mediaUrl, background.mediaType);
+                } else {
+                  bgInputRef.current?.click();
+                }
+              }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
                 background.type !== 'color'
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
-                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+                  : background.mediaUrl 
+                    ? 'bg-white/5 border-purple-500/30 hover:border-purple-500/50 hover:bg-white/10'
+                    : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
             >
-              <div className="w-4 h-4 rounded border border-dashed border-white/40 flex items-center justify-center">
-                <span className="text-[8px] text-white/60">+</span>
-              </div>
+              {background.mediaUrl && background.type === 'color' ? (
+                <img src={background.mediaUrl} alt="" className="w-4 h-4 object-cover rounded" />
+              ) : (
+                <div className="w-4 h-4 rounded border border-dashed border-white/40 flex items-center justify-center">
+                  <span className="text-[8px] text-white/60">+</span>
+                </div>
+              )}
               <span className="text-xs text-white">Custom</span>
             </button>
           </div>

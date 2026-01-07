@@ -123,7 +123,8 @@ export const useStudioStore = create<StudioState>((set) => ({
   customStyleTexture: DEFAULT_CUSTOM_STYLE,
   setSelected: (v) => set({ selected: v }),
   setBackgroundColor: (c) => set((state) => ({ 
-    background: { ...state.background, type: 'color', color: c, mediaUrl: null, mediaType: null } 
+    background: { ...state.background, type: 'color', color: c }
+    // Keep mediaUrl and mediaType intact so user can switch back to custom
   })),
   setBackgroundMedia: (url, type) => set((state) => ({ 
     background: { ...state.background, type: type === 'video' ? 'video' : 'image', mediaUrl: url, mediaType: type } 
