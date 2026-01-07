@@ -251,10 +251,12 @@ function AlienMembrane({ audioData }: any) {
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Base rotation advances slowly + spin speed
-      baseRotation.current.y += 0.002 * speed + 0.05 * spinSpeed;
-      baseRotation.current.x += 0.001 * speed;
-      baseRotation.current.z += 0.0005 * speed;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        baseRotation.current.y += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * speed : 0);
+        baseRotation.current.x += hasAudio ? 0.001 * speed : 0;
+        baseRotation.current.z += hasAudio ? 0.0005 * speed : 0;
+      }
       
       // Audio offset for rotation
       const offsetY = hasAudio ? bass * Math.PI * 0.15 : 0;
@@ -273,7 +275,7 @@ function AlienMembrane({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.6}>
+    <group ref={groupRef} scale={1.1}>
       <mesh ref={meshRef}>
         <icosahedronGeometry args={[1.2, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />

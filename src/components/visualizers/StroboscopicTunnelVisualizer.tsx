@@ -65,9 +65,11 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       const scale = 1 + Math.abs(currentZ.current) * 0.1 + bass * 1.2;
       meshRef.current.scale.setScalar(scale);
       
-      // Base rotation advances slowly
+      // Only rotate when audio is present
       const animSpeed = audioSensitivity.animationSpeed;
-      baseRotation.current += 0.003 * animSpeed;
+      if (hasAudio) {
+        baseRotation.current += 0.003 * animSpeed;
+      }
       
       // Audio offset for rotation
       const audioOffset = hasAudio ? bass * Math.PI * 0.3 : 0;
@@ -154,10 +156,12 @@ export default function StroboscopicTunnelVisualizer({
     
     if (tunnelRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      
-      // Base rotation advances slowly + spin speed
       const animSpeed = audioSensitivity.animationSpeed;
-      tunnelBaseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
+      
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        tunnelBaseRotation.current += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+      }
       
       // Audio offset for rotation
       const audioOffset = hasAudio ? mids * bass * Math.PI * 0.4 : 0;

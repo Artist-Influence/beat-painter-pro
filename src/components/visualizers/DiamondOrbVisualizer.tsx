@@ -85,11 +85,14 @@ function CrackedCrystalOrb({ audioData }: any) {
     const scalePulse = 1 + 0.8 * finalBeat;
 
     if (group.current) {
-      // Base rotation advances slowly (controlled by animationSpeed) + spin speed
       const animSpeed = audioSensitivity.animationSpeed;
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      baseRotation.current.y += 0.002 * animSpeed + 0.02 * spinSpeed;
-      baseRotation.current.x += 0.001 * animSpeed;
+      
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        baseRotation.current.y += (spinSpeed > 0 ? 0.02 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+        baseRotation.current.x += hasAudio ? 0.001 * animSpeed : 0;
+      }
       
       // Audio OFFSET - snaps to beat, returns when silent
       const audioOffsetY = hasAudio ? finalMids * Math.PI * 0.3 : 0;
@@ -118,11 +121,14 @@ function CrackedCrystalOrb({ audioData }: any) {
     }
 
     if (innerCore.current) {
-      // Base rotation for inner core
       const animSpeed = audioSensitivity.animationSpeed;
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      innerCoreBaseRotation.current.y += 0.003 * animSpeed + 0.025 * spinSpeed;
-      innerCoreBaseRotation.current.x += 0.002 * animSpeed;
+      
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        innerCoreBaseRotation.current.y += (spinSpeed > 0 ? 0.025 * spinSpeed : 0) + (hasAudio ? 0.003 * animSpeed : 0);
+        innerCoreBaseRotation.current.x += hasAudio ? 0.002 * animSpeed : 0;
+      }
       
       // Audio offset for inner core
       const coreOffsetY = hasAudio ? finalMids * Math.PI * 0.4 : 0;
@@ -141,10 +147,12 @@ function CrackedCrystalOrb({ audioData }: any) {
         const animSpeed = audioSensitivity.animationSpeed;
         const spinSpeed = audioSensitivity.spinSpeed ?? 0;
         
-        // Base rotation for each shard
-        shardBaseRotations.current[i].y += 0.002 * animSpeed * (1 + i * 0.1) + 0.015 * spinSpeed;
-        shardBaseRotations.current[i].x += 0.001 * animSpeed * (1 + i * 0.05);
-        shardBaseRotations.current[i].z += 0.0015 * animSpeed;
+        // Only rotate when spinSpeed > 0 OR audio is present
+        if (spinSpeed > 0 || hasAudio) {
+          shardBaseRotations.current[i].y += (spinSpeed > 0 ? 0.015 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed * (1 + i * 0.1) : 0);
+          shardBaseRotations.current[i].x += hasAudio ? 0.001 * animSpeed * (1 + i * 0.05) : 0;
+          shardBaseRotations.current[i].z += hasAudio ? 0.0015 * animSpeed : 0;
+        }
         
         // Audio offset for shards
         const shardOffsetY = hasAudio ? finalMids * Math.PI * 0.35 : 0;

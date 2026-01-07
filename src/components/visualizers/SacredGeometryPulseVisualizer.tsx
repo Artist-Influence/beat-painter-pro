@@ -63,8 +63,10 @@ function FlowerOfLife({ audioData, textureData }) {
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Base rotation advances slowly + spin speed
-      baseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        baseRotation.current += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+      }
       
       // Audio offset for rotation
       const audioOffset = hasAudio ? (bass * 0.15 + mids * 0.08) * Math.PI : 0;
@@ -188,10 +190,12 @@ function Metatron({ audioData, textureData }) {
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Base rotation advances slowly + spin speed
-      metatronBaseRotation.current.x += 0.002 * animSpeed + 0.02 * spinSpeed;
-      metatronBaseRotation.current.y += 0.0025 * animSpeed + 0.03 * spinSpeed;
-      metatronBaseRotation.current.z += 0.0015 * animSpeed + 0.01 * spinSpeed;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        metatronBaseRotation.current.x += (spinSpeed > 0 ? 0.02 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+        metatronBaseRotation.current.y += (spinSpeed > 0 ? 0.03 * spinSpeed : 0) + (hasAudio ? 0.0025 * animSpeed : 0);
+        metatronBaseRotation.current.z += (spinSpeed > 0 ? 0.01 * spinSpeed : 0) + (hasAudio ? 0.0015 * animSpeed : 0);
+      }
       
       // Audio offset for rotation
       const offsetX = hasAudio ? highs * Math.PI * 0.2 : 0;
@@ -293,8 +297,10 @@ export default function SacredGeometryPulseVisualizer({
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Base rotation advances slowly + spin speed
-      containerBaseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        containerBaseRotation.current += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+      }
       
       // Audio offset for rotation
       const audioOffset = hasAudio ? bass * Math.PI * 0.1 : 0;

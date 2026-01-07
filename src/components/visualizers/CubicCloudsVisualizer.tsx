@@ -164,8 +164,10 @@ function OrbitingCubesVisualizer({ audioData }: any) {
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Constant spin + Rotation ONLY when audio is present
-      groupRef.current.rotation.y += spinSpeed * 0.05;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0) {
+        groupRef.current.rotation.y += spinSpeed * 0.05;
+      }
       if (hasAudio) {
         groupRef.current.rotation.y += bass * 0.1;
         groupRef.current.rotation.x += bass * 0.06;
@@ -242,7 +244,7 @@ export default function CubicCloudsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={3.2}>
+      <group scale={1.0}>
         <OrbitingCubesVisualizer audioData={audioData} />
       </group>
     </>

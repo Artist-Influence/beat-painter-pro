@@ -149,7 +149,10 @@ export default function WaveRibbonsVisualizer({
   useFrame(() => {
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      groupRef.current.rotation.y += spinSpeed * 0.05;
+      // Only rotate when spinSpeed > 0
+      if (spinSpeed > 0) {
+        groupRef.current.rotation.y += spinSpeed * 0.05;
+      }
     }
   });
 

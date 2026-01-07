@@ -62,8 +62,10 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Base rotation advances slowly + spin speed
-      baseRotation.current += 0.002 * speed + 0.05 * spinSpeed;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        baseRotation.current += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * speed : 0);
+      }
       
       // Audio offset for rotation - reduced multipliers for smoother motion
       const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
@@ -173,10 +175,12 @@ export default function PsychedelicMandalaVisualizer({
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      
-      // Base rotation advances slowly + spin speed
       const animSpeed = audioSensitivity.animationSpeed;
-      mainBaseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
+      
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        mainBaseRotation.current += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 * animSpeed : 0);
+      }
       
       // Audio offset for rotation - reduced for smoother motion
       const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
