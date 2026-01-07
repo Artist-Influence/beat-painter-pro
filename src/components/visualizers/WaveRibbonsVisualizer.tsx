@@ -4,6 +4,7 @@ import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -133,7 +134,9 @@ export default function WaveRibbonsVisualizer({
   zoomLevel = 1,
   backgroundColor = '#000000',
 }: VisualizerProps) {
+  const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   const ribbons = useMemo(() => [
     { position: [0, 0.4, 0], index: 0 },
@@ -143,13 +146,20 @@ export default function WaveRibbonsVisualizer({
     { position: [0, -0.4, 0], index: 4 },
   ], []);
 
+  useFrame(() => {
+    if (groupRef.current) {
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      groupRef.current.rotation.y += spinSpeed * 0.05;
+    }
+  });
+
   return (
     <>
       <ambientLight intensity={0.2} />
       <directionalLight position={[5, 5, 5]} intensity={0.3} />
       <Environment preset="night" />
       
-      <group>
+      <group ref={groupRef}>
         {ribbons.map((ribbon) => (
           <RibbonMesh
             key={ribbon.index}

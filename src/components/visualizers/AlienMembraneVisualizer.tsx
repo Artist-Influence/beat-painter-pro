@@ -248,8 +248,11 @@ function AlienMembrane({ audioData }: any) {
       const beatScale = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
       groupRef.current.scale.setScalar(0.5 * beatScale);
       
-      // Base rotation advances slowly
-      baseRotation.current.y += 0.002 * speed;
+      // Get spinSpeed from store
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
+      // Base rotation advances slowly + spin speed
+      baseRotation.current.y += 0.002 * speed + 0.05 * spinSpeed;
       baseRotation.current.x += 0.001 * speed;
       baseRotation.current.z += 0.0005 * speed;
       

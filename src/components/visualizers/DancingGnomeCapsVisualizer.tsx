@@ -211,7 +211,10 @@ function GlassSphereVisualizer({ audioData }: any) {
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
     
     if (groupRef.current) {
-      // ROTATION: Only when audio is present (frozen when silent)
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
+      // Constant spin + Rotation ONLY when audio is present
+      groupRef.current.rotation.y += spinSpeed * 0.05;
       if (hasAudio) {
         groupRef.current.rotation.y += bass * 0.15 + mids * 0.08;
         groupRef.current.rotation.x += bass * 0.05;

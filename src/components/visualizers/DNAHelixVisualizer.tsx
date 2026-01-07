@@ -4,6 +4,7 @@ import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function DNAStrand({ isTop, audioData, textureData }) {
   const groupRef = useRef<THREE.Group>(null);
@@ -116,6 +117,7 @@ export default function DNAHelixVisualizer({
 }: VisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
@@ -134,10 +136,9 @@ export default function DNAHelixVisualizer({
     smoothedBass.current += (rawBass - smoothedBass.current) * factor;
     
     if (groupRef.current) {
-      // Keep horizontal orientation - no rotation
-      groupRef.current.rotation.x = 0;
-      groupRef.current.rotation.y = 0;
-      groupRef.current.rotation.z = 0;
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      // Add spin speed rotation
+      groupRef.current.rotation.y += spinSpeed * 0.05;
     }
   });
 

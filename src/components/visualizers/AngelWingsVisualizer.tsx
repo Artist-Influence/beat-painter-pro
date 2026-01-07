@@ -45,8 +45,8 @@ function Feather({ index, side, audioData }: any) {
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack for snappy response
     const lerpVal = (current: number, target: number) => {
@@ -66,12 +66,12 @@ function Feather({ index, side, audioData }: any) {
       const idleZ = Math.cos(t * 0.3 + index * 0.15) * 0.08 * animSpeed;
       
       // Audio-driven rotation speed (velocity-based for dynamic motion) + spin speed
-      const rotSpeed = 0.02 + bass * 0.3 + mids * 0.15 + spinSpeed * 0.03;
+      const rotSpeed = 0.02 + bass * 0.5 + mids * 0.25 + spinSpeed * 0.03;
       meshRef.current.rotation.y += rotSpeed * animSpeed;
-      meshRef.current.rotation.z = idleZ + bass * 0.6 + mids * 0.35;
+      meshRef.current.rotation.z = idleZ + bass * 0.8 + mids * 0.5;
       
-      // Beat-reactive scale - snappy response
-      const beatScale = 1 + bass * 1.2 + mids * 0.6;
+      // Beat-reactive scale - more dramatic response
+      const beatScale = 1 + bass * 1.5 + mids * 0.8;
       meshRef.current.scale.setScalar(beatScale);
       
       // Position offset for more dramatic movement
@@ -124,8 +124,8 @@ function Wing({ side, audioData }: any) {
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack
     const lerpVal = (current: number, target: number) => {
@@ -141,19 +141,19 @@ function Wing({ side, audioData }: any) {
     
     if (groupRef.current) {
       // Faster, more dramatic flapping
-      const flapAngle = Math.sin(t * 4 + bass * 12) * (0.3 + bass * 0.9);
+      const flapAngle = Math.sin(t * 4 + bass * 15) * (0.4 + bass * 1.2);
       groupRef.current.rotation.z = side * flapAngle;
-      groupRef.current.rotation.x = Math.sin(t * 2.5) * 0.2 * animSpeed + bass * 0.5;
+      groupRef.current.rotation.x = Math.sin(t * 2.5) * 0.2 * animSpeed + bass * 0.6;
       
       // Add spin speed to Y rotation
       groupRef.current.rotation.y += spinSpeed * 0.02;
       
       // Bigger scale response
-      const wingScale = 1 + bass * 2.0 + mids * 0.8;
+      const wingScale = 1 + bass * 2.5 + mids * 1.0;
       groupRef.current.scale.setScalar(wingScale);
       
       // More dramatic position bob
-      groupRef.current.position.y = 0.4 + bass * 1.0 + mids * 0.5;
+      groupRef.current.position.y = 0.4 + bass * 1.2 + mids * 0.6;
     }
   });
 
@@ -190,8 +190,8 @@ function HologramWings({ audioData }: any) {
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack
     const lerpVal = (current: number, target: number) => {

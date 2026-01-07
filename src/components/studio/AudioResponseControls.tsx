@@ -167,7 +167,7 @@ export const AudioResponseControls: React.FC = () => {
             <ResettableSlider
               value={[audioSensitivity.spinSpeed ?? 0]}
               min={0}
-              max={2.0}
+              max={8.0}
               step={0.1}
               defaultValue={0}
               onValueChange={([v]) => setAudioSensitivity({ spinSpeed: v })}
