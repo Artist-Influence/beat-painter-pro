@@ -21,12 +21,13 @@ interface StudioState {
   filters: Filters;
   zoomLevel: number;
   audioElement: HTMLAudioElement | null;
+  audioFileName: string | null;
   audioSensitivity: AudioSensitivity;
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackground: (c: StudioState["backgroundColor"]) => void;
   setFilters: (f: Partial<Filters>) => void;
   setZoom: (z: number) => void;
-  setAudioElement: (el: HTMLAudioElement | null) => void;
+  setAudioElement: (el: HTMLAudioElement | null, fileName?: string | null) => void;
   setAudioSensitivity: (s: Partial<AudioSensitivity>) => void;
   setAudioPreset: (preset: AudioSensitivity['preset']) => void;
 }
@@ -43,6 +44,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   filters: { brightness: 100, saturation: 100, contrast: 100 },
   zoomLevel: 1,
   audioElement: null,
+  audioFileName: null,
   audioSensitivity: {
     bassMultiplier: 2.5,
     midsMultiplier: 1.5,
@@ -54,7 +56,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   setBackground: (c) => set({ backgroundColor: c }),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
   setZoom: (z) => set({ zoomLevel: z }),
-  setAudioElement: (el) => set({ audioElement: el }),
+  setAudioElement: (el, fileName = null) => set({ audioElement: el, audioFileName: fileName }),
   setAudioSensitivity: (s) => set((state) => ({ 
     audioSensitivity: { ...state.audioSensitivity, ...s, preset: 'custom' } 
   })),
