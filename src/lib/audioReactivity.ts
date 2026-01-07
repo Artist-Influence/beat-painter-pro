@@ -38,25 +38,51 @@ export function smoothAudio(
 
 /**
  * Calculate raw audio values from frequency data with sensitivity multipliers
+ * Uses proper Hz-to-bin mapping based on sample rate for accurate frequency separation:
+ * - Bass: 0-250 Hz (kick drums, sub-bass, bass guitar)
+ * - Mids: 250-4000 Hz (vocals, snares, guitars, presence)
+ * - Highs: 4000+ Hz (hi-hats, cymbals, air, sparkle)
  * Values are capped at 1.5 to allow for punchy peaks while preventing overflow
  */
 export function calculateAudioValues(
   frequency: number[],
   beatStrength: number,
-  sensitivity: AudioSensitivity
+  sensitivity: AudioSensitivity,
+  sampleRate: number = 44100
 ): AudioValues {
+  const binCount = frequency.length; // typically 256 or 1024
+  const nyquist = sampleRate / 2; // 22050 Hz at 44.1kHz
+  const binHz = nyquist / binCount; // Hz per bin (~86 Hz at 256 bins)
+  
+  // Convert Hz to bin index
+  const hzToBin = (hz: number) => Math.min(Math.floor(hz / binHz), binCount - 1);
+  
+  // Proper frequency band cutoffs
+  const bassEnd = hzToBin(250);     // Bass: 0-250 Hz
+  const midsEnd = hzToBin(4000);    // Mids: 250-4000 Hz
+  // Highs: 4000+ Hz (remaining bins)
+  
   let bassSum = 0, midsSum = 0, highsSum = 0;
+  let bassCount = 0, midsCount = 0, highsCount = 0;
   
-  // Bass: 0-85 (roughly 20-250Hz)
-  for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-  // Mids: 86-170 (roughly 250Hz-2kHz)
-  for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-  // Highs: 171-255 (roughly 2kHz+)
-  for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+  for (let i = 0; i < binCount; i++) {
+    const val = frequency[i] || 0;
+    if (i <= bassEnd) {
+      bassSum += val;
+      bassCount++;
+    } else if (i <= midsEnd) {
+      midsSum += val;
+      midsCount++;
+    } else {
+      highsSum += val;
+      highsCount++;
+    }
+  }
   
-  const rawBass = (bassSum / 86 / 255) * sensitivity.bassMultiplier;
-  const rawMids = (midsSum / 85 / 255) * sensitivity.midsMultiplier;
-  const rawHighs = (highsSum / 85 / 255) * sensitivity.highsMultiplier;
+  // Normalize by count and max value (255), apply sensitivity
+  const rawBass = (bassCount > 0 ? bassSum / bassCount / 255 : 0) * sensitivity.bassMultiplier;
+  const rawMids = (midsCount > 0 ? midsSum / midsCount / 255 : 0) * sensitivity.midsMultiplier;
+  const rawHighs = (highsCount > 0 ? highsSum / highsCount / 255 : 0) * sensitivity.highsMultiplier;
   
   return {
     bass: Math.min(rawBass, 1.5),

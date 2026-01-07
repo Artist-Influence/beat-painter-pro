@@ -4,6 +4,7 @@ export interface AudioData {
   frequency: number[];
   amplitude: number;
   beatStrength: number;
+  sampleRate: number;
 }
 
 export const useAudioAnalysis = (
@@ -17,6 +18,7 @@ export const useAudioAnalysis = (
     frequency: Array(256).fill(0),
     amplitude: 0,
     beatStrength: 0,
+    sampleRate: 44100,
   });
   
   // Beat detection refs
@@ -39,6 +41,7 @@ export const useAudioAnalysis = (
           frequency: Array(256).fill(0),
           amplitude: 0,
           beatStrength: 0,
+          sampleRate: analyser?.context?.sampleRate || 44100,
         });
         animationFrameRef.current = requestAnimationFrame(updateAudioData);
         return;
@@ -93,6 +96,7 @@ export const useAudioAnalysis = (
       };
 
       // Apply asymmetric smoothing to frequency data
+      const sampleRate = analyser.context.sampleRate;
       smoothedDataRef.current = {
         frequency: frequency.map((val, i) => {
           const prev = prevData.frequency[i] ?? 0;
@@ -101,6 +105,7 @@ export const useAudioAnalysis = (
         }),
         amplitude: lerpValue(prevData.amplitude, amplitude),
         beatStrength: lerpValue(prevData.beatStrength, newBeatStrength),
+        sampleRate,
       };
 
       onDataUpdate(smoothedDataRef.current);

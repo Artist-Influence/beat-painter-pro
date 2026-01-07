@@ -55,7 +55,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     }
   }, [selected, customVisualizers]);
 
-  const [audioData, setAudioData] = useState<AudioData>({ frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 });
+  const [audioData, setAudioData] = useState<AudioData>({ frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0, sampleRate: 44100 });
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [styleVersion, setStyleVersion] = useState(0);
