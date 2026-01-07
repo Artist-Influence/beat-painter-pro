@@ -28,26 +28,26 @@ export function StudioLayoutV2() {
   return (
     <div className="fixed inset-0 overflow-hidden">
       {/* Background Layer - Color, Image, or Video */}
-      {background.type === 'color' ? (
-        <div 
-          className="absolute inset-0 z-[0]" 
-          style={{ backgroundColor: background.color }}
-        />
-      ) : background.mediaType === 'video' ? (
+      {background.type === 'video' && background.mediaUrl ? (
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover z-[0]"
-          src={background.mediaUrl || undefined}
+          src={background.mediaUrl}
           autoPlay
           loop
           muted
           playsInline
         />
-      ) : (
+      ) : background.type === 'image' && background.mediaUrl ? (
         <img
           className="absolute inset-0 w-full h-full object-cover z-[0]"
-          src={background.mediaUrl || undefined}
+          src={background.mediaUrl}
           alt="Background"
+        />
+      ) : (
+        <div 
+          className="absolute inset-0 z-[0]" 
+          style={{ backgroundColor: background.color }}
         />
       )}
       {/* Logo Behind Visualizer - lower z-index */}
