@@ -81,15 +81,9 @@ function StandaloneShape({
   // Get applied texture and colors from style system
   const textureData = useVisualizerTexture();
   
-  // Apply audio sensitivity multipliers (raw target values)
-  const { targetBass, targetMids, targetHighs } = useMemo(() => {
-    const raw = analyzeAudioData(audioData.frequency);
-    return {
-      targetBass: Math.min(raw.bass * audioSensitivity.bassMultiplier, 1.5),
-      targetMids: Math.min(raw.mids * audioSensitivity.midsMultiplier, 1.5),
-      targetHighs: Math.min(raw.highs * audioSensitivity.highsMultiplier, 1.5),
-    };
-  }, [audioData.frequency, audioSensitivity.bassMultiplier, audioSensitivity.midsMultiplier, audioSensitivity.highsMultiplier]);
+  // Audio sensitivity stored for use in useFrame
+  const audioSensitivityRef = useRef(audioSensitivity);
+  audioSensitivityRef.current = audioSensitivity;
   
   // Create texture-aware materials that respond to applied styles
   const mainMaterial = useMemo(() => {
@@ -182,6 +176,13 @@ function StandaloneShape({
   
   // Animation frame - AUDIO-FIRST: no motion when audio is silent
   useFrame(() => {
+    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    const raw = analyzeAudioData(audioData.frequency);
+    const sens = audioSensitivityRef.current;
+    const targetBass = Math.min(raw.bass * sens.bassMultiplier, 1.5);
+    const targetMids = Math.min(raw.mids * sens.midsMultiplier, 1.5);
+    const targetHighs = Math.min(raw.highs * sens.highsMultiplier, 1.5);
+    
     // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
     const attackLerp = 0.55;
     const decayLerp = 0.35;

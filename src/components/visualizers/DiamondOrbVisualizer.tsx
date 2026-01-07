@@ -41,8 +41,6 @@ function CrackedCrystalOrb({ audioData }: any) {
   const smoothedBeat = useRef(0);
 
   useFrame(() => {
-    const animSpeed = audioSensitivity.animationSpeed;
-    
     // Calculate audio per-frame
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
@@ -79,10 +77,10 @@ function CrackedCrystalOrb({ audioData }: any) {
     const scalePulse = 1 + 0.5 * finalBeat;
 
     if (group.current) {
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        group.current.rotation.y += finalMids * 0.15 * animSpeed;
-        group.current.rotation.x += finalBeat * 0.1 * animSpeed;
+        group.current.rotation.y += finalMids * 0.15;
+        group.current.rotation.x += finalBeat * 0.1;
       }
       
       // Position proportional to audio (returns to 0 when silent)
@@ -104,10 +102,10 @@ function CrackedCrystalOrb({ audioData }: any) {
     }
 
     if (innerCore.current) {
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        innerCore.current.rotation.y += finalMids * 0.3 * animSpeed;
-        innerCore.current.rotation.x += finalHighs * 0.25 * animSpeed;
+        innerCore.current.rotation.y += finalMids * 0.3;
+        innerCore.current.rotation.x += finalHighs * 0.25;
       }
       // Scale reacts to audio
       const coreScale = 0.4 + finalBeat * 1.2;
@@ -116,11 +114,11 @@ function CrackedCrystalOrb({ audioData }: any) {
 
     shards.current.forEach((shard, i) => {
       if (shard) {
-        // Rotation ONLY when audio is present
+        // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
         if (hasAudio) {
-          shard.rotation.y += finalMids * 0.25 * animSpeed;
-          shard.rotation.x += finalBeat * 0.4 * animSpeed;
-          shard.rotation.z += finalHighs * 0.3 * animSpeed;
+          shard.rotation.y += finalMids * 0.25;
+          shard.rotation.x += finalBeat * 0.4;
+          shard.rotation.z += finalHighs * 0.3;
         }
         
         // Scale reacts to audio

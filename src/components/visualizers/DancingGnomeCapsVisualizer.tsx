@@ -11,7 +11,6 @@ function GlassShard({ index, audioData, textureData }: any) {
   const { audioSensitivity } = useStudioStore();
   
   const primaryColor = textureData.colors.primary;
-  const secondaryColor = textureData.colors.secondary;
 
   const angle = useMemo(() => (index / 40) * Math.PI * 2, [index]);
   const radius = 0.8;
@@ -19,25 +18,29 @@ function GlassShard({ index, audioData, textureData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Create material with base settings - emissive updated in useFrame
+  const material = useMemo(() => {
+    return createVisualizerMaterial("#ffffff", textureData, {
+      emissive: primaryColor,
+      emissiveIntensity: 1.0,
+      metalness: textureData.colors.isMetallic ? 1 : 0.5,
+      roughness: textureData.colors.isMetallic ? 0.1 : 0.3,
+      transparent: true,
+      opacity: 0.9
+    });
+  }, [textureData, primaryColor]);
 
   useFrame(() => {
+    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
@@ -66,22 +69,12 @@ function GlassShard({ index, audioData, textureData }: any) {
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
-        const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = hasAudio ? (0.8 + highs * 4.0 + bass * 3.0) : 0.8;
+        const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = hasAudio ? (0.8 + highs * 4.0 + bass * 3.0) : 0.8;
+        mat.opacity = 0.9 + highs * 0.1;
       }
     }
   });
-
-  const material = useMemo(() => {
-    return createVisualizerMaterial("#ffffff", textureData, {
-      emissive: primaryColor,
-      emissiveIntensity: 1.0 + highs * 4.0 + bass * 3.0,
-      metalness: textureData.colors.isMetallic ? 1 : 0.5,
-      roughness: textureData.colors.isMetallic ? 0.1 : 0.3,
-      transparent: true,
-      opacity: 0.9 + highs * 0.1
-    });
-  }, [textureData, primaryColor, highs, bass]);
 
   return (
     <mesh ref={meshRef} material={material}>
@@ -94,7 +87,6 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
   
-  const primaryColor = textureData.colors.primary;
   const accentColor = textureData.colors.accent;
 
   const angle = useMemo(() => (index / 20) * Math.PI * 2, [index]);
@@ -103,25 +95,29 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
-
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Create material with base settings - updated in useFrame
+  const material = useMemo(() => {
+    return createVisualizerMaterial("#ffffff", textureData, {
+      emissive: accentColor,
+      emissiveIntensity: 1.5,
+      metalness: textureData.colors.isMetallic ? 1 : 0.7,
+      roughness: textureData.colors.isMetallic ? 0.05 : 0.2,
+      transparent: true,
+      opacity: 0.8
+    });
+  }, [textureData, accentColor]);
 
   useFrame(() => {
+    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
@@ -152,22 +148,12 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
-        const material = meshRef.current.material as THREE.MeshStandardMaterial;
-        material.emissiveIntensity = hasAudio ? (0.6 + highs * 3.5 + bass * 2.5) : 0.6;
+        const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = hasAudio ? (0.6 + highs * 3.5 + bass * 2.5) : 0.6;
+        mat.opacity = 0.8 + mids * 0.2;
       }
     }
   });
-
-  const material = useMemo(() => {
-    return createVisualizerMaterial("#ffffff", textureData, {
-      emissive: accentColor,
-      emissiveIntensity: 1.5 + highs * 3.5 + bass * 2.5,
-      metalness: textureData.colors.isMetallic ? 1 : 0.7,
-      roughness: textureData.colors.isMetallic ? 0.05 : 0.2,
-      transparent: true,
-      opacity: 0.8 + mids * 0.2
-    });
-  }, [textureData, accentColor, highs, bass, mids]);
 
   return (
     <mesh ref={meshRef} material={material}>
@@ -179,6 +165,7 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
 function GlassSphereVisualizer({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
   const centerSphereRef = useRef<THREE.Mesh>(null);
+  const sparklesRef = useRef<any>(null);
   const shardCount = 40;
   const capCount = 20;
   const { audioSensitivity } = useStudioStore();
@@ -190,25 +177,35 @@ function GlassSphereVisualizer({ audioData }: any) {
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
 
-  const bass = useMemo(() => {
-    let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-  }, [frequency, audioSensitivity.bassMultiplier]);
+  // Smoothed values for Sparkles (which can't be updated per-frame)
+  const smoothedBass = useRef(0);
+  const smoothedHighs = useRef(0);
 
-  const mids = useMemo(() => {
-    let sum = 0;
-    for (let i = 86; i <= 170; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.midsMultiplier]);
-
-  const highs = useMemo(() => {
-    let sum = 0;
-    for (let i = 171; i <= 255; i++) sum += frequency[i] || 0;
-    return Math.min((sum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-  }, [frequency, audioSensitivity.highsMultiplier]);
+  // Create center sphere material - updated in useFrame
+  const centerMaterial = useMemo(() => {
+    return createVisualizerMaterial("#ffffff", textureData, {
+      emissive: primaryColor,
+      emissiveIntensity: 2.0,
+      metalness: textureData.colors.isMetallic ? 1 : 0,
+      roughness: textureData.colors.isMetallic ? 0.05 : 0.3,
+    });
+  }, [textureData, primaryColor]);
 
   useFrame(() => {
+    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    let bassSum = 0, midsSum = 0, highsSum = 0;
+    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    
+    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    
+    // Update smoothed values for Sparkles
+    smoothedBass.current = smoothedBass.current * 0.9 + bass * 0.1;
+    smoothedHighs.current = smoothedHighs.current * 0.9 + highs * 0.1;
+    
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
@@ -233,6 +230,12 @@ function GlassSphereVisualizer({ audioData }: any) {
       const spherePulse = hasAudio ? (1 + bass * 3.0 + highs * 2.0) : 1;
       centerSphereRef.current.scale.setScalar(spherePulse);
       
+      // Update material emissive intensity
+      if (centerSphereRef.current.material) {
+        const mat = centerSphereRef.current.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = 2.0 + bass * 4.0;
+      }
+      
       // ROTATION: Only when audio is present (frozen when silent)
       if (hasAudio) {
         centerSphereRef.current.rotation.x += bass * 0.2;
@@ -252,21 +255,16 @@ function GlassSphereVisualizer({ audioData }: any) {
       ))}
       <mesh 
         ref={centerSphereRef}
-        material={createVisualizerMaterial("#ffffff", textureData, {
-          emissive: primaryColor,
-          emissiveIntensity: 2.0 + bass * 4.0,
-          metalness: textureData.colors.isMetallic ? 1 : 0,
-          roughness: textureData.colors.isMetallic ? 0.05 : 0.3,
-        })}
+        material={centerMaterial}
       >
         <sphereGeometry args={[0.15, 32, 32]} />
       </mesh>
       <Sparkles
-        count={(highs > 0.02 || bass > 0.02) ? Math.round(8 + highs * 25 + bass * 15) : 0}
+        count={Math.round(8 + smoothedHighs.current * 25 + smoothedBass.current * 15)}
         scale={[1.2, 1.2, 1.2]}
-        size={1.2 + highs * 2.5 + bass * 1.5}
-        speed={(highs > 0.02 || bass > 0.02) ? (1.0 + highs * 2.0 + bass * 1.5) : 0}
-        opacity={0.02 + highs * 0.05}
+        size={1.2 + smoothedHighs.current * 2.5 + smoothedBass.current * 1.5}
+        speed={1.0 + smoothedHighs.current * 2.0 + smoothedBass.current * 1.5}
+        opacity={0.02 + smoothedHighs.current * 0.05}
         color={accentColor}
       />
     </group>

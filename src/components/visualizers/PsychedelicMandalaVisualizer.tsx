@@ -55,9 +55,9 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       // Beat pop effect
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
       
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        meshRef.current.rotation.z += bass * 0.1 * speed;
+        meshRef.current.rotation.z += bass * 0.1;
       }
       
       // Scale reacts to audio (returns to 1 when silent)
@@ -126,8 +126,6 @@ export default function PsychedelicMandalaVisualizer({
 
   useFrame(() => {
     if (groupRef.current) {
-      const speed = audioSensitivity.animationSpeed;
-      
       // Calculate audio per-frame
       let bassSum = 0, midsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
@@ -160,9 +158,9 @@ export default function PsychedelicMandalaVisualizer({
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        groupRef.current.rotation.z += bass * 0.08 * speed;
+        groupRef.current.rotation.z += bass * 0.08;
       }
       
       // Scale reacts to audio (returns to 1 when silent)
