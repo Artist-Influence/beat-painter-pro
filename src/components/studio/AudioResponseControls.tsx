@@ -51,8 +51,8 @@ export const AudioResponseControls: React.FC = () => {
     setFilters,
     zoomLevel,
     setZoom,
-    transparentExport,
-    setTransparentExport
+    greenScreenMode,
+    setGreenScreenMode
   } = useStudioStore();
   
   const presets = [
@@ -191,9 +191,9 @@ export const AudioResponseControls: React.FC = () => {
           <span className="text-white/80 text-sm">Background</span>
           <div className="grid grid-cols-4 gap-2">
             <button
-              onClick={() => { setTransparentExport(false); setBackground("#00FF00"); }}
+              onClick={() => { setGreenScreenMode(false); setBackground("#00FF00"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                !transparentExport && backgroundColor === "#00FF00"
+                !greenScreenMode && backgroundColor === "#00FF00"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -202,9 +202,9 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">Green</span>
             </button>
             <button
-              onClick={() => { setTransparentExport(false); setBackground("#FFFFFF"); }}
+              onClick={() => { setGreenScreenMode(false); setBackground("#FFFFFF"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                !transparentExport && backgroundColor === "#FFFFFF"
+                !greenScreenMode && backgroundColor === "#FFFFFF"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -213,9 +213,9 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">White</span>
             </button>
             <button
-              onClick={() => { setTransparentExport(false); setBackground("#000000"); }}
+              onClick={() => { setGreenScreenMode(false); setBackground("#000000"); }}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                !transparentExport && backgroundColor === "#000000"
+                !greenScreenMode && backgroundColor === "#000000"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -224,24 +224,25 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">Black</span>
             </button>
             <button
-              onClick={() => setTransparentExport(true)}
+              onClick={() => setGreenScreenMode(true)}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                transparentExport
+                greenScreenMode
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
+              title="Exports with green screen for video editing transparency"
             >
               <div 
-                className="w-4 h-4 rounded border border-white/30"
-                style={{ 
-                  backgroundImage: 'linear-gradient(45deg, #666 25%, transparent 25%), linear-gradient(-45deg, #666 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #666 75%), linear-gradient(-45deg, transparent 75%, #666 75%)', 
-                  backgroundSize: '6px 6px', 
-                  backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px' 
-                }} 
-              />
-              <span className="text-xs text-white">None</span>
+                className="w-4 h-4 rounded border border-white/30 bg-green-500 flex items-center justify-center"
+              >
+                <span className="text-[8px] text-white font-bold">KEY</span>
+              </div>
+              <span className="text-xs text-white">Key</span>
             </button>
           </div>
+          {greenScreenMode && (
+            <p className="text-xs text-white/50">Exports with green screen for chroma keying in video editors</p>
+          )}
         </div>
 
         <div className="border-t border-white/10 my-4"></div>

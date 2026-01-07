@@ -25,7 +25,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     startAtSeconds: number, 
     backgroundColor: string, 
     filenamePrefix: string, 
-    transparentBackground: boolean = false,
+    greenScreenMode: boolean = false,
     quality: ExportQuality = '4k'
   ) => {
     if (!canvasRef.current || !audioElement) {
@@ -37,34 +37,34 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       // Set resolution based on quality - 16:9 horizontal format
       const height = quality === '4k' ? 2160 : 1080;
       const width = quality === '4k' ? 3840 : 1920;  // 16:9 ratio
-      const bitrate = quality === '4k' ? 50_000_000 : 15_000_000; // 50 Mbps for 4K, 15 Mbps for 1080p
+      // Reduced bitrates for smoother encoding
+      const bitrate = quality === '4k' ? 35_000_000 : 12_000_000; // 35 Mbps for 4K, 12 Mbps for 1080p
 
       const srcCanvas = canvasRef.current;
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = width;
       exportCanvas.height = height;
-      const ctx = exportCanvas.getContext("2d", { alpha: transparentBackground });
+      const ctx = exportCanvas.getContext("2d");
       if (!ctx) {
         toast.error("Failed to create export canvas");
         return;
       }
+      
+      // Disable image smoothing for faster rendering
+      ctx.imageSmoothingEnabled = false;
+      
       exportCanvasRef.current = exportCanvas;
       ctxRef.current = ctx;
-      transparentRef.current = transparentBackground;
-      backgroundColorRef.current = backgroundColor;
-
-      // Emit transparency event to tell Three.js renderer to use transparent background
-      if (transparentBackground) {
-        window.dispatchEvent(new CustomEvent('recording:transparency', { detail: { enabled: true } }));
-      }
+      transparentRef.current = greenScreenMode;
+      // Use green screen color when green screen mode is enabled
+      backgroundColorRef.current = greenScreenMode ? '#00FF00' : backgroundColor;
 
       chunksRef.current = [];
       keepRenderingRef.current = true;
       startTimeRef.current = startAtSeconds;
 
-      // Don't reset audio position - start recording from current playback position
-
-      const videoStream = exportCanvas.captureStream(60);
+      // Capture at 30fps for smoother playback
+      const videoStream = exportCanvas.captureStream(30);
       const audioStream = (audioElement as any).captureStream ? (audioElement as any).captureStream() : null;
 
       const videoTracks = videoStream.getVideoTracks();
@@ -74,7 +74,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       const mediaRecorder = new MediaRecorder(combinedStream, {
         mimeType: "video/webm;codecs=vp9,opus",
         videoBitsPerSecond: bitrate,
-        audioBitsPerSecond: 320_000, // Higher audio quality
+        audioBitsPerSecond: 320_000,
       });
       mediaRecorderRef.current = mediaRecorder;
 
@@ -125,33 +125,39 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         toast.error("Recording failed");
       };
 
-      mediaRecorder.start();
+      // Request data every 100ms for better encoding
+      mediaRecorder.start(100);
       setIsRecording(true);
       
-      // Don't pause/play audio - let it continue as is
+      // Start playback if paused
       if (audioElement.paused) {
         await audioElement.play();
       }
 
-      const render = () => {
-        if (!keepRenderingRef.current || !ctxRef.current || !exportCanvasRef.current) return;
-        const ctx = ctxRef.current;
-        const exportCanvas = exportCanvasRef.current;
-
-        // Clear canvas first (needed for transparency)
-        ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+      // Frame-rate limited render loop for consistent 30fps
+      let lastFrameTime = 0;
+      const targetFrameTime = 1000 / 30; // 30 FPS target
+      
+      const render = (timestamp: number) => {
+        if (!keepRenderingRef.current) return;
         
-        // Only fill background if NOT transparent
-        if (!transparentRef.current) {
+        // Only render if enough time has passed
+        if (timestamp - lastFrameTime >= targetFrameTime) {
+          lastFrameTime = timestamp;
+          
+          const ctx = ctxRef.current;
+          const exportCanvas = exportCanvasRef.current;
+          if (!ctx || !exportCanvas) return;
+
+          // Always fill with background color (green screen for keying, or selected color)
           ctx.fillStyle = backgroundColorRef.current;
           ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+          ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
         }
-        
-        ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
         requestAnimationFrame(render);
       };
-      render();
+      requestAnimationFrame(render);
 
       toast.success("Recording started. Tap again to stop.");
     } catch (error) {

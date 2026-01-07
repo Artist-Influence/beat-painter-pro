@@ -11,7 +11,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, backgroundColor, transparentExport } = useStudioStore();
+  const { audioElement, backgroundColor, greenScreenMode } = useStudioStore();
   const { isRecording, startRecording, stopRecording } = useWebMRecorder({ canvasRef, audioElement });
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
@@ -21,7 +21,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
     } else {
       // Start recording from current playback position
       const currentTime = audioElement?.currentTime || 0;
-      startRecording(currentTime, backgroundColor, 'visualizer', transparentExport, exportQuality);
+      startRecording(currentTime, backgroundColor, 'visualizer', greenScreenMode, exportQuality);
     }
   };
 
