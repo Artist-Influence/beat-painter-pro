@@ -14,8 +14,22 @@ interface RecordingControlsProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
+// Helper to format visualizer name for filename
+const formatVisualizerNameForFile = (key: string): string => {
+  if (key.startsWith('custom_')) {
+    return key.replace('custom_', '').replace(/([A-Z])/g, ' $1').trim();
+  }
+  return key.replace(/Visualizer$/, '').replace(/([A-Z])/g, ' $1').trim();
+};
+
+// Helper to extract song name from filename
+const getSongName = (fileName: string | null): string => {
+  if (!fileName) return 'Untitled';
+  return fileName.replace(/\.[^/.]+$/, '');
+};
+
 const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
-  const { selected, setSelected, background, setBackgroundColor, filters, setFilters, zoomLevel, setZoom, audioElement } = useStudioStore();
+  const { selected, setSelected, background, setBackgroundColor, filters, setFilters, zoomLevel, setZoom, audioElement, audioFileName, logo, exportMode } = useStudioStore();
   const [startAt, setStartAt] = useState(0);
   const { startRecording, stopRecording, isRecording } = useWebMRecorder({ canvasRef, audioElement });
 
@@ -79,7 +93,9 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
             logEvent("recording_stopped", { visualizer_key: selected });
           } else {
             logEvent("recording_started", { visualizer_key: selected });
-            startRecording(startAt, background, selected);
+            const songName = getSongName(audioFileName);
+            const vizName = formatVisualizerNameForFile(selected);
+            startRecording(startAt, background, songName, vizName, undefined, logo, exportMode);
           }
         }}
       >

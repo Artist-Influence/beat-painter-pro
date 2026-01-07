@@ -8,8 +8,22 @@ interface TopBarProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
+// Helper to format visualizer name
+const formatVisualizerName = (key: string): string => {
+  if (key.startsWith('custom_')) {
+    return key.replace('custom_', '').replace(/([A-Z])/g, ' $1').trim();
+  }
+  return key.replace(/Visualizer$/, '').replace(/([A-Z])/g, ' $1').trim();
+};
+
+// Helper to extract song name from filename
+const getSongName = (fileName: string | null): string => {
+  if (!fileName) return 'Untitled';
+  return fileName.replace(/\.[^/.]+$/, '');
+};
+
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, background, logo, exportMode } = useStudioStore();
+  const { audioElement, background, logo, exportMode, selected, audioFileName } = useStudioStore();
   const { isRecording, startRecording, stopRecording, frameCount } = useWebMRecorder({ canvasRef, audioElement });
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
@@ -18,7 +32,9 @@ export function TopBar({ canvasRef }: TopBarProps) {
       stopRecording();
     } else {
       const currentTime = audioElement?.currentTime || 0;
-      startRecording(currentTime, background, 'visualizer', exportQuality, logo, exportMode);
+      const songName = getSongName(audioFileName);
+      const vizName = formatVisualizerName(selected);
+      startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode);
     }
   };
 
