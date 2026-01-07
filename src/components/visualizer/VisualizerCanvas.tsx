@@ -19,7 +19,6 @@ interface VisualizerCanvasProps {
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
-  const [isTransparentRecording, setIsTransparentRecording] = useState(false);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   
   const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
@@ -134,28 +133,18 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     return () => window.removeEventListener("style:applied", handler);
   }, []);
 
-  // Listen for transparency recording events
-  useEffect(() => {
-    const handleTransparency = (e: Event) => {
-      const customEvent = e as CustomEvent<{ enabled: boolean }>;
-      setIsTransparentRecording(customEvent.detail.enabled);
-    };
-    window.addEventListener('recording:transparency', handleTransparency);
-    return () => window.removeEventListener('recording:transparency', handleTransparency);
-  }, []);
 
-  // Update renderer clear color when transparency mode changes or logo is behind
+  // Update renderer clear color when logo is behind
   useEffect(() => {
     if (rendererRef.current) {
-      if (isTransparentRecording || logoBehind) {
-        rendererRef.current.setClearColor(0x000000, 0); // Fully transparent
+      if (logoBehind) {
+        rendererRef.current.setClearColor(0x000000, 0); // Fully transparent for logo behind
       } else {
-        // Parse backgroundColor to set clear color
         const color = new THREE.Color(backgroundColor);
         rendererRef.current.setClearColor(color, 1);
       }
     }
-  }, [isTransparentRecording, backgroundColor, logoBehind]);
+  }, [backgroundColor, logoBehind]);
 
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
@@ -186,8 +175,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          // Hide background when recording with transparency OR logo is behind (so logo shows through)
-          backgroundColor: (isTransparentRecording || logoBehind) ? 'transparent' : backgroundColor 
+          backgroundColor: logoBehind ? 'transparent' : backgroundColor 
         }}
       >
         <Canvas

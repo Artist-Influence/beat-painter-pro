@@ -37,7 +37,7 @@ interface StudioState {
   audioFileName: string | null;
   audioSensitivity: AudioSensitivity;
   logo: LogoState;
-  transparentExport: boolean;
+  greenScreenMode: boolean;
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackground: (c: StudioState["backgroundColor"]) => void;
   setFilters: (f: Partial<Filters>) => void;
@@ -52,7 +52,7 @@ interface StudioState {
   setLogoLayer: (layer: LogoLayer) => void;
   setLogoColorMode: (mode: LogoColorMode) => void;
   clearLogo: () => void;
-  setTransparentExport: (value: boolean) => void;
+  setGreenScreenMode: (value: boolean) => void;
 }
 
 const AUDIO_PRESETS: Record<'calm' | 'flow' | 'energy', Omit<AudioSensitivity, 'preset'>> = {
@@ -86,7 +86,7 @@ export const useStudioStore = create<StudioState>((set) => ({
     preset: 'flow',
   },
   logo: DEFAULT_LOGO,
-  transparentExport: false,
+  greenScreenMode: false,
   setSelected: (v) => set({ selected: v }),
   setBackground: (c) => set({ backgroundColor: c }),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
@@ -105,5 +105,5 @@ export const useStudioStore = create<StudioState>((set) => ({
   setLogoLayer: (layer) => set((state) => ({ logo: { ...state.logo, layer } })),
   setLogoColorMode: (colorMode) => set((state) => ({ logo: { ...state.logo, colorMode } })),
   clearLogo: () => set({ logo: DEFAULT_LOGO }),
-  setTransparentExport: (value) => set({ transparentExport: value }),
+  setGreenScreenMode: (value) => set({ greenScreenMode: value }),
 }));
