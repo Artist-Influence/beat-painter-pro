@@ -1,11 +1,32 @@
-import React, { useRef } from 'react';
-import { Upload, Music, FileText } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, Music } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
 import { toast } from 'sonner';
 
 export function UploadSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setAudioElement, audioElement, audioFileName } = useStudioStore();
+  const [duration, setDuration] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!audioElement) {
+      setDuration(null);
+      return;
+    }
+
+    const handleLoadedMetadata = () => {
+      setDuration(audioElement.duration);
+    };
+
+    if (audioElement.duration && !isNaN(audioElement.duration)) {
+      setDuration(audioElement.duration);
+    }
+
+    audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    return () => {
+      audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, [audioElement]);
 
   const handleFile = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -72,7 +93,9 @@ export function UploadSection() {
                 {audioFileName || "Audio loaded"}
               </p>
               <p className="text-white/40 text-xs">
-                Duration: {audioElement.duration ? `${Math.floor(audioElement.duration / 60)}:${Math.floor(audioElement.duration % 60).toString().padStart(2, '0')}` : 'Unknown'}
+                Duration: {duration 
+                  ? `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}` 
+                  : 'Loading...'}
               </p>
             </div>
           </div>
