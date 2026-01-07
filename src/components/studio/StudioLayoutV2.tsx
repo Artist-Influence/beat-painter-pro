@@ -7,12 +7,14 @@ import { BottomBar } from './v2/BottomBar';
 import { FloatingActions } from './v2/FloatingActions';
 import { LogoOverlay } from './v2/LogoOverlay';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useStudioStore } from '@/stores/studioStore';
 
 type LeftPanelType = 'visualizers' | 'styles' | null;
 type RightPanelType = 'controls' | 'upload' | null;
 
 export function StudioLayoutV2() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const { logo } = useStudioStore();
   const [activePanels, setActivePanels] = useState({
     left: 'visualizers' as LeftPanelType,
     right: 'controls' as RightPanelType,
@@ -24,13 +26,16 @@ export function StudioLayoutV2() {
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">
+      {/* Logo Behind Visualizer */}
+      {logo.layer === 'behind' && <LogoOverlay />}
+
       {/* Full-Screen Visualizer Canvas */}
       <div className="absolute inset-0">
         <VisualizerCanvas canvasRef={canvasRef} />
       </div>
 
-      {/* Logo Overlay - Draggable */}
-      <LogoOverlay />
+      {/* Logo In Front of Visualizer */}
+      {logo.layer === 'front' && <LogoOverlay />}
 
       {/* Top Bar - Minimal, Transparent */}
       <TopBar canvasRef={canvasRef} />

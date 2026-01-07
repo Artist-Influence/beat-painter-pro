@@ -15,11 +15,16 @@ interface AudioSensitivity {
   preset: 'calm' | 'flow' | 'energy' | 'custom';
 }
 
+type LogoLayer = 'front' | 'behind';
+type LogoColorMode = 'original' | 'invert' | 'light' | 'dark';
+
 interface LogoState {
   url: string | null;
   position: { x: number; y: number };
   size: number;
   opacity: number;
+  layer: LogoLayer;
+  colorMode: LogoColorMode;
 }
 
 interface StudioState {
@@ -42,6 +47,8 @@ interface StudioState {
   setLogoPosition: (pos: { x: number; y: number }) => void;
   setLogoSize: (size: number) => void;
   setLogoOpacity: (opacity: number) => void;
+  setLogoLayer: (layer: LogoLayer) => void;
+  setLogoColorMode: (mode: LogoColorMode) => void;
   clearLogo: () => void;
 }
 
@@ -56,6 +63,8 @@ const DEFAULT_LOGO: LogoState = {
   position: { x: 50, y: 50 },
   size: 100,
   opacity: 100,
+  layer: 'front',
+  colorMode: 'original',
 };
 
 export const useStudioStore = create<StudioState>((set) => ({
@@ -88,5 +97,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   setLogoPosition: (position) => set((state) => ({ logo: { ...state.logo, position } })),
   setLogoSize: (size) => set((state) => ({ logo: { ...state.logo, size } })),
   setLogoOpacity: (opacity) => set((state) => ({ logo: { ...state.logo, opacity } })),
+  setLogoLayer: (layer) => set((state) => ({ logo: { ...state.logo, layer } })),
+  setLogoColorMode: (colorMode) => set((state) => ({ logo: { ...state.logo, colorMode } })),
   clearLogo: () => set({ logo: DEFAULT_LOGO }),
 }));

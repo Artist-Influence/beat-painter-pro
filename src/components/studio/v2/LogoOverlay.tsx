@@ -47,6 +47,15 @@ export function LogoOverlay() {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  const getColorFilter = (mode: typeof logo.colorMode): string => {
+    switch (mode) {
+      case 'invert': return 'invert(1)';
+      case 'light': return 'brightness(0) invert(1)';
+      case 'dark': return 'brightness(0)';
+      default: return 'none';
+    }
+  };
+
   if (!logo.url) return null;
 
   return (
@@ -67,7 +76,10 @@ export function LogoOverlay() {
         <img 
           src={logo.url} 
           alt="Logo overlay"
-          style={{ width: `${logo.size}px` }}
+          style={{ 
+            width: `${logo.size}px`,
+            filter: getColorFilter(logo.colorMode),
+          }}
           draggable={false}
           className="max-w-none"
         />
