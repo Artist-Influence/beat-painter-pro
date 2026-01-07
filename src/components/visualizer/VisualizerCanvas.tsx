@@ -97,7 +97,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     // Create an analyser for this session and wire the graph: source -> analyser -> gainNode -> destination
     const analyserNode = ctx.createAnalyser();
     analyserNode.fftSize = 2048;
-    analyserNode.smoothingTimeConstant = 0.8;
+    // Note: smoothingTimeConstant is set in useAudioAnalysis hook for centralized control
 
     // Create a GainNode for volume control (after analyser so visualizer stays reactive when muted)
     const gainNode = ctx.createGain();
