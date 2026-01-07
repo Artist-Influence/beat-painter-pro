@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 export function UploadSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const { setAudioElement, audioElement, audioFileName, logo, setLogo, setLogoSize, setLogoOpacity, clearLogo } = useStudioStore();
+  const { setAudioElement, audioElement, audioFileName, logo, setLogo, setLogoSize, setLogoOpacity, setLogoLayer, setLogoColorMode, clearLogo } = useStudioStore();
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -211,6 +211,53 @@ export function UploadSection() {
                 step={5}
                 className="w-full"
               />
+            </div>
+
+            {/* Layer Toggle */}
+            <div className="space-y-2">
+              <span className="text-white/60 text-xs">Layer</span>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setLogoLayer('behind')}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                    logo.layer === 'behind' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white/10 text-white/60 hover:bg-white/15'
+                  }`}
+                >
+                  Behind
+                </button>
+                <button 
+                  onClick={() => setLogoLayer('front')}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                    logo.layer === 'front' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white/10 text-white/60 hover:bg-white/15'
+                  }`}
+                >
+                  In Front
+                </button>
+              </div>
+            </div>
+
+            {/* Color Mode Selector */}
+            <div className="space-y-2">
+              <span className="text-white/60 text-xs">Color</span>
+              <div className="grid grid-cols-4 gap-1">
+                {(['original', 'invert', 'light', 'dark'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setLogoColorMode(mode)}
+                    className={`px-2 py-1.5 rounded text-xs capitalize transition-colors ${
+                      logo.colorMode === mode 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-white/10 text-white/60 hover:bg-white/15'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
