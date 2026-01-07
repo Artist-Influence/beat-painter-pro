@@ -11,16 +11,17 @@ interface TopBarProps {
 }
 
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, backgroundColor } = useStudioStore();
+  const { audioElement, backgroundColor, transparentExport } = useStudioStore();
   const { isRecording, startRecording, stopRecording } = useWebMRecorder({ canvasRef, audioElement });
-  const [transparentExport, setTransparentExport] = useState(false);
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
   const handleRecord = () => {
     if (isRecording) {
       stopRecording();
     } else {
-      startRecording(0, backgroundColor, 'visualizer', transparentExport, exportQuality);
+      // Start recording from current playback position
+      const currentTime = audioElement?.currentTime || 0;
+      startRecording(currentTime, backgroundColor, 'visualizer', transparentExport, exportQuality);
     }
   };
 
@@ -47,18 +48,6 @@ export function TopBar({ canvasRef }: TopBarProps) {
             <option value="1080p">1080p</option>
             <option value="4k">4K</option>
           </select>
-          
-          {/* Transparent BG toggle */}
-          <label className="flex items-center gap-1.5 cursor-pointer px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
-            <input
-              type="checkbox"
-              checked={transparentExport}
-              onChange={(e) => setTransparentExport(e.target.checked)}
-              className="w-3 h-3 rounded"
-              disabled={isRecording}
-            />
-            <span className="text-xs text-white/70">Transparent BG</span>
-          </label>
           
           {/* Record button */}
           <button 
