@@ -34,6 +34,12 @@ export const useAudioAnalysis = (
 
     const updateAudioData = () => {
       if (!analyser || !dataArrayRef.current || !isPlaying) {
+        // CRITICAL: Zero out audio data when paused so visualizers freeze
+        onDataUpdate({
+          frequency: Array(256).fill(0),
+          amplitude: 0,
+          beatStrength: 0,
+        });
         animationFrameRef.current = requestAnimationFrame(updateAudioData);
         return;
       }

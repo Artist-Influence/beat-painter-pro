@@ -189,10 +189,10 @@ export default function NeonSkylineVisualizer({
         ))}
         
         <Sparkles
-          count={200}
-          scale={[12, 2, 2]} // Flatter sparkle area for horizontal layout
+          count={smoothedBass.current > 0.02 ? 200 : 0}
+          scale={[12, 2, 2]}
           size={1 + smoothedBass.current * 2}
-          speed={0.3 + smoothedBass.current}
+          speed={smoothedBass.current > 0.02 ? (0.3 + smoothedBass.current) : 0}
           opacity={0.2 + smoothedBass.current * 0.3}
           color={textureData.colors.primary}
         />

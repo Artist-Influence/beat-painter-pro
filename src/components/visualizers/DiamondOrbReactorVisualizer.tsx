@@ -200,11 +200,11 @@ function ReactorCore({
       {/* Internal Beam Array */}
       <instancedMesh ref={beamsRef} args={[beamGeo, beamMat, beamCount]} />
 
-      {/* Sparkle Layer - driven by highs, uses accent color */}
+      {/* Sparkle Layer - driven by highs, uses accent color, frozen when no audio */}
       <Sparkles
         count={sparkleCount}
         size={1.5}
-        speed={0.4}
+        speed={0}
         opacity={0.75}
         scale={2.0}
         color={accentColor}

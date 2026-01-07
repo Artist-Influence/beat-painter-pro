@@ -275,7 +275,7 @@ export default function CircuitPulseVisualizer({
           count={50}
           scale={[8, 2, 2]}
           size={1}
-          speed={0.5}
+          speed={0}
           opacity={0.3}
           color={textureData.colors?.primary || "#00ffff"}
         />

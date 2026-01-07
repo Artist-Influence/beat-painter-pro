@@ -212,10 +212,10 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         />
       </mesh>
       <Sparkles
-        count={5 + smoothedHighs.current * 15 + smoothedBass.current * 10}
+        count={(smoothedHighs.current > 0.02 || smoothedBass.current > 0.02) ? Math.round(5 + smoothedHighs.current * 15 + smoothedBass.current * 10) : 0}
         scale={[0.8, 0.8, 0.8]}
         size={0.8 + smoothedHighs.current * 1.5 + smoothedBass.current * 1}
-        speed={0.6 + smoothedHighs.current * 1.2 + smoothedBass.current * 1}
+        speed={(smoothedHighs.current > 0.02 || smoothedBass.current > 0.02) ? (0.6 + smoothedHighs.current * 1.2 + smoothedBass.current * 1) : 0}
         opacity={0.015 + smoothedHighs.current * 0.035}
         color={accentColor}
       />
