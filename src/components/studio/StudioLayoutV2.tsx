@@ -32,6 +32,7 @@ export function StudioLayoutV2() {
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover z-[0]"
+          style={{ objectPosition: `center ${background.positionY}%` }}
           src={background.mediaUrl}
           autoPlay
           loop
@@ -41,6 +42,7 @@ export function StudioLayoutV2() {
       ) : background.type === 'image' && background.mediaUrl ? (
         <img
           className="absolute inset-0 w-full h-full object-cover z-[0]"
+          style={{ objectPosition: `center ${background.positionY}%` }}
           src={background.mediaUrl}
           alt="Background"
         />

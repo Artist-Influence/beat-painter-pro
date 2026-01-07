@@ -79,7 +79,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
             logEvent("recording_stopped", { visualizer_key: selected });
           } else {
             logEvent("recording_started", { visualizer_key: selected });
-            startRecording(startAt, background.color, selected);
+            startRecording(startAt, background, selected);
           }
         }}
       >

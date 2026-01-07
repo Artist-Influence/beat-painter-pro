@@ -18,7 +18,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
       stopRecording();
     } else {
       const currentTime = audioElement?.currentTime || 0;
-      startRecording(currentTime, background.color, 'visualizer', exportQuality, logo, exportMode);
+      startRecording(currentTime, background, 'visualizer', exportQuality, logo, exportMode);
     }
   };
 

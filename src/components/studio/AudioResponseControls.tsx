@@ -48,6 +48,7 @@ export const AudioResponseControls: React.FC = () => {
     background,
     setBackgroundColor,
     setBackgroundMedia,
+    setBackgroundPositionY,
     clearBackgroundMedia,
     filters,
     setFilters,
@@ -275,33 +276,59 @@ export const AudioResponseControls: React.FC = () => {
             </button>
           </div>
           
+          {/* File type info - shown when no custom background */}
+          {!background.mediaUrl && (
+            <div className="text-xs text-white/50 space-y-0.5">
+              <p>Accepted: PNG, JPG, GIF, MP4, WebM</p>
+              <p>Max recommended: 50MB</p>
+            </div>
+          )}
+          
           {/* Custom background preview */}
           {background.type !== 'color' && background.mediaUrl && (
-            <div className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2">
-              {background.mediaType === 'video' ? (
-                <video 
-                  src={background.mediaUrl} 
-                  className="w-10 h-10 object-cover rounded"
-                  muted
-                />
-              ) : (
-                <img 
-                  src={background.mediaUrl} 
-                  alt="Background preview" 
-                  className="w-10 h-10 object-cover rounded"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-white/80 text-xs truncate">
-                  {background.mediaType === 'video' ? 'Video' : background.mediaType === 'gif' ? 'GIF' : 'Image'}
-                </p>
+            <div className="space-y-3">
+              <div className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2">
+                {background.mediaType === 'video' ? (
+                  <video 
+                    src={background.mediaUrl} 
+                    className="w-10 h-10 object-cover rounded"
+                    muted
+                  />
+                ) : (
+                  <img 
+                    src={background.mediaUrl} 
+                    alt="Background preview" 
+                    className="w-10 h-10 object-cover rounded"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/80 text-xs truncate">
+                    {background.mediaType === 'video' ? 'Video' : background.mediaType === 'gif' ? 'GIF' : 'Image'}
+                  </p>
+                </div>
+                <button
+                  onClick={clearBackgroundMedia}
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <span className="text-white/60 text-xs">✕</span>
+                </button>
               </div>
-              <button
-                onClick={clearBackgroundMedia}
-                className="p-1 hover:bg-white/10 rounded"
-              >
-                <span className="text-white/60 text-xs">✕</span>
-              </button>
+              
+              {/* Vertical position slider */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/80 text-xs">Vertical Position</span>
+                  <span className="text-xs text-white/60">{background.positionY}%</span>
+                </div>
+                <ResettableSlider
+                  value={[background.positionY]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  defaultValue={50}
+                  onValueChange={([v]) => setBackgroundPositionY(v)}
+                />
+              </div>
             </div>
           )}
         </div>
