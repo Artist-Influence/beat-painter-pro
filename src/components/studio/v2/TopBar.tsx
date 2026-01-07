@@ -1,27 +1,24 @@
 import React, { useState } from 'react';
-import { Mic2 } from 'lucide-react';
+import { Mic2, Film, Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStudioStore } from '@/stores/studioStore';
-import { useWebMRecorder } from '@/hooks/useWebMRecorder';
-
-type ExportQuality = '1080p' | '4k';
+import { useWebMRecorder, ExportQuality } from '@/hooks/useWebMRecorder';
 
 interface TopBarProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, backgroundColor, greenScreenMode, logo } = useStudioStore();
-  const { isRecording, startRecording, stopRecording } = useWebMRecorder({ canvasRef, audioElement });
+  const { audioElement, backgroundColor, logo, exportMode } = useStudioStore();
+  const { isRecording, startRecording, stopRecording, frameCount } = useWebMRecorder({ canvasRef, audioElement });
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
   const handleRecord = () => {
     if (isRecording) {
       stopRecording();
     } else {
-      // Start recording from current playback position
       const currentTime = audioElement?.currentTime || 0;
-      startRecording(currentTime, backgroundColor, 'visualizer', greenScreenMode, exportQuality, logo);
+      startRecording(currentTime, backgroundColor, 'visualizer', exportQuality, logo, exportMode);
     }
   };
 
@@ -47,7 +44,20 @@ export function TopBar({ canvasRef }: TopBarProps) {
           >
             <option value="1080p">1080p</option>
             <option value="4k">4K</option>
+            <option value="8k">8K</option>
           </select>
+          
+          {/* Mode indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
+            {exportMode === 'video' ? (
+              <Film className="w-4 h-4 text-white/70" />
+            ) : (
+              <Image className="w-4 h-4 text-white/70" />
+            )}
+            <span className="text-white/70 text-xs">
+              {exportMode === 'video' ? 'WebM' : 'PNG'}
+            </span>
+          </div>
           
           {/* Record button */}
           <button 
@@ -58,7 +68,10 @@ export function TopBar({ canvasRef }: TopBarProps) {
                 : 'bg-red-600/70 hover:bg-red-600/90 shadow-red-600/30'
             }`}
           >
-            {isRecording ? 'STOP' : 'REC'}
+            {isRecording 
+              ? (exportMode === 'png-sequence' ? `STOP (${frameCount})` : 'STOP')
+              : (exportMode === 'png-sequence' ? 'REC FRAMES' : 'REC')
+            }
           </button>
         </div>
 
