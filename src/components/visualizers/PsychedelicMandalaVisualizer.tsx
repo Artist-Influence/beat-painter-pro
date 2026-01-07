@@ -19,6 +19,9 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
   
+  // Base rotation for position-based rotation
+  const baseRotation = useRef(0);
+  
   useFrame(() => {
     if (meshRef.current) {
       const speed = audioSensitivity.animationSpeed;
@@ -55,10 +58,12 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       // Beat pop effect
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
       
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        meshRef.current.rotation.z += bass * 0.1;
-      }
+      // Base rotation advances slowly
+      baseRotation.current += 0.002 * speed;
+      
+      // Audio offset for rotation - snaps to beat
+      const audioOffset = hasAudio ? bass * Math.PI * 0.2 : 0;
+      meshRef.current.rotation.z = baseRotation.current + audioOffset;
       
       // Scale reacts to audio (returns to 1 when silent)
       const pulse = (1 + bass * 0.6) * beatPop;
@@ -123,6 +128,9 @@ export default function PsychedelicMandalaVisualizer({
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const mainBaseRotation = useRef(0);
 
   useFrame(() => {
     if (groupRef.current) {
@@ -158,10 +166,13 @@ export default function PsychedelicMandalaVisualizer({
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
       
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        groupRef.current.rotation.z += bass * 0.08;
-      }
+      // Base rotation advances slowly
+      const animSpeed = audioSensitivity.animationSpeed;
+      mainBaseRotation.current += 0.002 * animSpeed;
+      
+      // Audio offset for rotation - snaps to beat
+      const audioOffset = hasAudio ? bass * Math.PI * 0.15 : 0;
+      groupRef.current.rotation.z = mainBaseRotation.current + audioOffset;
       
       // Scale reacts to audio (returns to 1 when silent)
       const breathe = (1 + bass * 0.4) * beatPop;

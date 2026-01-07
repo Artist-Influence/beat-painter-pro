@@ -199,6 +199,9 @@ function AlienMembrane({ audioData }: any) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const baseRotation = useRef({ x: 0, y: 0, z: 0 });
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
@@ -245,12 +248,19 @@ function AlienMembrane({ audioData }: any) {
       const beatScale = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
       groupRef.current.scale.setScalar(0.5 * beatScale);
       
-      // ROTATION: Only when audio is present (frozen when silent)
-      if (hasAudio) {
-        groupRef.current.rotation.y += bass * 0.08;
-        groupRef.current.rotation.x += mids * 0.04;
-        groupRef.current.rotation.z += highs * 0.02;
-      }
+      // Base rotation advances slowly
+      baseRotation.current.y += 0.002 * speed;
+      baseRotation.current.x += 0.001 * speed;
+      baseRotation.current.z += 0.0005 * speed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? bass * Math.PI * 0.15 : 0;
+      const offsetX = hasAudio ? mids * Math.PI * 0.08 : 0;
+      const offsetZ = hasAudio ? highs * Math.PI * 0.04 : 0;
+      
+      groupRef.current.rotation.y = baseRotation.current.y + offsetY;
+      groupRef.current.rotation.x = baseRotation.current.x + offsetX;
+      groupRef.current.rotation.z = baseRotation.current.z + offsetZ;
       
       // POSITION: Proportional to audio (returns to 0 when silent)
       groupRef.current.position.y = bass * 0.5;

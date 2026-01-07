@@ -39,6 +39,13 @@ function CrackedCrystalOrb({ audioData }: any) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
+  
+  // Base rotation refs for position-based rotation
+  const baseRotation = useRef({ x: 0, y: 0, z: 0 });
+  const innerCoreBaseRotation = useRef({ x: 0, y: 0, z: 0 });
+  const shardBaseRotations = useRef<{ x: number; y: number; z: number }[]>(
+    Array(16).fill(null).map(() => ({ x: 0, y: 0, z: 0 }))
+  );
 
   useFrame(() => {
     // Calculate audio per-frame
@@ -77,11 +84,18 @@ function CrackedCrystalOrb({ audioData }: any) {
     const scalePulse = 1 + 0.5 * finalBeat;
 
     if (group.current) {
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        group.current.rotation.y += finalMids * 0.15;
-        group.current.rotation.x += finalBeat * 0.1;
-      }
+      // Base rotation advances slowly (controlled by animationSpeed)
+      const animSpeed = audioSensitivity.animationSpeed;
+      baseRotation.current.y += 0.002 * animSpeed;
+      baseRotation.current.x += 0.001 * animSpeed;
+      
+      // Audio OFFSET - snaps to beat, returns when silent
+      const audioOffsetY = hasAudio ? finalMids * Math.PI * 0.3 : 0;
+      const audioOffsetX = hasAudio ? finalBeat * Math.PI * 0.2 : 0;
+      
+      // Final rotation = slow base + audio snap
+      group.current.rotation.y = baseRotation.current.y + audioOffsetY;
+      group.current.rotation.x = baseRotation.current.x + audioOffsetX;
       
       // Position proportional to audio (returns to 0 when silent)
       group.current.position.y = finalBeat * 2.0;
@@ -102,11 +116,18 @@ function CrackedCrystalOrb({ audioData }: any) {
     }
 
     if (innerCore.current) {
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        innerCore.current.rotation.y += finalMids * 0.3;
-        innerCore.current.rotation.x += finalHighs * 0.25;
-      }
+      // Base rotation for inner core
+      const animSpeed = audioSensitivity.animationSpeed;
+      innerCoreBaseRotation.current.y += 0.003 * animSpeed;
+      innerCoreBaseRotation.current.x += 0.002 * animSpeed;
+      
+      // Audio offset for inner core
+      const coreOffsetY = hasAudio ? finalMids * Math.PI * 0.4 : 0;
+      const coreOffsetX = hasAudio ? finalHighs * Math.PI * 0.3 : 0;
+      
+      innerCore.current.rotation.y = innerCoreBaseRotation.current.y + coreOffsetY;
+      innerCore.current.rotation.x = innerCoreBaseRotation.current.x + coreOffsetX;
+      
       // Scale reacts to audio
       const coreScale = 0.4 + finalBeat * 1.2;
       innerCore.current.scale.setScalar(coreScale);
@@ -114,12 +135,21 @@ function CrackedCrystalOrb({ audioData }: any) {
 
     shards.current.forEach((shard, i) => {
       if (shard) {
-        // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-        if (hasAudio) {
-          shard.rotation.y += finalMids * 0.25;
-          shard.rotation.x += finalBeat * 0.4;
-          shard.rotation.z += finalHighs * 0.3;
-        }
+        const animSpeed = audioSensitivity.animationSpeed;
+        
+        // Base rotation for each shard
+        shardBaseRotations.current[i].y += 0.002 * animSpeed * (1 + i * 0.1);
+        shardBaseRotations.current[i].x += 0.001 * animSpeed * (1 + i * 0.05);
+        shardBaseRotations.current[i].z += 0.0015 * animSpeed;
+        
+        // Audio offset for shards
+        const shardOffsetY = hasAudio ? finalMids * Math.PI * 0.35 : 0;
+        const shardOffsetX = hasAudio ? finalBeat * Math.PI * 0.5 : 0;
+        const shardOffsetZ = hasAudio ? finalHighs * Math.PI * 0.4 : 0;
+        
+        shard.rotation.y = shardBaseRotations.current[i].y + shardOffsetY;
+        shard.rotation.x = shardBaseRotations.current[i].x + shardOffsetX;
+        shard.rotation.z = shardBaseRotations.current[i].z + shardOffsetZ;
         
         // Scale reacts to audio
         const shardScale = 1.0 + finalBeat * 1.0 + finalHighs * 0.7;

@@ -34,6 +34,9 @@ function NeuralLattice({ audioData }: any) {
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const baseRotation = useRef({ x: 0, y: 0, z: 0 });
 
   useFrame(() => {
     let bassSum = 0, midsSum = 0, highsSum = 0;
@@ -60,11 +63,19 @@ function NeuralLattice({ audioData }: any) {
       const targetScale = 1 + bass * 1.2;
       groupRef.current.scale.setScalar(groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.05);
       
-      if (hasAudio) {
-        groupRef.current.rotation.y += mids * 0.1;
-        groupRef.current.rotation.x += bass * 0.05;
-        groupRef.current.rotation.z += highs * 0.03;
-      }
+      // Base rotation advances slowly
+      baseRotation.current.y += 0.002;
+      baseRotation.current.x += 0.001;
+      baseRotation.current.z += 0.0008;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? mids * Math.PI * 0.2 : 0;
+      const offsetX = hasAudio ? bass * Math.PI * 0.1 : 0;
+      const offsetZ = hasAudio ? highs * Math.PI * 0.06 : 0;
+      
+      groupRef.current.rotation.y = baseRotation.current.y + offsetY;
+      groupRef.current.rotation.x = baseRotation.current.x + offsetX;
+      groupRef.current.rotation.z = baseRotation.current.z + offsetZ;
       
       groupRef.current.position.y = bass * 2.0 + amplitude * 2.0;
     }

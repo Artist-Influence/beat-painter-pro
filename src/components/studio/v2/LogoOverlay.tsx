@@ -50,8 +50,6 @@ export function LogoOverlay() {
   const getColorFilter = (mode: typeof logo.colorMode): string => {
     switch (mode) {
       case 'invert': return 'invert(1)';
-      case 'light': return 'brightness(0) invert(1)';
-      case 'dark': return 'brightness(0)';
       default: return 'none';
     }
   };

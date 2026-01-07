@@ -34,6 +34,9 @@ function Feather({ index, side, audioData }: any) {
   // Smoothing refs
   const smoothedMids = useRef(0);
   const smoothedBass = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const baseRotation = useRef({ y: 0, z: 0 });
 
   useFrame(() => {
     // Calculate audio per-frame with sensitivity multipliers
@@ -61,11 +64,16 @@ function Feather({ index, side, audioData }: any) {
     const hasAudio = bass > audioThreshold || mids > audioThreshold;
     
     if (meshRef.current) {
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        meshRef.current.rotation.y += bass * 0.15 + mids * 0.08;
-        meshRef.current.rotation.z += mids * 0.05 + bass * 0.06;
-      }
+      // Base rotation advances slowly
+      baseRotation.current.y += 0.002 * audioSensitivity.animationSpeed;
+      baseRotation.current.z += 0.001 * audioSensitivity.animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? (bass * 0.3 + mids * 0.15) * Math.PI : 0;
+      const offsetZ = hasAudio ? (mids * 0.1 + bass * 0.12) * Math.PI : 0;
+      
+      meshRef.current.rotation.y = baseRotation.current.y + offsetY;
+      meshRef.current.rotation.z = baseRotation.current.z + offsetZ;
       
       // Scale reacts to audio (returns to 1 when silent)
       const beatScale = bass > 0.5 ? 1 + bass * 1.2 : 1;
@@ -106,6 +114,9 @@ function Wing({ side, audioData }: any) {
   // Smoothing refs
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const wingBaseRotation = useRef({ x: 0, z: 0 });
 
   useFrame(() => {
     // Calculate audio per-frame with sensitivity multipliers
@@ -133,11 +144,16 @@ function Wing({ side, audioData }: any) {
     const hasAudio = bass > audioThreshold || mids > audioThreshold;
     
     if (groupRef.current) {
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        groupRef.current.rotation.z += side * bass * 0.15;
-        groupRef.current.rotation.x += bass * 0.08;
-      }
+      // Base rotation advances slowly
+      wingBaseRotation.current.z += side * 0.002 * audioSensitivity.animationSpeed;
+      wingBaseRotation.current.x += 0.001 * audioSensitivity.animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetZ = hasAudio ? side * bass * Math.PI * 0.3 : 0;
+      const offsetX = hasAudio ? bass * Math.PI * 0.15 : 0;
+      
+      groupRef.current.rotation.z = wingBaseRotation.current.z + offsetZ;
+      groupRef.current.rotation.x = wingBaseRotation.current.x + offsetX;
       
       // Scale reacts to audio (returns to 1 when silent)
       const beatScale = bass > 0.6 ? 1 + bass * 2.0 : 1;
@@ -170,6 +186,9 @@ function HologramWings({ audioData }: any) {
   // Smoothing refs
   const smoothedHighs = useRef(0);
   const smoothedBass = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const hologramBaseRotation = useRef({ x: 0, y: 0 });
 
   useFrame(() => {
     // Calculate audio per-frame with sensitivity multipliers
@@ -200,11 +219,16 @@ function HologramWings({ audioData }: any) {
       // Position proportional to audio (returns to 0 when silent)
       groupRef.current.position.y = bass * 1.0;
       
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        groupRef.current.rotation.y += bass * 0.1 + highs * 0.05;
-        groupRef.current.rotation.x += bass * 0.06;
-      }
+      // Base rotation advances slowly
+      hologramBaseRotation.current.y += 0.002 * audioSensitivity.animationSpeed;
+      hologramBaseRotation.current.x += 0.001 * audioSensitivity.animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? (bass * 0.2 + highs * 0.1) * Math.PI : 0;
+      const offsetX = hasAudio ? bass * Math.PI * 0.12 : 0;
+      
+      groupRef.current.rotation.y = hologramBaseRotation.current.y + offsetY;
+      groupRef.current.rotation.x = hologramBaseRotation.current.x + offsetX;
     }
   });
 

@@ -19,6 +19,8 @@ function StrobeRing({ distance, index, audioData, textureData }) {
   const smoothedHighs = useRef(0);
   // Store current Z position
   const currentZ = useRef(distance);
+  // Base rotation for position-based rotation
+  const baseRotation = useRef(0);
   
   useFrame(() => {
     if (meshRef.current && materialRef.current) {
@@ -63,10 +65,13 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       const scale = 1 + Math.abs(currentZ.current) * 0.1 + bass * 1.2;
       meshRef.current.scale.setScalar(scale);
       
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        meshRef.current.rotation.z += bass * 0.15;
-      }
+      // Base rotation advances slowly
+      const animSpeed = audioSensitivity.animationSpeed;
+      baseRotation.current += 0.003 * animSpeed;
+      
+      // Audio offset for rotation
+      const audioOffset = hasAudio ? bass * Math.PI * 0.3 : 0;
+      meshRef.current.rotation.z = baseRotation.current + audioOffset;
       
       // Position oscillation proportional to audio
       meshRef.current.position.x = bass * 0.2;
@@ -119,6 +124,8 @@ export default function StroboscopicTunnelVisualizer({
   // Smoothing refs
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
+  // Base rotation for position-based rotation
+  const tunnelBaseRotation = useRef(0);
   
   useFrame(({ camera }) => {
     // Calculate audio per-frame
@@ -146,10 +153,13 @@ export default function StroboscopicTunnelVisualizer({
     const hasAudio = bass > audioThreshold || mids > audioThreshold;
     
     if (tunnelRef.current) {
-      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
-      if (hasAudio) {
-        tunnelRef.current.rotation.z += mids * bass * 0.2;
-      }
+      // Base rotation advances slowly
+      const animSpeed = audioSensitivity.animationSpeed;
+      tunnelBaseRotation.current += 0.002 * animSpeed;
+      
+      // Audio offset for rotation
+      const audioOffset = hasAudio ? mids * bass * Math.PI * 0.4 : 0;
+      tunnelRef.current.rotation.z = tunnelBaseRotation.current + audioOffset;
       
       // Scale driven by audio (returns to 1 when silent)
       const tunnelScale = 1 + bass * 0.4;

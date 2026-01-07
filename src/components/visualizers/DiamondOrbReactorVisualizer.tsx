@@ -25,6 +25,12 @@ function ReactorCore({
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   const smoothedBeat = useRef(0);
+  
+  // Base rotation for position-based rotation
+  const groupBaseRotation = useRef({ x: 0, y: 0 });
+  const shellBaseRotation = useRef({ y: 0, z: 0 });
+  const coreBaseRotation = useRef({ x: 0, y: 0, z: 0 });
+  const beamsBaseRotation = useRef({ x: 0, y: 0 });
 
   const beamCount = 60;
 
@@ -129,38 +135,55 @@ function ReactorCore({
     const audioThreshold = 0.02;
     const hasAudio = bassFinal > audioThreshold || midsFinal > audioThreshold || highsFinal > audioThreshold;
 
-    // Group rotation - ONLY when audio is present
+    // Group rotation - position-based
     if (groupRef.current) {
-      if (hasAudio) {
-        groupRef.current.rotation.y += bassFinal * 0.08;
-        groupRef.current.rotation.x = bassFinal * 0.15;
-      }
+      groupBaseRotation.current.y += 0.002 * animationSpeed;
+      groupBaseRotation.current.x += 0.001 * animationSpeed;
+      
+      const offsetY = hasAudio ? bassFinal * Math.PI * 0.15 : 0;
+      const offsetX = hasAudio ? bassFinal * Math.PI * 0.1 : 0;
+      
+      groupRef.current.rotation.y = groupBaseRotation.current.y + offsetY;
+      groupRef.current.rotation.x = groupBaseRotation.current.x + offsetX;
     }
 
-    // Shell: scale reacts to audio (returns to 1 when silent), rotation ONLY when audio plays
+    // Shell: scale reacts to audio (returns to 1 when silent), position-based rotation
     if (shellRef.current) {
       const beatPop = beatFinal > 0.4 ? 1 + (beatFinal - 0.4) * 1.5 : 1;
       const shellScale = (1 + bassFinal * 0.5) * beatPop;
       shellRef.current.scale.setScalar(shellScale);
       
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        shellRef.current.rotation.y += bassFinal * 0.15;
-        shellRef.current.rotation.z += bassFinal * 0.08;
-      }
+      // Base rotation advances slowly
+      shellBaseRotation.current.y += 0.003 * animationSpeed;
+      shellBaseRotation.current.z += 0.002 * animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? bassFinal * Math.PI * 0.25 : 0;
+      const offsetZ = hasAudio ? bassFinal * Math.PI * 0.15 : 0;
+      
+      shellRef.current.rotation.y = shellBaseRotation.current.y + offsetY;
+      shellRef.current.rotation.z = shellBaseRotation.current.z + offsetZ;
       
       // Emissive intensity driven by highs
       (shellRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 
         (isNeon ? 0.2 : 0.1) + highsFinal * 1.2;
     }
 
-    // Core: rotation ONLY when audio is present
+    // Core: position-based rotation
     if (coreRef.current) {
-      if (hasAudio) {
-        coreRef.current.rotation.y += midsFinal * 0.6;
-        coreRef.current.rotation.x += midsFinal * 0.4;
-        coreRef.current.rotation.z += midsFinal * 0.25;
-      }
+      // Base rotation advances slowly
+      coreBaseRotation.current.y += 0.004 * animationSpeed;
+      coreBaseRotation.current.x += 0.003 * animationSpeed;
+      coreBaseRotation.current.z += 0.002 * animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? midsFinal * Math.PI * 0.6 : 0;
+      const offsetX = hasAudio ? midsFinal * Math.PI * 0.4 : 0;
+      const offsetZ = hasAudio ? midsFinal * Math.PI * 0.25 : 0;
+      
+      coreRef.current.rotation.y = coreBaseRotation.current.y + offsetY;
+      coreRef.current.rotation.x = coreBaseRotation.current.x + offsetX;
+      coreRef.current.rotation.z = coreBaseRotation.current.z + offsetZ;
       
       // Scale pulse with mids + bass (returns to 1 when silent)
       const coreScale = 1 + midsFinal * 0.4 + bassFinal * 0.3;
@@ -170,12 +193,18 @@ function ReactorCore({
         (isNeon ? 0.4 : 0.2) + highsFinal * 1.0;
     }
 
-    // Beams: rotation ONLY when audio is present
+    // Beams: position-based rotation
     if (beamsRef.current) {
-      if (hasAudio) {
-        beamsRef.current.rotation.y += midsFinal * 0.7;
-        beamsRef.current.rotation.x += midsFinal * 0.3;
-      }
+      // Base rotation advances slowly
+      beamsBaseRotation.current.y += 0.005 * animationSpeed;
+      beamsBaseRotation.current.x += 0.002 * animationSpeed;
+      
+      // Audio offset for rotation
+      const offsetY = hasAudio ? midsFinal * Math.PI * 0.7 : 0;
+      const offsetX = hasAudio ? midsFinal * Math.PI * 0.3 : 0;
+      
+      beamsRef.current.rotation.y = beamsBaseRotation.current.y + offsetY;
+      beamsRef.current.rotation.x = beamsBaseRotation.current.x + offsetX;
       
       // Scale (returns to 1 when silent)
       const beamScale = 1 + bassFinal * 0.4;

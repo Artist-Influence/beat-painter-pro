@@ -191,7 +191,7 @@ export function UploadSection() {
                 value={[logo.size]}
                 onValueChange={([value]) => setLogoSize(value)}
                 min={20}
-                max={400}
+                max={1000}
                 step={5}
                 className="w-full"
               />
@@ -243,8 +243,8 @@ export function UploadSection() {
             {/* Color Mode Selector */}
             <div className="space-y-2">
               <span className="text-white/60 text-xs">Color</span>
-              <div className="grid grid-cols-4 gap-1">
-                {(['original', 'invert', 'light', 'dark'] as const).map((mode) => (
+              <div className="grid grid-cols-2 gap-1">
+                {(['original', 'invert'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setLogoColorMode(mode)}
