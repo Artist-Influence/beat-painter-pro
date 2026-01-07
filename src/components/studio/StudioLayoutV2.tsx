@@ -5,6 +5,7 @@ import { LeftPanel } from './v2/LeftPanel';
 import { RightPanel } from './v2/RightPanel';
 import { BottomBar } from './v2/BottomBar';
 import { FloatingActions } from './v2/FloatingActions';
+import { LogoOverlay } from './v2/LogoOverlay';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 type LeftPanelType = 'visualizers' | 'styles' | null;
@@ -27,6 +28,9 @@ export function StudioLayoutV2() {
       <div className="absolute inset-0">
         <VisualizerCanvas canvasRef={canvasRef} />
       </div>
+
+      {/* Logo Overlay - Draggable */}
+      <LogoOverlay />
 
       {/* Top Bar - Minimal, Transparent */}
       <TopBar canvasRef={canvasRef} />

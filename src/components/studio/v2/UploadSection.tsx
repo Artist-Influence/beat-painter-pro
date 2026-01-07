@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Music } from 'lucide-react';
+import { Upload, Music, ImageIcon, X } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
 import { toast } from 'sonner';
+import { Slider } from '@/components/ui/slider';
 
 export function UploadSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setAudioElement, audioElement, audioFileName } = useStudioStore();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const { setAudioElement, audioElement, audioFileName, logo, setLogo, setLogoSize, setLogoOpacity, clearLogo } = useStudioStore();
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -36,6 +38,12 @@ export function UploadSection() {
     toast.success("Audio loaded successfully!");
   };
 
+  const handleLogoFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setLogo(url);
+    toast.success("Logo added!");
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
@@ -44,6 +52,17 @@ export function UploadSection() {
       handleFile(audioFile);
     } else {
       toast.error("Please upload an audio file");
+    }
+  };
+
+  const handleLogoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) {
+      handleLogoFile(imageFile);
+    } else {
+      toast.error("Please upload an image file");
     }
   };
 
@@ -112,6 +131,90 @@ export function UploadSection() {
         </ul>
       </div>
 
+      {/* Logo Upload Section */}
+      <div className="pt-4 border-t border-white/10">
+        <h3 className="text-white/80 text-sm font-medium mb-3">Logo Overlay</h3>
+        
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleLogoFile(file);
+          }}
+        />
+
+        {!logo.url ? (
+          <div
+            onDrop={handleLogoDrop}
+            onDragOver={handleDragOver}
+            className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center hover:border-purple-500/50 transition-colors cursor-pointer"
+            onClick={() => logoInputRef.current?.click()}
+          >
+            <ImageIcon className="w-6 h-6 text-white/40 mx-auto mb-2" />
+            <p className="text-white/60 text-xs">
+              Drop your logo here
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Logo Preview */}
+            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={logo.url} 
+                  alt="Logo preview" 
+                  className="w-10 h-10 object-contain rounded"
+                />
+                <div className="flex-1">
+                  <p className="text-white/80 text-sm">Logo loaded</p>
+                  <p className="text-white/40 text-xs">Drag on screen to position</p>
+                </div>
+                <button
+                  onClick={clearLogo}
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4 text-white/60" />
+                </button>
+              </div>
+            </div>
+
+            {/* Size Slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-white/60">Size</span>
+                <span className="text-white/40">{logo.size}px</span>
+              </div>
+              <Slider
+                value={[logo.size]}
+                onValueChange={([value]) => setLogoSize(value)}
+                min={20}
+                max={400}
+                step={5}
+                className="w-full"
+              />
+            </div>
+
+            {/* Opacity Slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-white/60">Opacity</span>
+                <span className="text-white/40">{logo.opacity}%</span>
+              </div>
+              <Slider
+                value={[logo.opacity]}
+                onValueChange={([value]) => setLogoOpacity(value)}
+                min={10}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
