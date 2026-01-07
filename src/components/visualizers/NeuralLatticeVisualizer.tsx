@@ -48,20 +48,23 @@ function NeuralLattice({ audioData }: any) {
     const rawMids = midsSum / 85 / 255;
     const rawHighs = highsSum / 85 / 255;
     
-    const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.55 : 0.35);
+    // Faster lerp for immediate response
+    const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.75 : 0.4);
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
     smoothedMids.current = lerp(smoothedMids.current, rawMids);
     smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
     
-    const bass = smoothedBass.current * 0.7 + rawBass * 0.3;
-    const mids = smoothedMids.current * 0.7 + rawMids * 0.3;
-    const highs = smoothedHighs.current * 0.7 + rawHighs * 0.3;
+    // 50/50 blend for zero latency
+    const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
+    const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
+    const highs = smoothedHighs.current * 0.5 + rawHighs * 0.5;
     
     const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
 
     if (groupRef.current) {
-      const targetScale = 1 + bass * 1.2;
-      groupRef.current.scale.setScalar(groupRef.current.scale.x + (targetScale - groupRef.current.scale.x) * 0.05);
+      // Direct scale - no lerp for zero latency
+      const targetScale = 1 + bass * 1.5;
+      groupRef.current.scale.setScalar(targetScale);
       
       // Base rotation advances slowly
       baseRotation.current.y += 0.002;

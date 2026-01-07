@@ -300,14 +300,18 @@ export default function SacredGeometryPulseVisualizer({
     }
   });
 
-  // Static material for particles
+  // Material for particles - use createVisualizerMaterial for visual style support
   const particleMaterial = useMemo(() => {
-    return new THREE.MeshBasicMaterial({
-      color: new THREE.Color(textureData.colors?.primary || '#ffd700'),
-      transparent: true,
-      opacity: 0.8,
-    });
-  }, [textureData.textureVersion, textureData.colors?.primary]);
+    return createVisualizerMaterial(
+      textureData.colors?.primary || '#ffd700',
+      textureData,
+      {
+        emissiveIntensity: 1.5,
+        metalness: 0.7,
+        roughness: 0.2,
+      }
+    );
+  }, [textureData.textureVersion, textureData.colors?.primary, textureData.texture]);
   
   return (
     <>
