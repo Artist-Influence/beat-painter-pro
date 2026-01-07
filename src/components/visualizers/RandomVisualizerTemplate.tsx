@@ -407,17 +407,26 @@ function StandaloneShape({
 function BackgroundEffects({ 
   effect, 
   colors, 
-  bass, 
+  bass,
+  mids,
+  highs,
+  isPlaying,
   seed 
 }: { 
   effect: string; 
   colors: THREE.Color[]; 
   bass: number;
+  mids: number;
+  highs: number;
+  isPlaying: boolean;
   seed: number;
 }) {
   const pointsRef = useRef<THREE.Points>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
   const shootingStarsRef = useRef<THREE.Points>(null);
+  
+  // Persistent refs for audio-driven state (not time-driven)
+  const auroraPhaseRef = useRef<Float32Array | null>(null);
   
   // Get applied style texture and colors
   const textureData = useVisualizerTexture();
@@ -561,39 +570,62 @@ function BackgroundEffects({
     return null;
   }, [effect, seed]);
   
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+  useFrame(() => {
+    // Freeze completely when not playing
+    if (!isPlaying) return;
+    
+    // Audio threshold for movement
+    const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
+    if (!hasAudio) return;
     
     if (effect === 'stars' && pointsRef.current && effectData?.opacities) {
-      // Twinkle effect
+      // Fully audio-reactive - stars pulse with bass, brighten with highs
       const material = pointsRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.4 + Math.sin(t * 2) * 0.2 + bass * 0.3;
+      material.opacity = 0.3 + bass * 0.5 + highs * 0.2;
     }
     
     // MovingLines and EnergyField are handled by their own components
     
     if (effect === 'particles' && pointsRef.current && effectData?.velocities) {
+      // Only move when there's audio - use mids as velocity driver
       const positions = pointsRef.current.geometry.attributes.position;
       for (let i = 0; i < Math.min(50, effectData.count); i++) {
         let y = positions.getY(i);
-        y += effectData.velocities[i * 3 + 1] + bass * 0.01;
-        if (y > 8) y = -8;
-        if (y < -8) y = 8;
+        // Movement driven by mids intensity, not time
+        y += effectData.velocities[i * 3 + 1] * (1 + mids * 5);
+        if (y > 25) y = -25;
+        if (y < -25) y = 25;
         positions.setY(i, y);
       }
       positions.needsUpdate = true;
+      
+      // Opacity reacts to audio
+      const material = pointsRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.3 + bass * 0.4 + highs * 0.2;
     }
     
     // Light rays animation is handled in the render loop via mesh updates
     
     if (effect === 'aurora' && pointsRef.current && effectData) {
+      // Initialize phase tracking if needed
+      if (!auroraPhaseRef.current || auroraPhaseRef.current.length !== effectData.count) {
+        auroraPhaseRef.current = new Float32Array(effectData.count);
+      }
+      
       const positions = pointsRef.current.geometry.attributes.position;
       for (let i = 0; i < effectData.count; i++) {
-        const x = positions.getX(i);
-        const baseY = 6 + Math.sin(x * 0.3 + t) * 2;
-        positions.setY(i, baseY + bass * 2);
+        // Aurora wave height driven by mids, vertical offset by bass
+        const baseY = 8 + mids * 4;
+        // Accumulate phase only when there's audio
+        auroraPhaseRef.current[i] += mids * 0.02;
+        const wave = Math.sin(auroraPhaseRef.current[i] + i * 0.1) * (1 + highs);
+        positions.setY(i, baseY + bass * 2 + wave);
       }
       positions.needsUpdate = true;
+      
+      // Opacity reacts to overall audio energy
+      const material = pointsRef.current.material as THREE.PointsMaterial;
+      material.opacity = 0.4 + bass * 0.3 + mids * 0.2;
     }
   });
   
@@ -624,18 +656,18 @@ function BackgroundEffects({
   
   // Moving lines - use separate component with style colors
   if (effect === 'movingLines' && effectData.stars) {
-    return <MovingLinesEffect stars={effectData.stars} bass={bass} color={styleColors.accent} />;
+    return <MovingLinesEffect stars={effectData.stars} bass={bass} mids={mids} isPlaying={isPlaying} color={styleColors.accent} />;
   }
   
   // Energy field - pulsing rings with style colors
   if (effect === 'energyField' && effectData.rings) {
-    return <EnergyFieldEffect rings={effectData.rings} bass={bass} color={styleColors.primary} accentColor={styleColors.accent} />;
+    return <EnergyFieldEffect rings={effectData.rings} bass={bass} mids={mids} isPlaying={isPlaying} color={styleColors.primary} accentColor={styleColors.accent} />;
   }
   
   // Light rays - volumetric glowing beams with style colors
   if (effect === 'lightRays' && effectData.rays) {
     return (
-      <LightRaysEffect rays={effectData.rays} bass={bass} color={styleColors.primary} accentColor={styleColors.accent} />
+      <LightRaysEffect rays={effectData.rays} bass={bass} mids={mids} isPlaying={isPlaying} color={styleColors.primary} accentColor={styleColors.accent} />
     );
   }
   
@@ -689,36 +721,51 @@ function BackgroundEffects({
 }
 
 // Volumetric light rays component with glow effect - now with style colors
-function LightRaysEffect({ rays, bass, color, accentColor }: { 
+function LightRaysEffect({ rays, bass, mids, isPlaying, color, accentColor }: { 
   rays: Array<{ angle: number; width: number; length: number; phase: number; speed: number; opacity: number }>;
   bass: number;
+  mids: number;
+  isPlaying: boolean;
   color: THREE.Color;
   accentColor: THREE.Color;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
+  // Track accumulated slide per ray - audio-driven, not time-driven
+  const slideRef = useRef<number[]>([]);
   
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+  useFrame(() => {
+    // Freeze when not playing
+    if (!isPlaying) return;
+    
+    const hasAudio = bass > 0.02 || mids > 0.02;
     
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
       const ray = rays[i];
       if (!ray) return;
       
-      // Animate rays sliding in and out of view - expanded range
-      const slidePhase = Math.sin(t * ray.speed + ray.phase);
-      const slideAmount = slidePhase * 6; // Increased from 4
+      // Initialize slide tracking
+      if (slideRef.current[i] === undefined) slideRef.current[i] = 0;
+      
+      // Audio-driven slide - rays extend/contract with bass
+      if (hasAudio) {
+        // Accumulate movement based on bass intensity
+        slideRef.current[i] += (bass - 0.3) * ray.speed * 0.5;
+        // Decay back toward center when bass is low
+        slideRef.current[i] *= 0.98;
+      }
+      
+      const slideAmount = slideRef.current[i] * 6;
       
       // Move along the ray direction (toward/away from center) - expanded positions
-      mesh.position.x = Math.cos(ray.angle) * (14 + slideAmount); // Increased from 10
-      mesh.position.y = Math.sin(ray.angle) * (10 + slideAmount * 0.5); // Increased from 7
-      mesh.position.z = -15 + slideAmount * 0.5; // Pushed back from -12
+      mesh.position.x = Math.cos(ray.angle) * (14 + slideAmount);
+      mesh.position.y = Math.sin(ray.angle) * (10 + slideAmount * 0.5);
+      mesh.position.z = -15 + slideAmount * 0.5;
       
-      // Fade opacity based on slide position (more visible when "entering")
+      // Opacity reacts to audio intensity
       const material = mesh.material as THREE.MeshBasicMaterial;
-      const visibilityPhase = (slidePhase + 1) / 2; // 0 to 1
-      material.opacity = ray.opacity * (0.3 + visibilityPhase * 0.7) + bass * 0.2;
+      material.opacity = ray.opacity * (0.4 + bass * 0.6) + mids * 0.1;
     });
   });
   
@@ -766,25 +813,41 @@ function LightRaysEffect({ rays, bass, color, accentColor }: {
 // Moving lines effect - safe component without buffer modifications
 function MovingLinesEffect({ 
   stars, 
-  bass, 
+  bass,
+  mids,
+  isPlaying,
   color 
 }: { 
   stars: Array<{ speed: number; angle: number; startX: number; startY: number; phase: number }>;
   bass: number;
+  mids: number;
+  isPlaying: boolean;
   color: THREE.Color;
 }) {
   const meshRefs = useRef<THREE.Mesh[]>([]);
+  // Track progress per star - audio-driven, not time-driven
+  const progressRef = useRef<number[]>([]);
   
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+  useFrame(() => {
+    // Freeze when not playing
+    if (!isPlaying) return;
+    
+    const hasAudio = bass > 0.02 || mids > 0.02;
     
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
       const star = stars[i];
       if (!star) return;
       
-      // Calculate position along trajectory
-      const progress = ((t * star.speed + star.phase) % 50) / 50; // 0-1 cycle
+      // Initialize progress tracking
+      if (progressRef.current[i] === undefined) progressRef.current[i] = star.phase / 100;
+      
+      // Only move when there's audio - use bass as velocity driver
+      if (hasAudio) {
+        progressRef.current[i] = (progressRef.current[i] + bass * star.speed * 0.08) % 1;
+      }
+      
+      const progress = progressRef.current[i];
       const travelDist = 40; // Total travel distance
       
       // Move from start position in diagonal direction
@@ -795,16 +858,16 @@ function MovingLinesEffect({
       mesh.position.y = star.startY + dy;
       mesh.position.z = -8;
       
-      // Fade in at start, fade out at end
+      // Fade in at start, fade out at end - intensity based on audio
       const fadeIn = Math.min(progress * 5, 1);
       const fadeOut = Math.min((1 - progress) * 5, 1);
-      const opacity = fadeIn * fadeOut * (0.4 + bass * 0.4);
+      const opacity = fadeIn * fadeOut * (0.3 + bass * 0.5 + mids * 0.2);
       
       const material = mesh.material as THREE.MeshBasicMaterial;
       material.opacity = opacity;
       
-      // Scale based on speed (faster = longer trail)
-      mesh.scale.x = 0.5 + star.speed * 2 + bass * 0.5;
+      // Scale based on audio intensity (louder = longer trail)
+      mesh.scale.x = 0.5 + bass * 2 + mids * 0.5;
     });
   });
   
@@ -832,38 +895,53 @@ function MovingLinesEffect({
 // Energy field effect - pulsing concentric rings - now with style colors
 function EnergyFieldEffect({ 
   rings, 
-  bass, 
+  bass,
+  mids,
+  isPlaying,
   color,
   accentColor
 }: { 
   rings: Array<{ baseRadius: number; phase: number; speed: number; thickness: number }>;
   bass: number;
+  mids: number;
+  isPlaying: boolean;
   color: THREE.Color;
   accentColor: THREE.Color;
 }) {
   const meshRefs = useRef<THREE.Mesh[]>([]);
+  // Track rotation per ring - audio-driven, not time-driven
+  const rotationRef = useRef<number[]>([]);
   
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+  useFrame(() => {
+    // Freeze when not playing
+    if (!isPlaying) return;
+    
+    const hasAudio = bass > 0.02 || mids > 0.02;
     
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
       const ring = rings[i];
       if (!ring) return;
       
-      // Pulsing expansion/contraction
-      const pulse = Math.sin(t * ring.speed + ring.phase);
-      const scale = 1 + pulse * 0.15 + bass * 0.2;
+      // Initialize rotation tracking
+      if (rotationRef.current[i] === undefined) rotationRef.current[i] = 0;
+      
+      // Pulse scale with bass - beat-synced expansion
+      const pulse = bass * 1.5 + mids * 0.5;
+      const scale = 1 + pulse * 0.3;
       
       mesh.scale.setScalar(scale);
       
-      // Fade opacity based on pulse
+      // Opacity reacts to audio intensity
       const material = mesh.material as THREE.MeshBasicMaterial;
-      const baseOpacity = 0.1 + (i / rings.length) * 0.06; // Slightly increased
-      material.opacity = baseOpacity + pulse * 0.06 + bass * 0.12;
+      const baseOpacity = 0.1 + (i / rings.length) * 0.06;
+      material.opacity = baseOpacity + bass * 0.2 + mids * 0.1;
       
-      // Slow rotation
-      mesh.rotation.z = t * 0.1 * (i % 2 === 0 ? 1 : -1);
+      // Rotation only when audio present - accumulate based on mids
+      if (hasAudio) {
+        rotationRef.current[i] += mids * 0.03 * (i % 2 === 0 ? 1 : -1);
+      }
+      mesh.rotation.z = rotationRef.current[i];
     });
   });
   
@@ -888,7 +966,7 @@ function EnergyFieldEffect({
   );
 }
 
-export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizerTemplateProps) {
+export function RandomVisualizerTemplate({ params, audioData, isPlaying = false }: RandomVisualizerTemplateProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
   const particlesRef = useRef<THREE.Points>(null);
@@ -1444,6 +1522,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
           effect={params.backgroundEffect} 
           colors={colors} 
           bass={bass}
+          mids={mids}
+          highs={highs}
+          isPlaying={isPlaying}
           seed={params.seed}
         />
         
@@ -1464,6 +1545,9 @@ export function RandomVisualizerTemplate({ params, audioData }: RandomVisualizer
         effect={params.backgroundEffect} 
         colors={colors} 
         bass={bass}
+        mids={mids}
+        highs={highs}
+        isPlaying={isPlaying}
         seed={params.seed}
       />
       
