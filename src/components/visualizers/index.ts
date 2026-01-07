@@ -17,22 +17,23 @@ import { CustomVisualizerLoader } from "./CustomVisualizerLoader";
 
 export type { VisualizerProps } from "../visualizer";
 
+// Normalized scales for consistent sizing across all visualizers
 export const VISUALIZER_SCALES: Record<string, number> = {
-  DiamondOrbVisualizer: 0.18,
-  AlienMembraneVisualizer: 0.08,
-  NeuralLatticeVisualizer: 0.066,
-  AngelWingsVisualizer: 0.6,
-  CubicCloudsVisualizer: 0.1,
-  DancingGnomeCapsVisualizer: 0.25,
-  PsychedelicMandalaVisualizer: 0.3,
-  HypercubePortalVisualizer: 0.4,
-  SacredGeometryPulseVisualizer: 0.35,
-  StroboscopicTunnelVisualizer: 0.3,
-  WaveRibbonsVisualizer: 0.4,
-  DNAHelixVisualizer: 0.3,
-  CircuitPulseVisualizer: 0.4,
-  NeonSkylineVisualizer: 0.3,
-  ElectricFieldVisualizer: 0.18,
+  DiamondOrbVisualizer: 0.30,
+  AlienMembraneVisualizer: 0.30,
+  NeuralLatticeVisualizer: 0.30,
+  AngelWingsVisualizer: 0.30,
+  CubicCloudsVisualizer: 0.30,
+  DancingGnomeCapsVisualizer: 0.30,
+  PsychedelicMandalaVisualizer: 0.30,
+  HypercubePortalVisualizer: 0.30,
+  SacredGeometryPulseVisualizer: 0.30,
+  StroboscopicTunnelVisualizer: 0.30,
+  WaveRibbonsVisualizer: 0.30,
+  DNAHelixVisualizer: 0.30,
+  CircuitPulseVisualizer: 0.30,
+  NeonSkylineVisualizer: 0.30,
+  ElectricFieldVisualizer: 0.30,
 };
 
 export const visualizerRegistry = {

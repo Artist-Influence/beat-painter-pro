@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useStudioStore } from "@/stores/studioStore";
 
-function Feather({ index, side, audioData }: any) {
+function Feather({ index, side, audioData, totalFeathers }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
   
@@ -24,9 +24,10 @@ function Feather({ index, side, audioData }: any) {
   
   const primaryColor = extractedColors?.primary || '#ffffff';
   
-  const angle = (index / 20) * Math.PI * 0.8;
-  const length = 0.3 + index * 0.04;
-  const geometry = useMemo(() => new THREE.CapsuleGeometry(0.015, length, 4, 8), [length]);
+  // More feathers with varying sizes for density
+  const angle = (index / totalFeathers) * Math.PI * 0.9;
+  const length = 0.25 + index * 0.035;
+  const geometry = useMemo(() => new THREE.CapsuleGeometry(0.012, length, 4, 8), [length]);
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -34,6 +35,8 @@ function Feather({ index, side, audioData }: any) {
   // Smoothing refs
   const smoothedMids = useRef(0);
   const smoothedBass = useRef(0);
+  // Phase for organic ripple motion
+  const phaseRef = useRef(Math.random() * Math.PI * 2);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -60,23 +63,33 @@ function Feather({ index, side, audioData }: any) {
     const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
     const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
     
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold;
+    const shouldAnimate = spinSpeed > 0 || hasAudio;
+    
     if (meshRef.current) {
-      // Idle sine wave oscillation for organic motion
-      const idleY = Math.sin(t * 0.5 + index * 0.2) * 0.1 * animSpeed;
-      const idleZ = Math.cos(t * 0.3 + index * 0.15) * 0.08 * animSpeed;
+      // Cascading ripple effect - feathers at different positions move at different phases
+      const rippleDelay = index * 0.15;
       
-      // Audio-driven rotation speed (velocity-based for dynamic motion) + spin speed
-      const rotSpeed = 0.02 + bass * 0.5 + mids * 0.25 + spinSpeed * 0.03;
-      meshRef.current.rotation.y += rotSpeed * animSpeed;
-      meshRef.current.rotation.z = idleZ + bass * 0.8 + mids * 0.5;
+      if (shouldAnimate) {
+        // Organic breathing + audio-reactive motion
+        const breathe = Math.sin(t * 2 + rippleDelay) * 0.15;
+        const ripple = hasAudio ? Math.sin(t * 4 + rippleDelay) * bass * 0.4 : 0;
+        
+        // Y rotation with organic wave
+        meshRef.current.rotation.y += (spinSpeed * 0.02 + (hasAudio ? bass * 0.08 : 0)) * animSpeed;
+        meshRef.current.rotation.z = breathe + ripple + (hasAudio ? bass * 0.5 + mids * 0.3 : 0);
+        meshRef.current.rotation.x = Math.sin(t * 1.5 + rippleDelay * 0.5) * 0.1 * (hasAudio ? (1 + bass) : 0.3);
+      }
       
       // Beat-reactive scale - more dramatic response
-      const beatScale = 1 + bass * 1.5 + mids * 0.8;
+      const beatScale = hasAudio ? 1 + bass * 1.2 + mids * 0.5 : 1;
       meshRef.current.scale.setScalar(beatScale);
       
       // Position offset for more dramatic movement
-      meshRef.current.position.y = bass * 0.3;
-      meshRef.current.position.z = mids * 0.2;
+      meshRef.current.position.y = hasAudio ? bass * 0.2 : 0;
+      meshRef.current.position.z = hasAudio ? mids * 0.15 : 0;
     }
   });
 
@@ -84,27 +97,28 @@ function Feather({ index, side, audioData }: any) {
     <mesh
       ref={meshRef}
       geometry={geometry}
-      position={[side * (0.1 + index * 0.035), 0.5 - index * 0.05, 0]}
+      position={[side * (0.08 + index * 0.03), 0.4 - index * 0.04, 0]}
       rotation={[0, 0, angle * side]}
     >
       <meshStandardMaterial
         color={primaryColor}
         roughness={extractedColors?.isMetallic ? 0.05 : 0.3}
         metalness={extractedColors?.isMetallic ? 1 : 0.2}
-          transparent
-          opacity={0.9 + smoothedMids.current * 0.5}
-          side={THREE.DoubleSide}
-          map={texture || undefined}
-          emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-          emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
-        />
+        transparent
+        opacity={0.9 + smoothedMids.current * 0.5}
+        side={THREE.DoubleSide}
+        map={texture || undefined}
+        emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
+        emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
+      />
     </mesh>
   );
 }
 
 function Wing({ side, audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
-  const featherIndices = Array.from({ length: 20 }, (_, i) => i);
+  const featherCount = 28; // More feathers for density
+  const featherIndices = Array.from({ length: featherCount }, (_, i) => i);
   const { audioSensitivity } = useStudioStore();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
@@ -113,6 +127,8 @@ function Wing({ side, audioData }: any) {
   // Smoothing refs
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
+  // Base rotation ref
+  const baseRotation = useRef(0);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -139,28 +155,43 @@ function Wing({ side, audioData }: any) {
     const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
     const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
     
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || mids > audioThreshold;
+    const shouldAnimate = spinSpeed > 0 || hasAudio;
+    
     if (groupRef.current) {
-      // Faster, more dramatic flapping
-      const flapAngle = Math.sin(t * 4 + bass * 15) * (0.4 + bass * 1.2);
-      groupRef.current.rotation.z = side * flapAngle;
-      groupRef.current.rotation.x = Math.sin(t * 2.5) * 0.2 * animSpeed + bass * 0.6;
+      // More fluid, organic flapping with breathing
+      const breatheAmplitude = 0.15;
+      const breathe = Math.sin(t * 1.5) * breatheAmplitude;
       
-      // Add spin speed to Y rotation
-      groupRef.current.rotation.y += spinSpeed * 0.02;
+      // Audio-reactive flap - dramatic on bass hits
+      const flapAmplitude = hasAudio ? 0.3 + bass * 1.0 : breatheAmplitude;
+      const flapFrequency = hasAudio ? 3 + bass * 8 : 1.5;
+      const flapAngle = Math.sin(t * flapFrequency) * flapAmplitude;
       
-      // Bigger scale response
-      const wingScale = 1 + bass * 2.5 + mids * 1.0;
+      groupRef.current.rotation.z = side * (shouldAnimate ? flapAngle : breathe * 0.5);
+      groupRef.current.rotation.x = (shouldAnimate ? Math.sin(t * 2) * 0.15 : 0) * animSpeed + (hasAudio ? bass * 0.4 : 0);
+      
+      // Only add Y rotation with spinSpeed
+      if (spinSpeed > 0) {
+        baseRotation.current += spinSpeed * 0.02;
+        groupRef.current.rotation.y = baseRotation.current;
+      }
+      
+      // Scale response - organic breathing + audio
+      const wingScale = hasAudio ? 1 + bass * 1.8 + mids * 0.6 : 1 + Math.sin(t * 1.2) * 0.05;
       groupRef.current.scale.setScalar(wingScale);
       
-      // More dramatic position bob
-      groupRef.current.position.y = 0.4 + bass * 1.2 + mids * 0.6;
+      // Position bob - gentle breathing motion + audio
+      groupRef.current.position.y = 0.4 + (hasAudio ? bass * 0.8 + mids * 0.3 : Math.sin(t * 1.5) * 0.05);
     }
   });
 
   return (
-    <group ref={groupRef} position={[side * 0.15, 0.4, 0]}>
+    <group ref={groupRef} position={[side * 0.12, 0.4, 0]}>
       {featherIndices.map((i) => (
-        <Feather key={i} index={i} side={side} audioData={audioData} />
+        <Feather key={i} index={i} side={side} audioData={audioData} totalFeathers={featherCount} />
       ))}
     </group>
   );
@@ -179,6 +210,8 @@ function HologramWings({ audioData }: any) {
   // Smoothing refs
   const smoothedHighs = useRef(0);
   const smoothedBass = useRef(0);
+  // Base rotation ref
+  const baseRotation = useRef({ x: 0, y: 0 });
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -205,13 +238,25 @@ function HologramWings({ audioData }: any) {
     const highs = smoothedHighs.current * 0.5 + rawHighs * 0.5;
     const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
     
+    // Audio threshold check
+    const audioThreshold = 0.02;
+    const hasAudio = bass > audioThreshold || highs > audioThreshold;
+    const shouldAnimate = spinSpeed > 0 || hasAudio;
+    
     if (groupRef.current) {
-      // Dynamic rotation with organic oscillation + spin speed
-      groupRef.current.rotation.y += (0.005 + bass * 0.02 + highs * 0.01 + spinSpeed * 0.02) * animSpeed;
-      groupRef.current.rotation.x = Math.sin(t * 0.8) * 0.1 * animSpeed + bass * 0.15;
+      // Only rotate when spinSpeed > 0 OR audio is playing
+      if (spinSpeed > 0) {
+        baseRotation.current.y += spinSpeed * 0.02;
+      }
+      if (hasAudio) {
+        baseRotation.current.y += bass * 0.015 + highs * 0.008;
+      }
+      
+      groupRef.current.rotation.y = baseRotation.current.y;
+      groupRef.current.rotation.x = shouldAnimate ? Math.sin(t * 0.8) * 0.08 * animSpeed + (hasAudio ? bass * 0.1 : 0) : 0;
       
       // Position proportional to audio
-      groupRef.current.position.y = bass * 1.0 + highs * 0.3;
+      groupRef.current.position.y = hasAudio ? bass * 0.6 + highs * 0.2 : 0;
     }
   });
 
@@ -247,7 +292,7 @@ export default function AngelWingsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={0.8}>
+      <group scale={1.0}>
         <HologramWings audioData={audioData} />
       </group>
     </>

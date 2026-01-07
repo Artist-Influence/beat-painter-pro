@@ -70,10 +70,12 @@ function NeuralLattice({ audioData }: any) {
       const targetScale = 1 + bass * 1.5;
       groupRef.current.scale.setScalar(targetScale);
       
-      // Base rotation advances slowly + spin speed
-      baseRotation.current.y += 0.002 + 0.05 * spinSpeed;
-      baseRotation.current.x += 0.001;
-      baseRotation.current.z += 0.0008;
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0 || hasAudio) {
+        baseRotation.current.y += (spinSpeed > 0 ? 0.05 * spinSpeed : 0) + (hasAudio ? 0.002 : 0);
+        baseRotation.current.x += hasAudio ? 0.001 : 0;
+        baseRotation.current.z += hasAudio ? 0.0008 : 0;
+      }
       
       // Audio offset for rotation
       const offsetY = hasAudio ? mids * Math.PI * 0.2 : 0;
@@ -99,7 +101,7 @@ function NeuralLattice({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.14}>
+    <group ref={groupRef} scale={0.65}>
       <mesh ref={sphere1Ref}><sphereGeometry args={[2.0, 32, 32]} /><meshStandardMaterial color={primaryColor} wireframe transparent opacity={0.25} map={texture || undefined} /></mesh>
       <mesh ref={sphere2Ref}><sphereGeometry args={[2.8, 16, 16]} /><meshStandardMaterial color={secondaryColor} wireframe transparent opacity={0.15} map={texture || undefined} /></mesh>
       <mesh ref={sphere3Ref}><sphereGeometry args={[3.5, 8, 8]} /><meshStandardMaterial color={accentColor} wireframe transparent opacity={0.1} map={texture || undefined} /></mesh>

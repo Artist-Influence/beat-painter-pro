@@ -167,8 +167,10 @@ export default function NeonSkylineVisualizer({
     
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      // Add spin rotation
-      groupRotation.current += spinSpeed * 0.05;
+      // Only rotate when spinSpeed > 0
+      if (spinSpeed > 0) {
+        groupRotation.current += spinSpeed * 0.05;
+      }
       groupRef.current.rotation.y = groupRotation.current;
       
       // Keep horizontal - no movement, no breathing effect

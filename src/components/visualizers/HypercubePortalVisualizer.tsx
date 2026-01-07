@@ -169,8 +169,14 @@ export default function HypercubePortalVisualizer({
 
     if (portalRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
-      portalRef.current.rotation.y += spinSpeed * 0.05;
-      if (hasAudio) portalRef.current.rotation.y += bass * 0.1 * audioSensitivity.animationSpeed;
+      
+      // Only rotate when spinSpeed > 0 OR audio is present
+      if (spinSpeed > 0) {
+        portalRef.current.rotation.y += spinSpeed * 0.05;
+      }
+      if (hasAudio) {
+        portalRef.current.rotation.y += bass * 0.1 * audioSensitivity.animationSpeed;
+      }
       portalRef.current.rotation.x = bass * 0.3;
       const scale = 1 + bass * 0.5;
       portalRef.current.scale.setScalar(scale);
