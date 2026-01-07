@@ -134,17 +134,17 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
   }, []);
 
 
-  // Update renderer clear color when logo is behind
+  // Update renderer clear color when logo is behind or custom background
   useEffect(() => {
     if (rendererRef.current) {
-      if (logoBehind) {
-        rendererRef.current.setClearColor(0x000000, 0); // Fully transparent for logo behind
+      if (logoBehind || background.type !== 'color') {
+        rendererRef.current.setClearColor(0x000000, 0); // Fully transparent
       } else {
         const color = new THREE.Color(background.color);
         rendererRef.current.setClearColor(color, 1);
       }
     }
-  }, [background.color, logoBehind]);
+  }, [background.color, background.type, logoBehind]);
 
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
@@ -152,14 +152,14 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     }
     // Store renderer reference for transparency control
     rendererRef.current = gl;
-    // Set initial clear color - transparent if logo is behind
-    if (logoBehind) {
+    // Set initial clear color - transparent if logo is behind or custom background
+    if (logoBehind || background.type !== 'color') {
       gl.setClearColor(0x000000, 0);
     } else {
       const color = new THREE.Color(background.color);
       gl.setClearColor(color, 1);
     }
-  }, [canvasRef, background.color, logoBehind]);
+  }, [canvasRef, background.color, background.type, logoBehind]);
 
 
   
@@ -175,7 +175,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          backgroundColor: logoBehind ? 'transparent' : background.color 
+          backgroundColor: (logoBehind || background.type !== 'color') ? 'transparent' : background.color 
         }}
       >
         <Canvas

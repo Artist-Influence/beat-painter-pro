@@ -36,6 +36,12 @@ export function LogoOverlay() {
     setIsDragging(false);
   }, []);
 
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLogoPosition({ x: 50, y: 50 });
+  }, [setLogoPosition]);
+
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -70,6 +76,7 @@ export function LogoOverlay() {
           opacity: logo.opacity / 100,
         }}
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
       >
         <img 
           src={logo.url} 
