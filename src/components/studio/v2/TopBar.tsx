@@ -9,7 +9,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, backgroundColor, logo, exportMode } = useStudioStore();
+  const { audioElement, background, logo, exportMode } = useStudioStore();
   const { isRecording, startRecording, stopRecording, frameCount } = useWebMRecorder({ canvasRef, audioElement });
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
@@ -18,7 +18,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
       stopRecording();
     } else {
       const currentTime = audioElement?.currentTime || 0;
-      startRecording(currentTime, backgroundColor, 'visualizer', exportQuality, logo, exportMode);
+      startRecording(currentTime, background.color, 'visualizer', exportQuality, logo, exportMode);
     }
   };
 

@@ -15,7 +15,7 @@ interface RecordingControlsProps {
 }
 
 const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
-  const { selected, setSelected, backgroundColor, setBackground, filters, setFilters, zoomLevel, setZoom, audioElement } = useStudioStore();
+  const { selected, setSelected, background, setBackgroundColor, filters, setFilters, zoomLevel, setZoom, audioElement } = useStudioStore();
   const [startAt, setStartAt] = useState(0);
   const { startRecording, stopRecording, isRecording } = useWebMRecorder({ canvasRef, audioElement });
 
@@ -39,9 +39,9 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <Button variant={backgroundColor === "#00FF00" ? "default" : "outline"} onClick={() => setBackground("#00FF00")}>Green</Button>
-        <Button variant={backgroundColor === "#FFFFFF" ? "default" : "outline"} onClick={() => setBackground("#FFFFFF")}>White</Button>
-        <Button variant={backgroundColor === "#000000" ? "default" : "outline"} onClick={() => setBackground("#000000")}>Black</Button>
+        <Button variant={background.type === 'color' && background.color === "#00FF00" ? "default" : "outline"} onClick={() => setBackgroundColor("#00FF00")}>Green</Button>
+        <Button variant={background.type === 'color' && background.color === "#FFFFFF" ? "default" : "outline"} onClick={() => setBackgroundColor("#FFFFFF")}>White</Button>
+        <Button variant={background.type === 'color' && background.color === "#000000" ? "default" : "outline"} onClick={() => setBackgroundColor("#000000")}>Black</Button>
       </div>
 
       <div className="space-y-2">
@@ -79,7 +79,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
             logEvent("recording_stopped", { visualizer_key: selected });
           } else {
             logEvent("recording_started", { visualizer_key: selected });
-            startRecording(startAt, backgroundColor, selected);
+            startRecording(startAt, background.color, selected);
           }
         }}
       >

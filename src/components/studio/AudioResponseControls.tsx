@@ -45,8 +45,10 @@ export const AudioResponseControls: React.FC = () => {
     audioSensitivity, 
     setAudioSensitivity, 
     setAudioPreset,
-    backgroundColor,
-    setBackground,
+    background,
+    setBackgroundColor,
+    setBackgroundMedia,
+    clearBackgroundMedia,
     filters,
     setFilters,
     zoomLevel,
@@ -54,6 +56,15 @@ export const AudioResponseControls: React.FC = () => {
     exportMode,
     setExportMode
   } = useStudioStore();
+  
+  const bgInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const handleBackgroundFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/');
+    const isGif = file.type === 'image/gif';
+    setBackgroundMedia(url, isVideo ? 'video' : isGif ? 'gif' : 'image');
+  };
   
   const presets = [
     { key: 'calm' as const, label: 'Calm', description: 'Minimal movements' },
@@ -186,14 +197,27 @@ export const AudioResponseControls: React.FC = () => {
 
         <div className="border-t border-white/10 my-4"></div>
 
-        {/* Background Colors */}
+        {/* Background */}
         <div className="space-y-3">
           <span className="text-white/80 text-sm">Background</span>
-          <div className="grid grid-cols-3 gap-2">
+          
+          {/* Hidden file input for custom background */}
+          <input
+            ref={bgInputRef}
+            type="file"
+            accept="image/*,video/mp4,video/webm"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleBackgroundFile(file);
+            }}
+          />
+          
+          <div className="grid grid-cols-4 gap-2">
             <button
-              onClick={() => setBackground("#00FF00")}
+              onClick={() => setBackgroundColor("#00FF00")}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#00FF00"
+                background.type === 'color' && background.color === "#00FF00"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -202,9 +226,9 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">Green</span>
             </button>
             <button
-              onClick={() => setBackground("#FFFFFF")}
+              onClick={() => setBackgroundColor("#FFFFFF")}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#FFFFFF"
+                background.type === 'color' && background.color === "#FFFFFF"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -213,9 +237,9 @@ export const AudioResponseControls: React.FC = () => {
               <span className="text-xs text-white">White</span>
             </button>
             <button
-              onClick={() => setBackground("#000000")}
+              onClick={() => setBackgroundColor("#000000")}
               className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
-                backgroundColor === "#000000"
+                background.type === 'color' && background.color === "#000000"
                   ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
                   : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
               }`}
@@ -223,7 +247,50 @@ export const AudioResponseControls: React.FC = () => {
               <div className="w-4 h-4 bg-black rounded border border-white/30" />
               <span className="text-xs text-white">Black</span>
             </button>
+            <button
+              onClick={() => bgInputRef.current?.click()}
+              className={`h-12 flex flex-col gap-1 items-center justify-center rounded-xl border transition-all ${
+                background.type !== 'color'
+                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
+                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
+              }`}
+            >
+              <div className="w-4 h-4 rounded border border-dashed border-white/40 flex items-center justify-center">
+                <span className="text-[8px] text-white/60">+</span>
+              </div>
+              <span className="text-xs text-white">Custom</span>
+            </button>
           </div>
+          
+          {/* Custom background preview */}
+          {background.type !== 'color' && background.mediaUrl && (
+            <div className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2">
+              {background.mediaType === 'video' ? (
+                <video 
+                  src={background.mediaUrl} 
+                  className="w-10 h-10 object-cover rounded"
+                  muted
+                />
+              ) : (
+                <img 
+                  src={background.mediaUrl} 
+                  alt="Background preview" 
+                  className="w-10 h-10 object-cover rounded"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs truncate">
+                  {background.mediaType === 'video' ? 'Video' : background.mediaType === 'gif' ? 'GIF' : 'Image'}
+                </p>
+              </div>
+              <button
+                onClick={clearBackgroundMedia}
+                className="p-1 hover:bg-white/10 rounded"
+              >
+                <span className="text-white/60 text-xs">✕</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-white/10 my-4"></div>

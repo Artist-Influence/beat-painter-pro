@@ -6,7 +6,7 @@ import { useStudioStore } from '@/stores/studioStore';
 export function FloatingActions() {
   const [showQuickSettings, setShowQuickSettings] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const { setFilters, setZoom, setBackground } = useStudioStore();
+  const { setFilters, setZoom, setBackgroundColor } = useStudioStore();
 
   const takeScreenshot = () => {
     const canvas = document.querySelector('canvas');
@@ -21,7 +21,7 @@ export function FloatingActions() {
   const resetView = () => {
     setFilters({ brightness: 100, saturation: 100, contrast: 100 });
     setZoom(1);
-    setBackground("#FFFFFF");
+    setBackgroundColor("#FFFFFF");
   };
 
   const quickActions = [

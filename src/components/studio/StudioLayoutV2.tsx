@@ -14,7 +14,8 @@ type RightPanelType = 'controls' | 'upload' | null;
 
 export function StudioLayoutV2() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const { logo, backgroundColor } = useStudioStore();
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const { logo, background } = useStudioStore();
   const [activePanels, setActivePanels] = useState({
     left: 'visualizers' as LeftPanelType,
     right: 'controls' as RightPanelType,
@@ -26,11 +27,29 @@ export function StudioLayoutV2() {
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* Background Color Layer - Always at bottom */}
-      <div 
-        className="absolute inset-0 z-[0]" 
-        style={{ backgroundColor }}
-      />
+      {/* Background Layer - Color, Image, or Video */}
+      {background.type === 'color' ? (
+        <div 
+          className="absolute inset-0 z-[0]" 
+          style={{ backgroundColor: background.color }}
+        />
+      ) : background.mediaType === 'video' ? (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover z-[0]"
+          src={background.mediaUrl || undefined}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      ) : (
+        <img
+          className="absolute inset-0 w-full h-full object-cover z-[0]"
+          src={background.mediaUrl || undefined}
+          alt="Background"
+        />
+      )}
       {/* Logo Behind Visualizer - lower z-index */}
       {logo.layer === 'behind' && (
         <div className="absolute inset-0 z-[1]">

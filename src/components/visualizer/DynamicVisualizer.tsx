@@ -186,7 +186,7 @@ const DynamicVisualizer: React.FC<DynamicVisualizerProps> = ({
   width = 1080,
   height = 1080
 }) => {
-  const storeBackgroundColor = useStudioStore((state) => state.backgroundColor);
+  const storeBackgroundColor = useStudioStore((state) => state.background.color);
   const backgroundColor = propBackgroundColor || storeBackgroundColor;
   const lastGoodCodeRef = React.useRef<string>('');
   
