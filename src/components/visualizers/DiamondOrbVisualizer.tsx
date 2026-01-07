@@ -59,9 +59,9 @@ function CrackedCrystalOrb({ audioData }: any) {
     const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
     const rawBeat = Math.max(beatStrength, rawBass);
     
-    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
+    // Asymmetric smoothing: faster attack (0.75), fast decay (0.4) for zero-latency beat tracking
     const lerp = (current: number, target: number) => {
-      const factor = target > current ? 0.55 : 0.35;
+      const factor = target > current ? 0.75 : 0.4;
       return current + (target - current) * factor;
     };
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
@@ -69,11 +69,11 @@ function CrackedCrystalOrb({ audioData }: any) {
     smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
     smoothedBeat.current = lerp(smoothedBeat.current, rawBeat);
     
-    // Transient blend: 30% raw for immediate punch
-    const finalBass = smoothedBass.current * 0.7 + rawBass * 0.3;
-    const finalMids = smoothedMids.current * 0.7 + rawMids * 0.3;
-    const finalHighs = smoothedHighs.current * 0.7 + rawHighs * 0.3;
-    const finalBeat = smoothedBeat.current * 0.7 + rawBeat * 0.3;
+    // Transient blend: 50% raw for immediate punch (zero-latency)
+    const finalBass = smoothedBass.current * 0.5 + rawBass * 0.5;
+    const finalMids = smoothedMids.current * 0.5 + rawMids * 0.5;
+    const finalHighs = smoothedHighs.current * 0.5 + rawHighs * 0.5;
+    const finalBeat = smoothedBeat.current * 0.5 + rawBeat * 0.5;
     
     // Audio threshold check
     const audioThreshold = 0.02;
@@ -162,9 +162,9 @@ function CrackedCrystalOrb({ audioData }: any) {
         const targetZ = Math.sin(angle) * radius;
         const targetY = finalBeat * 1.5;
         
-        shard.position.x = THREE.MathUtils.lerp(shard.position.x, targetX, 0.1);
-        shard.position.z = THREE.MathUtils.lerp(shard.position.z, targetZ, 0.1);
-        shard.position.y = THREE.MathUtils.lerp(shard.position.y, targetY, 0.1);
+        shard.position.x = targetX;
+        shard.position.z = targetZ;
+        shard.position.y = targetY;
       }
     });
   });
