@@ -153,9 +153,11 @@ export default function StroboscopicTunnelVisualizer({
     const hasAudio = bass > audioThreshold || mids > audioThreshold;
     
     if (tunnelRef.current) {
-      // Base rotation advances slowly
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
+      // Base rotation advances slowly + spin speed
       const animSpeed = audioSensitivity.animationSpeed;
-      tunnelBaseRotation.current += 0.002 * animSpeed;
+      tunnelBaseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
       
       // Audio offset for rotation
       const audioOffset = hasAudio ? mids * bass * Math.PI * 0.4 : 0;

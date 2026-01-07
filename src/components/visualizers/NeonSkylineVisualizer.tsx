@@ -4,6 +4,7 @@ import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useVisualizerTexture, createVisualizerMaterial } from "@/hooks/useVisualizerTexture";
+import { useStudioStore } from "@/stores/studioStore";
 
 function NeonBuilding({ position, baseHeight, width, index, audioData, textureData }) {
   const buildingRef = useRef<THREE.Mesh>(null);
@@ -135,6 +136,7 @@ export default function NeonSkylineVisualizer({
   const groupRef = useRef<THREE.Group>(null);
   const { viewport } = useThree();
   const textureData = useVisualizerTexture();
+  const { audioSensitivity } = useStudioStore();
   
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const freqData = safeAudioData.frequency || Array(256).fill(0);
@@ -151,6 +153,8 @@ export default function NeonSkylineVisualizer({
     }));
   }, []);
 
+  const groupRotation = useRef(0);
+
   useFrame(() => {
     // Calculate bass per-frame
     let sum = 0;
@@ -162,6 +166,11 @@ export default function NeonSkylineVisualizer({
     smoothedBass.current += (rawBass - smoothedBass.current) * factor;
     
     if (groupRef.current) {
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      // Add spin rotation
+      groupRotation.current += spinSpeed * 0.05;
+      groupRef.current.rotation.y = groupRotation.current;
+      
       // Keep horizontal - no movement, no breathing effect
       groupRef.current.position.y = -1;
       groupRef.current.scale.setScalar(1);

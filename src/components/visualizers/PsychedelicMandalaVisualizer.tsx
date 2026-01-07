@@ -59,21 +59,24 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       // Beat pop effect - stronger
       const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 1.5 : 1;
       
-      // Base rotation advances slowly
-      baseRotation.current += 0.002 * speed;
+      // Get spinSpeed from store
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Audio offset for rotation - larger multipliers
-      const audioOffset = hasAudio ? (bass * 0.4 + mids * 0.25) * Math.PI : 0;
+      // Base rotation advances slowly + spin speed
+      baseRotation.current += 0.002 * speed + 0.05 * spinSpeed;
+      
+      // Audio offset for rotation - reduced multipliers for smoother motion
+      const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
       meshRef.current.rotation.z = baseRotation.current + audioOffset;
       
-      // Scale reacts to audio - stronger response, higher clamp
-      const pulse = (1 + bass * 1.0 + mids * 0.5) * beatPop;
-      meshRef.current.scale.setScalar(Math.min(pulse, 2.5));
+      // Scale reacts to audio - reduced response for less jarring motion
+      const pulse = (1 + bass * 0.5 + mids * 0.25) * beatPop;
+      meshRef.current.scale.setScalar(Math.min(pulse, 1.6));
       
-      // Position driven by audio - stronger response
-      meshRef.current.position.z = bass * 2.5;
-      meshRef.current.position.x = mids * 1.2;
-      meshRef.current.position.y = bass * 1.0;
+      // Position driven by audio - reduced for smoother motion
+      meshRef.current.position.z = bass * 0.6;
+      meshRef.current.position.x = mids * 0.3;
+      meshRef.current.position.y = bass * 0.25;
     }
   });
   
@@ -165,24 +168,27 @@ export default function PsychedelicMandalaVisualizer({
       const audioThreshold = 0.02;
       const hasAudio = bass > audioThreshold || mids > audioThreshold;
       
-      // Beat pop - stronger
-      const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 1.2 : 1;
+      // Beat pop - moderate
+      const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 0.6 : 1;
       
-      // Base rotation advances slowly
+      // Get spinSpeed from store
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
+      // Base rotation advances slowly + spin speed
       const animSpeed = audioSensitivity.animationSpeed;
-      mainBaseRotation.current += 0.002 * animSpeed;
+      mainBaseRotation.current += 0.002 * animSpeed + 0.05 * spinSpeed;
       
-      // Audio offset for rotation - larger multipliers
-      const audioOffset = hasAudio ? (bass * 0.4 + mids * 0.25) * Math.PI : 0;
+      // Audio offset for rotation - reduced for smoother motion
+      const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
       groupRef.current.rotation.z = mainBaseRotation.current + audioOffset;
       
-      // Scale reacts to audio - stronger, higher clamp
-      const breathe = (1 + bass * 0.8 + mids * 0.4) * beatPop;
-      groupRef.current.scale.setScalar(Math.min(breathe, 2.0));
+      // Scale reacts to audio - reduced for less jarring motion
+      const breathe = (1 + bass * 0.4 + mids * 0.2) * beatPop;
+      groupRef.current.scale.setScalar(Math.min(breathe, 1.5));
       
-      // Position driven by audio - stronger
-      groupRef.current.position.y = bass * 1.5;
-      groupRef.current.rotation.x = mids * Math.PI * 0.3;
+      // Position driven by audio - reduced for smoother motion
+      groupRef.current.position.y = bass * 0.4;
+      groupRef.current.rotation.x = mids * Math.PI * 0.1;
     }
   });
   

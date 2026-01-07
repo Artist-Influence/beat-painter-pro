@@ -64,6 +64,7 @@ function StandaloneShape({
     midsMultiplier: number;
     highsMultiplier: number;
     animationSpeed: number;
+    spinSpeed: number;
   };
 }) {
   const groupRef = useRef<THREE.Group>(null);
@@ -211,11 +212,13 @@ function StandaloneShape({
     
     if (groupRef.current) {
       const g = groupRef.current;
+      const spinSpeed = sens.spinSpeed ?? 0;
       
       // Scale reacts to audio (returns to 1.8 when silent)
       g.scale.setScalar(1.8 * (1 + bass * 0.3) * beatPop);
       
-      // Rotation ONLY when audio is present
+      // Constant spin speed + audio-reactive rotation
+      g.rotation.y += spinSpeed * 0.05;
       if (hasAudio) {
         g.rotation.y += bass * 0.08;
         g.rotation.x += mids * 0.03;

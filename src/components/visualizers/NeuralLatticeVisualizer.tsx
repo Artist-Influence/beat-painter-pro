@@ -3,12 +3,14 @@ import { useFrame } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function NeuralLattice({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
   const sphere1Ref = useRef<THREE.Mesh>(null);
   const sphere2Ref = useRef<THREE.Mesh>(null);
   const sphere3Ref = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
 
   const extractedColors = (window as any).extractedColors;
   
@@ -62,12 +64,14 @@ function NeuralLattice({ audioData }: any) {
     const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
 
     if (groupRef.current) {
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
       // Direct scale - no lerp for zero latency
       const targetScale = 1 + bass * 1.5;
       groupRef.current.scale.setScalar(targetScale);
       
-      // Base rotation advances slowly
-      baseRotation.current.y += 0.002;
+      // Base rotation advances slowly + spin speed
+      baseRotation.current.y += 0.002 + 0.05 * spinSpeed;
       baseRotation.current.x += 0.001;
       baseRotation.current.z += 0.0008;
       

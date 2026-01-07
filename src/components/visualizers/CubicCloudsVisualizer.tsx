@@ -111,6 +111,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
   const centerSphereRef = useRef<THREE.Mesh>(null);
   const cubeCount = 40;
   const angles = useMemo(() => Array.from({ length: cubeCount }, (_, i) => (i / cubeCount) * Math.PI * 2), []);
+  const { audioSensitivity } = useStudioStore();
 
   const extractedColors = (window as any).extractedColors;
   
@@ -161,7 +162,10 @@ function OrbitingCubesVisualizer({ audioData }: any) {
     const hasAudio = bass > audioThreshold || highs > audioThreshold;
     
     if (groupRef.current) {
-      // Rotation ONLY when audio is present
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
+      // Constant spin + Rotation ONLY when audio is present
+      groupRef.current.rotation.y += spinSpeed * 0.05;
       if (hasAudio) {
         groupRef.current.rotation.y += bass * 0.1;
         groupRef.current.rotation.x += bass * 0.06;

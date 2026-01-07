@@ -123,8 +123,10 @@ function ElectricField({ audioData }: any) {
     const audioThreshold = 0.02;
     const hasAudio = bassFinal > audioThreshold || midsFinal > audioThreshold || highsFinal > audioThreshold;
     
-    // Field group - rotation only when audio present
+    // Field group - rotation only when audio present + spin speed
     if (fieldGroupRef.current) {
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      fieldGroupRef.current.rotation.y += spinSpeed * 0.05;
       // ROTATION: Only when audio is present (frozen when silent)
       if (hasAudio) {
         fieldGroupRef.current.rotation.y += bassFinal * 0.03;
