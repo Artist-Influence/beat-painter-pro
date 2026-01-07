@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { VisualizerProps } from ".";
+import { useStudioStore } from "@/stores/studioStore";
 
 function Feather({ index, side, audioData }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { audioSensitivity } = useStudioStore();
   
   const extractedColors = (window as any).extractedColors;
   
@@ -34,13 +36,13 @@ function Feather({ index, side, audioData }: any) {
   const smoothedBass = useRef(0);
 
   useFrame(() => {
-    // Calculate audio per-frame
+    // Calculate audio per-frame with sensitivity multipliers
     let midsSum = 0, bassSum = 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     
-    const rawMids = Math.min(midsSum / 85 / 255, 1.0);
-    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
     
     // Asymmetric smoothing
     const lerpVal = (current: number, target: number) => {
@@ -96,6 +98,7 @@ function Feather({ index, side, audioData }: any) {
 function Wing({ side, audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
   const featherIndices = Array.from({ length: 20 }, (_, i) => i);
+  const { audioSensitivity } = useStudioStore();
 
   const safeAudioData = audioData || { frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0 };
   const frequency = safeAudioData.frequency || Array(256).fill(0);
@@ -105,13 +108,13 @@ function Wing({ side, audioData }: any) {
   const smoothedMids = useRef(0);
 
   useFrame(() => {
-    // Calculate audio per-frame
+    // Calculate audio per-frame with sensitivity multipliers
     let bassSum = 0, midsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     
-    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
-    const rawMids = Math.min(midsSum / 85 / 255, 1.0);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
+    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
     
     // Asymmetric smoothing
     const lerpVal = (current: number, target: number) => {
@@ -156,6 +159,7 @@ function Wing({ side, audioData }: any) {
 
 function HologramWings({ audioData }: any) {
   const groupRef = useRef<THREE.Group>(null);
+  const { audioSensitivity } = useStudioStore();
   
   const extractedColors = (window as any).extractedColors;
   const accentColor = extractedColors?.accent || '#ffffff';
@@ -168,13 +172,13 @@ function HologramWings({ audioData }: any) {
   const smoothedBass = useRef(0);
 
   useFrame(() => {
-    // Calculate audio per-frame
+    // Calculate audio per-frame with sensitivity multipliers
     let highsSum = 0, bassSum = 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     
-    const rawHighs = Math.min(highsSum / 85 / 255, 1.0);
-    const rawBass = Math.min(bassSum / 86 / 255, 1.0);
+    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
     
     // Asymmetric smoothing
     const lerpVal = (current: number, target: number) => {

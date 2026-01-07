@@ -22,8 +22,6 @@ function StrobeRing({ distance, index, audioData, textureData }) {
   
   useFrame(() => {
     if (meshRef.current && materialRef.current) {
-      const animSpeed = audioSensitivity.animationSpeed;
-      
       // Calculate audio per-frame
       let bassSum = 0, highsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
@@ -50,12 +48,12 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       
       // Strobe effect driven by audio
       const strobeFreq = hasAudio ? 30 + bass * 40 : 0;
-      const strobe = hasAudio && Math.sin(Date.now() * 0.001 * strobeFreq * animSpeed + index * 2) > 0.2 ? 1 : 0;
+      const strobe = hasAudio && Math.sin(Date.now() * 0.001 * strobeFreq + index * 2) > 0.2 ? 1 : 0;
       materialRef.current.emissiveIntensity = strobe * (1.0 + bass * 3.0);
       
       // Z-position movement ONLY when audio is present
       if (hasAudio) {
-        const speed = (6 + bass * 6) * animSpeed * 0.016;
+        const speed = (6 + bass * 6) * 0.016;
         currentZ.current -= speed;
         if (currentZ.current < -10) currentZ.current = 10;
       }
@@ -65,9 +63,9 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       const scale = 1 + Math.abs(currentZ.current) * 0.1 + bass * 1.2;
       meshRef.current.scale.setScalar(scale);
       
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        meshRef.current.rotation.z += bass * 0.15 * animSpeed;
+        meshRef.current.rotation.z += bass * 0.15;
       }
       
       // Position oscillation proportional to audio
@@ -123,8 +121,6 @@ export default function StroboscopicTunnelVisualizer({
   const smoothedMids = useRef(0);
   
   useFrame(({ camera }) => {
-    const animSpeed = audioSensitivity.animationSpeed;
-    
     // Calculate audio per-frame
     let bassSum = 0, midsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
@@ -150,9 +146,9 @@ export default function StroboscopicTunnelVisualizer({
     const hasAudio = bass > audioThreshold || mids > audioThreshold;
     
     if (tunnelRef.current) {
-      // Rotation ONLY when audio is present
+      // Rotation ONLY when audio is present - NO animationSpeed on rotation amount
       if (hasAudio) {
-        tunnelRef.current.rotation.z += mids * bass * 0.2 * animSpeed;
+        tunnelRef.current.rotation.z += mids * bass * 0.2;
       }
       
       // Scale driven by audio (returns to 1 when silent)
