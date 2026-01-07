@@ -1,5 +1,4 @@
 import DiamondOrbVisualizer from "./DiamondOrbVisualizer";
-import DiamondOrbReactorVisualizer from "./DiamondOrbReactorVisualizer";
 import AlienMembraneVisualizer from "./AlienMembraneVisualizer";
 import NeuralLatticeVisualizer from "./NeuralLatticeVisualizer";
 import AngelWingsVisualizer from "./AngelWingsVisualizer";
@@ -20,7 +19,6 @@ export type { VisualizerProps } from "../visualizer";
 
 export const VISUALIZER_SCALES: Record<string, number> = {
   DiamondOrbVisualizer: 0.18,
-  DiamondOrbReactorVisualizer: 0.25,
   AlienMembraneVisualizer: 0.08,
   NeuralLatticeVisualizer: 0.066,
   AngelWingsVisualizer: 0.6,
@@ -39,7 +37,6 @@ export const VISUALIZER_SCALES: Record<string, number> = {
 
 export const visualizerRegistry = {
   DiamondOrbVisualizer,
-  DiamondOrbReactorVisualizer,
   AlienMembraneVisualizer,
   NeuralLatticeVisualizer,
   AngelWingsVisualizer,
