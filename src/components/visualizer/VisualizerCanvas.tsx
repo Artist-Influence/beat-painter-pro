@@ -207,6 +207,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
                 <Visualizer 
                   key={`${styleVersion}-${selected}`}
                   audioData={audioData} 
+                  isPlaying={isPlaying}
                   backgroundColor={backgroundColor}
                   zoomLevel={zoomLevel}
                   {...(isCustomVisualizer(selected) ? { 

@@ -4,6 +4,7 @@ export interface VisualizerProps {
     amplitude: number;   // 0-1
     beatStrength: number; // 0-1
   };
+  isPlaying?: boolean; // true when audio is playing, false when paused
   styleAdjustments?: {
     brightness: number; // 0-200, default 100
     saturation: number; // 0-200, default 100

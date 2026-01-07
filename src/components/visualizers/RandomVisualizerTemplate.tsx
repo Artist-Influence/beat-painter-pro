@@ -12,6 +12,7 @@ interface RandomVisualizerTemplateProps {
     amplitude: number;
     beatStrength: number;
   };
+  isPlaying?: boolean;
 }
 
 // Audio analysis helper

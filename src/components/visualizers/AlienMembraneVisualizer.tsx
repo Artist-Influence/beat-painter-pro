@@ -266,10 +266,10 @@ function AlienMembrane({ audioData }: any) {
         <AlienMembraneShaderMaterial audioData={audioData} />
       </mesh>
       <Sparkles
-        count={20}
+        count={smoothedHighs.current > 0.02 ? 20 : 0}
         scale={[1, 1, 1]}
         size={2}
-        speed={1}
+        speed={smoothedHighs.current > 0.02 ? 1 : 0}
         opacity={0.05}
         color={accentColor}
       />

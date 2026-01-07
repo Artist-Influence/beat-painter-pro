@@ -204,10 +204,10 @@ export default function PsychedelicMandalaVisualizer({
         </mesh>
         
         <Sparkles
-          count={150}
+          count={smoothedBass.current > 0.02 ? 150 : 0}
           scale={[5, 5, 5]}
           size={3}
-          speed={3}
+          speed={smoothedBass.current > 0.02 ? 3 : 0}
           opacity={0.8}
           color={textureData.colors.accent}
         />

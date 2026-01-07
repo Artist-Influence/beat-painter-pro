@@ -13,12 +13,13 @@ interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
   initialCode?: string; // Legacy: Pre-loaded JSX code
   initialConfig?: RandomVisualizerParams; // New: Pre-loaded config
+  isPlaying?: boolean; // Whether audio is playing
 }
 
 // Session-based cache to prevent flickering
 const sessionCache = new Map<string, { config?: RandomVisualizerParams; code?: string }>();
 
-export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConfig, ...props }: CustomVisualizerLoaderProps) {
+export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConfig, isPlaying, ...props }: CustomVisualizerLoaderProps) {
   const { user } = useAuth();
   const [config, setConfig] = useState<RandomVisualizerParams | null>(initialConfig || null);
   const [legacyCode, setLegacyCode] = useState<string>(initialCode || '');
@@ -178,6 +179,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
       <RandomVisualizerTemplate 
         params={config} 
         audioData={props.audioData}
+        isPlaying={isPlaying}
       />
     );
   }

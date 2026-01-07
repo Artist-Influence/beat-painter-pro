@@ -152,10 +152,10 @@ export default function DNAHelixVisualizer({
         <DNAStrand isTop={false} audioData={audioData} textureData={textureData} />
         
         <Sparkles
-          count={100}
+          count={smoothedBass.current > 0.02 ? 100 : 0}
           scale={[6, 2, 2]}
           size={1 + smoothedBass.current * 2}
-          speed={0.5 + smoothedBass.current}
+          speed={smoothedBass.current > 0.02 ? (0.5 + smoothedBass.current) : 0}
           opacity={0.3 + smoothedBass.current * 0.3}
           color={textureData.colors?.primary || "#ffffff"}
         />

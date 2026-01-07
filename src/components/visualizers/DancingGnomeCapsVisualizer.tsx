@@ -262,10 +262,10 @@ function GlassSphereVisualizer({ audioData }: any) {
         <sphereGeometry args={[0.15, 32, 32]} />
       </mesh>
       <Sparkles
-        count={8 + highs * 25 + bass * 15}
+        count={(highs > 0.02 || bass > 0.02) ? Math.round(8 + highs * 25 + bass * 15) : 0}
         scale={[1.2, 1.2, 1.2]}
         size={1.2 + highs * 2.5 + bass * 1.5}
-        speed={1.0 + highs * 2.0 + bass * 1.5}
+        speed={(highs > 0.02 || bass > 0.02) ? (1.0 + highs * 2.0 + bass * 1.5) : 0}
         opacity={0.02 + highs * 0.05}
         color={accentColor}
       />
