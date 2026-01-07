@@ -13,6 +13,14 @@ interface LogoState {
   opacity: number;
 }
 
+interface BackgroundMedia {
+  type: 'color' | 'image' | 'video';
+  color: string;
+  mediaUrl: string | null;
+  mediaType: 'image' | 'gif' | 'video' | null;
+  positionY: number;
+}
+
 interface UseRecorderProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   audioElement: HTMLAudioElement | null;
@@ -34,7 +42,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const [isRecording, setIsRecording] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
 
-  const backgroundColorRef = useRef<string>('#000000');
+  const backgroundRef = useRef<BackgroundMedia | null>(null);
+  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
   const logoRef = useRef<LogoState | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
@@ -43,7 +53,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   const startRecording = useCallback(async (
     startAtSeconds: number, 
-    backgroundColor: string, 
+    background: BackgroundMedia, 
     filenamePrefix: string, 
     quality: ExportQuality = '4k',
     logo?: LogoState,
@@ -57,11 +67,13 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     try {
       // Store references
       logoRef.current = logo || null;
+      backgroundRef.current = background;
       exportModeRef.current = exportMode;
       filenamePrefixRef.current = filenamePrefix;
       pngFramesRef.current = [];
       setFrameCount(0);
 
+      // Load logo image if present
       if (logo?.url) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -75,6 +87,41 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         });
       } else {
         logoImageRef.current = null;
+      }
+
+      // Load background image if needed
+      backgroundImageRef.current = null;
+      backgroundVideoRef.current = null;
+      
+      if (background.type === 'image' && background.mediaUrl) {
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'anonymous';
+        bgImg.src = background.mediaUrl;
+        await new Promise<void>((resolve) => {
+          bgImg.onload = () => {
+            backgroundImageRef.current = bgImg;
+            resolve();
+          };
+          bgImg.onerror = () => resolve();
+        });
+      }
+
+      // Load background video if needed
+      if (background.type === 'video' && background.mediaUrl) {
+        const bgVideo = document.createElement('video');
+        bgVideo.crossOrigin = 'anonymous';
+        bgVideo.src = background.mediaUrl;
+        bgVideo.muted = true;
+        bgVideo.loop = true;
+        bgVideo.playsInline = true;
+        await new Promise<void>((resolve) => {
+          bgVideo.onloadeddata = () => {
+            backgroundVideoRef.current = bgVideo;
+            bgVideo.play();
+            resolve();
+          };
+          bgVideo.onerror = () => resolve();
+        });
       }
 
       const { width, height, bitrate } = RESOLUTIONS[quality];
@@ -95,7 +142,6 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       
       exportCanvasRef.current = exportCanvas;
       ctxRef.current = ctx;
-      backgroundColorRef.current = backgroundColor;
 
       chunksRef.current = [];
       keepRenderingRef.current = true;
@@ -171,11 +217,17 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           const exportCanvas = exportCanvasRef.current;
           if (!ctx || !exportCanvas) return;
 
-          // For PNG sequence, clear to transparent; for video, fill background
+          const bg = backgroundRef.current;
+
+          // Draw background first
           if (exportModeRef.current === 'png-sequence') {
             ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+          } else if (bg?.type === 'video' && backgroundVideoRef.current) {
+            drawBackgroundMedia(ctx, backgroundVideoRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
+          } else if (bg?.type === 'image' && backgroundImageRef.current) {
+            drawBackgroundMedia(ctx, backgroundImageRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
           } else {
-            ctx.fillStyle = backgroundColorRef.current;
+            ctx.fillStyle = bg?.color || '#000000';
             ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
           }
           
@@ -277,6 +329,29 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   return { startRecording, stopRecording, isRecording, frameCount };
 };
+
+function drawBackgroundMedia(
+  ctx: CanvasRenderingContext2D, 
+  media: HTMLImageElement | HTMLVideoElement, 
+  canvasWidth: number, 
+  canvasHeight: number, 
+  positionY: number
+) {
+  const mediaWidth = media instanceof HTMLVideoElement ? media.videoWidth : media.width;
+  const mediaHeight = media instanceof HTMLVideoElement ? media.videoHeight : media.height;
+  
+  // Calculate cover dimensions (maintain aspect ratio, fill canvas)
+  const scale = Math.max(canvasWidth / mediaWidth, canvasHeight / mediaHeight);
+  const scaledWidth = mediaWidth * scale;
+  const scaledHeight = mediaHeight * scale;
+  
+  // Center horizontally, use positionY for vertical
+  const x = (canvasWidth - scaledWidth) / 2;
+  const yRange = scaledHeight - canvasHeight;
+  const y = -yRange * (positionY / 100);
+  
+  ctx.drawImage(media, x, y, scaledWidth, scaledHeight);
+}
 
 async function logVisualizerEvent() {
   try {

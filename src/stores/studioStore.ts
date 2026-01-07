@@ -15,6 +15,7 @@ interface BackgroundState {
   color: "#00FF00" | "#FFFFFF" | "#000000";
   mediaUrl: string | null;
   mediaType: BackgroundMediaType;
+  positionY: number; // 0-100, 50 = centered
 }
 
 interface CustomStyleTexture {
@@ -58,6 +59,7 @@ interface StudioState {
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackgroundColor: (c: BackgroundState["color"]) => void;
   setBackgroundMedia: (url: string, type: BackgroundMediaType) => void;
+  setBackgroundPositionY: (y: number) => void;
   clearBackgroundMedia: () => void;
   setFilters: (f: Partial<Filters>) => void;
   setZoom: (z: number) => void;
@@ -96,6 +98,7 @@ const DEFAULT_BACKGROUND: BackgroundState = {
   color: '#FFFFFF',
   mediaUrl: null,
   mediaType: null,
+  positionY: 50,
 };
 
 const DEFAULT_CUSTOM_STYLE: CustomStyleTexture = {
@@ -128,6 +131,9 @@ export const useStudioStore = create<StudioState>((set) => ({
   })),
   setBackgroundMedia: (url, type) => set((state) => ({ 
     background: { ...state.background, type: type === 'video' ? 'video' : 'image', mediaUrl: url, mediaType: type } 
+  })),
+  setBackgroundPositionY: (y) => set((state) => ({
+    background: { ...state.background, positionY: y }
   })),
   clearBackgroundMedia: () => set((state) => ({ 
     background: { ...state.background, type: 'color', mediaUrl: null, mediaType: null } 
