@@ -7,6 +7,21 @@ interface Filters {
   contrast: number;
 }
 
+type BackgroundType = 'color' | 'image' | 'video';
+type BackgroundMediaType = 'image' | 'gif' | 'video' | null;
+
+interface BackgroundState {
+  type: BackgroundType;
+  color: "#00FF00" | "#FFFFFF" | "#000000";
+  mediaUrl: string | null;
+  mediaType: BackgroundMediaType;
+}
+
+interface CustomStyleTexture {
+  url: string | null;
+  name: string | null;
+}
+
 interface AudioSensitivity {
   bassMultiplier: number;
   midsMultiplier: number;
@@ -31,7 +46,7 @@ interface LogoState {
 
 interface StudioState {
   selected: VisualizerKey | `custom_${string}`;
-  backgroundColor: "#00FF00" | "#FFFFFF" | "#000000";
+  background: BackgroundState;
   filters: Filters;
   zoomLevel: number;
   audioElement: HTMLAudioElement | null;
@@ -39,8 +54,11 @@ interface StudioState {
   audioSensitivity: AudioSensitivity;
   logo: LogoState;
   exportMode: ExportMode;
+  customStyleTexture: CustomStyleTexture;
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
-  setBackground: (c: StudioState["backgroundColor"]) => void;
+  setBackgroundColor: (c: BackgroundState["color"]) => void;
+  setBackgroundMedia: (url: string, type: BackgroundMediaType) => void;
+  clearBackgroundMedia: () => void;
   setFilters: (f: Partial<Filters>) => void;
   setZoom: (z: number) => void;
   setAudioElement: (el: HTMLAudioElement | null, fileName?: string | null) => void;
@@ -54,6 +72,8 @@ interface StudioState {
   setLogoColorMode: (mode: LogoColorMode) => void;
   clearLogo: () => void;
   setExportMode: (mode: ExportMode) => void;
+  setCustomStyleTexture: (url: string | null, name?: string | null) => void;
+  clearCustomStyleTexture: () => void;
 }
 
 const AUDIO_PRESETS: Record<'calm' | 'flow' | 'energy', Omit<AudioSensitivity, 'preset'>> = {
@@ -71,9 +91,21 @@ const DEFAULT_LOGO: LogoState = {
   colorMode: 'original',
 };
 
+const DEFAULT_BACKGROUND: BackgroundState = {
+  type: 'color',
+  color: '#FFFFFF',
+  mediaUrl: null,
+  mediaType: null,
+};
+
+const DEFAULT_CUSTOM_STYLE: CustomStyleTexture = {
+  url: null,
+  name: null,
+};
+
 export const useStudioStore = create<StudioState>((set) => ({
   selected: "PsychedelicMandalaVisualizer",
-  backgroundColor: "#FFFFFF",
+  background: DEFAULT_BACKGROUND,
   filters: { brightness: 100, saturation: 100, contrast: 100 },
   zoomLevel: 1,
   audioElement: null,
@@ -88,8 +120,17 @@ export const useStudioStore = create<StudioState>((set) => ({
   },
   logo: DEFAULT_LOGO,
   exportMode: 'video',
+  customStyleTexture: DEFAULT_CUSTOM_STYLE,
   setSelected: (v) => set({ selected: v }),
-  setBackground: (c) => set({ backgroundColor: c }),
+  setBackgroundColor: (c) => set((state) => ({ 
+    background: { ...state.background, type: 'color', color: c, mediaUrl: null, mediaType: null } 
+  })),
+  setBackgroundMedia: (url, type) => set((state) => ({ 
+    background: { ...state.background, type: type === 'video' ? 'video' : 'image', mediaUrl: url, mediaType: type } 
+  })),
+  clearBackgroundMedia: () => set((state) => ({ 
+    background: { ...state.background, type: 'color', mediaUrl: null, mediaType: null } 
+  })),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
   setZoom: (z) => set({ zoomLevel: z }),
   setAudioElement: (el, fileName = null) => set({ audioElement: el, audioFileName: fileName }),
@@ -107,4 +148,16 @@ export const useStudioStore = create<StudioState>((set) => ({
   setLogoColorMode: (colorMode) => set((state) => ({ logo: { ...state.logo, colorMode } })),
   clearLogo: () => set({ logo: DEFAULT_LOGO }),
   setExportMode: (mode) => set({ exportMode: mode }),
+  setCustomStyleTexture: (url, name = null) => {
+    set({ customStyleTexture: { url, name } });
+    if (url) {
+      (window as any).appliedTexture = url;
+      window.dispatchEvent(new CustomEvent('style:applied', { detail: { texture: url } }));
+    }
+  },
+  clearCustomStyleTexture: () => {
+    set({ customStyleTexture: DEFAULT_CUSTOM_STYLE });
+    (window as any).appliedTexture = null;
+    window.dispatchEvent(new CustomEvent('texture:cleared'));
+  },
 }));

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Sparkles, X, RefreshCw } from "lucide-react";
+import { ChevronDown, Sparkles, X, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
+import { useStudioStore } from "@/stores/studioStore";
+import { toast } from "sonner";
 
 const ALL_STYLES = [
   "Neon Glow", "Metallic Chrome", "Organic Flow", "Cyberpunk Grid",
@@ -29,11 +31,20 @@ export function StyleSelector() {
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const customStyleInputRef = useRef<HTMLInputElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
   const [appliedIndex, setAppliedIndex] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
+  
+  const { customStyleTexture, setCustomStyleTexture, clearCustomStyleTexture } = useStudioStore();
 
   const canAddMore = selectedStyles.length < 3;
+  
+  const handleCustomStyleUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setCustomStyleTexture(url, file.name);
+    toast.success("Custom style applied!");
+  };
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
   
   // Sort styles to show selected ones at the top
@@ -164,6 +175,53 @@ export function StyleSelector() {
 
   return (
     <div className="space-y-3">
+      {/* Custom Style Upload */}
+      <div className="space-y-2">
+        <span className="text-white/60 text-xs">Custom Style Texture</span>
+        <input
+          ref={customStyleInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleCustomStyleUpload(file);
+          }}
+        />
+        
+        {!customStyleTexture.url ? (
+          <button
+            onClick={() => customStyleInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-white/20 rounded-xl p-4 text-center hover:border-purple-500/50 transition-colors"
+          >
+            <Upload className="w-5 h-5 text-white/40 mx-auto mb-2" />
+            <p className="text-white/60 text-xs">Upload any image as style</p>
+          </button>
+        ) : (
+          <div className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2">
+            <img 
+              src={customStyleTexture.url} 
+              alt="Custom style preview" 
+              className="w-10 h-10 object-cover rounded"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-white/80 text-xs truncate">{customStyleTexture.name || 'Custom style'}</p>
+              <p className="text-white/40 text-[10px]">Applied to visualizer</p>
+            </div>
+            <button
+              onClick={clearCustomStyleTexture}
+              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4 text-white/60" />
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div className="border-t border-white/10 my-3"></div>
+      
+      <span className="text-white/60 text-xs">Or Generate from Presets</span>
+      
       <div className="relative">
         <div className="flex flex-col gap-2">
           <Button

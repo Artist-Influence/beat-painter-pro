@@ -17,7 +17,7 @@ interface VisualizerCanvasProps {
 }
 
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
-  const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
+  const { selected, background, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   
@@ -140,11 +140,11 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       if (logoBehind) {
         rendererRef.current.setClearColor(0x000000, 0); // Fully transparent for logo behind
       } else {
-        const color = new THREE.Color(backgroundColor);
+        const color = new THREE.Color(background.color);
         rendererRef.current.setClearColor(color, 1);
       }
     }
-  }, [backgroundColor, logoBehind]);
+  }, [background.color, logoBehind]);
 
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
@@ -156,10 +156,10 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     if (logoBehind) {
       gl.setClearColor(0x000000, 0);
     } else {
-      const color = new THREE.Color(backgroundColor);
+      const color = new THREE.Color(background.color);
       gl.setClearColor(color, 1);
     }
-  }, [canvasRef, backgroundColor, logoBehind]);
+  }, [canvasRef, background.color, logoBehind]);
 
 
   
@@ -175,7 +175,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          backgroundColor: logoBehind ? 'transparent' : backgroundColor 
+          backgroundColor: logoBehind ? 'transparent' : background.color 
         }}
       >
         <Canvas
@@ -201,7 +201,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
                   key={`${styleVersion}-${selected}`}
                   audioData={audioData} 
                   isPlaying={isPlaying}
-                  backgroundColor={backgroundColor}
+                  backgroundColor={background.color}
                   zoomLevel={zoomLevel}
                   {...(isCustomVisualizer(selected) ? { 
                     visualizerKey: selected,
