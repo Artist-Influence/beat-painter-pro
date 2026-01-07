@@ -12,6 +12,7 @@ interface AudioSensitivity {
   midsMultiplier: number;
   highsMultiplier: number;
   animationSpeed: number;
+  spinSpeed: number;
   preset: 'calm' | 'flow' | 'energy' | 'custom';
 }
 
@@ -53,9 +54,9 @@ interface StudioState {
 }
 
 const AUDIO_PRESETS: Record<'calm' | 'flow' | 'energy', Omit<AudioSensitivity, 'preset'>> = {
-  calm: { bassMultiplier: 1.2, midsMultiplier: 0.8, highsMultiplier: 0.5, animationSpeed: 0.7 },
-  flow: { bassMultiplier: 2.5, midsMultiplier: 1.5, highsMultiplier: 1.0, animationSpeed: 1.0 },
-  energy: { bassMultiplier: 4.0, midsMultiplier: 3.0, highsMultiplier: 2.0, animationSpeed: 1.5 },
+  calm: { bassMultiplier: 1.2, midsMultiplier: 0.8, highsMultiplier: 0.5, animationSpeed: 0.7, spinSpeed: 0 },
+  flow: { bassMultiplier: 2.5, midsMultiplier: 1.5, highsMultiplier: 1.0, animationSpeed: 1.0, spinSpeed: 0 },
+  energy: { bassMultiplier: 4.0, midsMultiplier: 3.0, highsMultiplier: 2.0, animationSpeed: 1.5, spinSpeed: 0 },
 };
 
 const DEFAULT_LOGO: LogoState = {
@@ -79,6 +80,7 @@ export const useStudioStore = create<StudioState>((set) => ({
     midsMultiplier: 1.5,
     highsMultiplier: 1.0,
     animationSpeed: 1.0,
+    spinSpeed: 0,
     preset: 'flow',
   },
   logo: DEFAULT_LOGO,

@@ -38,6 +38,7 @@ function Feather({ index, side, audioData }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     const animSpeed = audioSensitivity.animationSpeed;
+    const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
     let midsSum = 0, bassSum = 0;
@@ -56,22 +57,26 @@ function Feather({ index, side, audioData }: any) {
     smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
     smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
     
-    const mids = smoothedMids.current * 0.6 + rawMids * 0.4;
-    const bass = smoothedBass.current * 0.6 + rawBass * 0.4;
+    const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
+    const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
     
     if (meshRef.current) {
       // Idle sine wave oscillation for organic motion
       const idleY = Math.sin(t * 0.5 + index * 0.2) * 0.1 * animSpeed;
       const idleZ = Math.cos(t * 0.3 + index * 0.15) * 0.08 * animSpeed;
       
-      // Audio-driven rotation speed (velocity-based for dynamic motion)
-      const rotSpeed = 0.01 + bass * 0.15 + mids * 0.08;
+      // Audio-driven rotation speed (velocity-based for dynamic motion) + spin speed
+      const rotSpeed = 0.02 + bass * 0.3 + mids * 0.15 + spinSpeed * 0.03;
       meshRef.current.rotation.y += rotSpeed * animSpeed;
-      meshRef.current.rotation.z = idleZ + bass * 0.4 + mids * 0.2;
+      meshRef.current.rotation.z = idleZ + bass * 0.6 + mids * 0.35;
       
       // Beat-reactive scale - snappy response
-      const beatScale = 1 + bass * 0.8 + mids * 0.4;
+      const beatScale = 1 + bass * 1.2 + mids * 0.6;
       meshRef.current.scale.setScalar(beatScale);
+      
+      // Position offset for more dramatic movement
+      meshRef.current.position.y = bass * 0.3;
+      meshRef.current.position.z = mids * 0.2;
     }
   });
 
@@ -112,6 +117,7 @@ function Wing({ side, audioData }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     const animSpeed = audioSensitivity.animationSpeed;
+    const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
     let bassSum = 0, midsSum = 0;
@@ -130,21 +136,24 @@ function Wing({ side, audioData }: any) {
     smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
     smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
     
-    const bass = smoothedBass.current * 0.6 + rawBass * 0.4;
-    const mids = smoothedMids.current * 0.6 + rawMids * 0.4;
+    const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
+    const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
     
     if (groupRef.current) {
-      // Dynamic flapping motion - sine wave modulated by bass
-      const flapAngle = Math.sin(t * 3 + bass * 8) * (0.2 + bass * 0.6);
+      // Faster, more dramatic flapping
+      const flapAngle = Math.sin(t * 4 + bass * 12) * (0.3 + bass * 0.9);
       groupRef.current.rotation.z = side * flapAngle;
-      groupRef.current.rotation.x = Math.sin(t * 2) * 0.15 * animSpeed + bass * 0.3;
+      groupRef.current.rotation.x = Math.sin(t * 2.5) * 0.2 * animSpeed + bass * 0.5;
       
-      // Scale pump - beat reactive
-      const wingScale = 1 + bass * 1.5 + mids * 0.5;
+      // Add spin speed to Y rotation
+      groupRef.current.rotation.y += spinSpeed * 0.02;
+      
+      // Bigger scale response
+      const wingScale = 1 + bass * 2.0 + mids * 0.8;
       groupRef.current.scale.setScalar(wingScale);
       
-      // Position bob
-      groupRef.current.position.y = 0.4 + bass * 0.6 + mids * 0.3;
+      // More dramatic position bob
+      groupRef.current.position.y = 0.4 + bass * 1.0 + mids * 0.5;
     }
   });
 
@@ -174,6 +183,7 @@ function HologramWings({ audioData }: any) {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     const animSpeed = audioSensitivity.animationSpeed;
+    const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
     let highsSum = 0, bassSum = 0;
@@ -192,12 +202,12 @@ function HologramWings({ audioData }: any) {
     smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
     smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
     
-    const highs = smoothedHighs.current * 0.6 + rawHighs * 0.4;
-    const bass = smoothedBass.current * 0.6 + rawBass * 0.4;
+    const highs = smoothedHighs.current * 0.5 + rawHighs * 0.5;
+    const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
     
     if (groupRef.current) {
-      // Dynamic rotation with organic oscillation
-      groupRef.current.rotation.y += (0.005 + bass * 0.02 + highs * 0.01) * animSpeed;
+      // Dynamic rotation with organic oscillation + spin speed
+      groupRef.current.rotation.y += (0.005 + bass * 0.02 + highs * 0.01 + spinSpeed * 0.02) * animSpeed;
       groupRef.current.rotation.x = Math.sin(t * 0.8) * 0.1 * animSpeed + bass * 0.15;
       
       // Position proportional to audio

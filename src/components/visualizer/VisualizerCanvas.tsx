@@ -186,8 +186,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          // Hide background when recording with transparency or logo is behind
-          backgroundColor: isTransparentRecording ? 'transparent' : backgroundColor 
+          // Hide background when recording with transparency OR logo is behind (so logo shows through)
+          backgroundColor: (isTransparentRecording || logoBehind) ? 'transparent' : backgroundColor 
         }}
       >
         <Canvas

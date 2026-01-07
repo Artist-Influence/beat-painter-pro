@@ -23,7 +23,6 @@ export function VisualizerGrid() {
 
   const standardVisualizers = [
     { id: 'DiamondOrbVisualizer', name: 'Diamond Orb', preview: '💎', description: 'Crystalline energy patterns' },
-    { id: 'DiamondOrbReactorVisualizer', name: 'Orb Reactor', preview: '⚛️', description: 'Breathing reactor core with beams' },
     { id: 'AlienMembraneVisualizer', name: 'Alien Membrane', preview: '👽', description: 'Organic flowing surfaces' },
     { id: 'NeuralLatticeVisualizer', name: 'Neural Lattice', preview: '🧠', description: 'Interconnected neural networks' },
     { id: 'AngelWingsVisualizer', name: 'Angel Wings', preview: '🪶', description: 'Ethereal wing formations' },

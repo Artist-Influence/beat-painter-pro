@@ -14,7 +14,7 @@ type RightPanelType = 'controls' | 'upload' | null;
 
 export function StudioLayoutV2() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const { logo } = useStudioStore();
+  const { logo, backgroundColor } = useStudioStore();
   const [activePanels, setActivePanels] = useState({
     left: 'visualizers' as LeftPanelType,
     right: 'controls' as RightPanelType,
@@ -25,7 +25,12 @@ export function StudioLayoutV2() {
   useKeyboardShortcuts();
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
+    <div className="fixed inset-0 overflow-hidden">
+      {/* Background Color Layer - Always at bottom */}
+      <div 
+        className="absolute inset-0 z-[0]" 
+        style={{ backgroundColor }}
+      />
       {/* Logo Behind Visualizer - lower z-index */}
       {logo.layer === 'behind' && (
         <div className="absolute inset-0 z-[1]">
