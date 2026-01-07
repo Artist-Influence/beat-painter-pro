@@ -13,9 +13,10 @@ import * as THREE from "three";
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  logoBehind?: boolean;
 }
 
-const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
+const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
   const { selected, backgroundColor, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
   const [isTransparentRecording, setIsTransparentRecording] = useState(false);
@@ -143,10 +144,10 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     return () => window.removeEventListener('recording:transparency', handleTransparency);
   }, []);
 
-  // Update renderer clear color when transparency mode changes
+  // Update renderer clear color when transparency mode changes or logo is behind
   useEffect(() => {
     if (rendererRef.current) {
-      if (isTransparentRecording) {
+      if (isTransparentRecording || logoBehind) {
         rendererRef.current.setClearColor(0x000000, 0); // Fully transparent
       } else {
         // Parse backgroundColor to set clear color
@@ -154,7 +155,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
         rendererRef.current.setClearColor(color, 1);
       }
     }
-  }, [isTransparentRecording, backgroundColor]);
+  }, [isTransparentRecording, backgroundColor, logoBehind]);
 
   const handleCreated = useCallback(({ gl }: any) => {
     if (canvasRef) {
@@ -162,10 +163,14 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
     }
     // Store renderer reference for transparency control
     rendererRef.current = gl;
-    // Set initial clear color
-    const color = new THREE.Color(backgroundColor);
-    gl.setClearColor(color, 1);
-  }, [canvasRef, backgroundColor]);
+    // Set initial clear color - transparent if logo is behind
+    if (logoBehind) {
+      gl.setClearColor(0x000000, 0);
+    } else {
+      const color = new THREE.Color(backgroundColor);
+      gl.setClearColor(color, 1);
+    }
+  }, [canvasRef, backgroundColor, logoBehind]);
 
 
   
@@ -176,13 +181,13 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef }) => {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-0">
-      <div 
+        <div 
         className="w-full h-full" 
         style={{ 
           paddingBottom: '100px', // Account for audio bar height
           paddingTop: '80px',    // Account for top bar
-          // Hide background when recording with transparency
-          backgroundColor: isTransparentRecording ? 'transparent' : backgroundColor 
+          // Hide background when recording with transparency or logo is behind
+          backgroundColor: (isTransparentRecording || logoBehind) ? 'transparent' : backgroundColor 
         }}
       >
         <Canvas

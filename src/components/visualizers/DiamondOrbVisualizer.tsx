@@ -160,9 +160,9 @@ function CrackedCrystalOrb({ audioData }: any) {
           color={primaryColor} 
           roughness={extractedColors?.isMetallic ? 0.1 : 0.25} 
           metalness={extractedColors?.isMetallic ? 0.95 : 0.9}
-           map={texture || undefined}
-          emissive={extractedColors?.isNeon ? primaryColor : '#000000'}
-          emissiveIntensity={extractedColors?.isNeon ? 0.3 : 0}
+          map={texture || undefined}
+          emissive={primaryColor}
+          emissiveIntensity={extractedColors?.isNeon ? 0.5 : 0.15}
         />
       </mesh>
       <mesh ref={innerCore} geometry={innerGeom}>
@@ -170,9 +170,9 @@ function CrackedCrystalOrb({ audioData }: any) {
           color={secondaryColor} 
           roughness={extractedColors?.isMetallic ? 0.15 : 0.3} 
           metalness={extractedColors?.isMetallic ? 0.9 : 0.85}
-           map={texture || undefined}
-          emissive={extractedColors?.isNeon ? secondaryColor : '#000000'}
-          emissiveIntensity={extractedColors?.isNeon ? 0.2 : 0}
+          map={texture || undefined}
+          emissive={secondaryColor}
+          emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0.1}
         />
       </mesh>
       {Array.from({ length: 16 }).map((_, i) => (
@@ -186,9 +186,9 @@ function CrackedCrystalOrb({ audioData }: any) {
             color={accentColor} 
             roughness={extractedColors?.isMetallic ? 0.05 : 0.2} 
             metalness={extractedColors?.isMetallic ? 0.98 : 0.95}
-             map={texture || undefined}
-            emissive={extractedColors?.isNeon ? accentColor : '#000000'}
-            emissiveIntensity={extractedColors?.isNeon ? 0.4 : 0}
+            map={texture || undefined}
+            emissive={accentColor}
+            emissiveIntensity={extractedColors?.isNeon ? 0.6 : 0.2}
           />
         </mesh>
       ))}
