@@ -35,6 +35,17 @@ export function StyleSelector() {
 
   const canAddMore = selectedStyles.length < 3;
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
+  
+  // Sort styles to show selected ones at the top
+  const sortedStyles = useMemo(() => {
+    return [...ALL_STYLES].sort((a, b) => {
+      const aSelected = selectedStyles.includes(a);
+      const bSelected = selectedStyles.includes(b);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
+  }, [selectedStyles]);
 
   // Load persisted previews and styles on mount
   useEffect(() => {
@@ -154,7 +165,7 @@ export function StyleSelector() {
   return (
     <div className="space-y-3">
       <div className="relative">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex flex-col gap-2">
           <Button
             type="button"
             ref={buttonRef}
@@ -165,22 +176,22 @@ export function StyleSelector() {
               }
               setIsDropdownOpen((v) => !v);
             }}
-            variant="secondary"
-            className="w-full justify-between"
+            variant="outline"
+            className="w-full justify-between h-10 bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10 backdrop-blur-sm text-white"
             aria-haspopup="listbox"
             aria-expanded={isDropdownOpen}
           >
             <span className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-4 w-4 text-purple-400" />
               {selectedLabel}
             </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-4 w-4 text-white/60 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
           </Button>
           <Button
             onClick={generatePreviews}
             disabled={isGenerating || selectedStyles.length === 0}
             aria-label="Generate style previews"
-            className="w-full"
+            className="w-full h-10 bg-purple-600/80 hover:bg-purple-600 text-white border-0"
           >
             {isGenerating ? `Generating ${progress}/3…` : "Generate Previews"}
           </Button>
@@ -191,7 +202,7 @@ export function StyleSelector() {
           <Button
             onClick={generatePreviews}
             variant="outline"
-            className="w-full mt-2"
+            className="w-full mt-2 h-10 bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10 text-white/80"
             disabled={selectedStyles.length === 0}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -199,30 +210,48 @@ export function StyleSelector() {
           </Button>
         )}
 
-{isDropdownOpen &&
+        {isDropdownOpen &&
           createPortal(
-            <div ref={menuRef} className="fixed z-[9999] rounded-lg border border-border bg-popover shadow-xl" style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }} role="listbox">
-              <div className="max-h-96 overflow-y-auto p-2">
+            <div 
+              ref={menuRef} 
+              className="fixed z-[9999] rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/50" 
+              style={{ top: menuPos.top, left: menuPos.left, width: Math.max(menuPos.width, 280) }} 
+              role="listbox"
+            >
+              <div className="max-h-96 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                 {selectedStyles.length > 0 && (
-                  <div className="mb-2 pb-2 border-b border-border">
+                  <div className="mb-2 pb-2 border-b border-white/10">
                     <Button
                       onClick={unselectAllStyles}
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-center text-xs h-8"
+                      className="w-full justify-center text-xs h-8 text-white/60 hover:text-white hover:bg-white/10"
                     >
                       <X className="h-3 w-3 mr-1" />
                       Unselect All Styles
                     </Button>
                   </div>
                 )}
-                {ALL_STYLES.map((style) => {
+                {sortedStyles.map((style) => {
                   const checked = selectedStyles.includes(style);
                   const disabled = !checked && !canAddMore;
                   return (
-                    <label key={style} className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${checked ? "bg-accent/40" : "hover:bg-accent/30"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
-                      <input type="checkbox" checked={checked} onChange={() => toggleStyle(style)} disabled={disabled} className="h-4 w-4" />
-                      <span className="text-foreground">{style}</span>
+                    <label 
+                      key={style} 
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                        checked 
+                          ? "bg-purple-600/30 text-white" 
+                          : "hover:bg-white/10 text-white/70"
+                      } ${disabled ? "cursor-not-allowed opacity-40" : ""}`}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={checked} 
+                        onChange={() => toggleStyle(style)} 
+                        disabled={disabled} 
+                        className="h-4 w-4 rounded border-white/30 bg-white/10 text-purple-500 focus:ring-purple-500 focus:ring-offset-0" 
+                      />
+                      <span>{style}</span>
                     </label>
                   );
                 })}

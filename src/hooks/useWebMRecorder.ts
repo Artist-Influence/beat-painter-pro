@@ -4,6 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ExportQuality = '1080p' | '4k';
 
+interface LogoState {
+  url: string | null;
+  position: { x: number; y: number };
+  size: number;
+  opacity: number;
+}
+
 interface UseRecorderProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   audioElement: HTMLAudioElement | null;
@@ -20,13 +27,16 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   const transparentRef = useRef<boolean>(false);
   const backgroundColorRef = useRef<string>('#000000');
+  const logoRef = useRef<LogoState | null>(null);
+  const logoImageRef = useRef<HTMLImageElement | null>(null);
 
   const startRecording = useCallback(async (
     startAtSeconds: number, 
     backgroundColor: string, 
     filenamePrefix: string, 
     greenScreenMode: boolean = false,
-    quality: ExportQuality = '4k'
+    quality: ExportQuality = '4k',
+    logo?: LogoState
   ) => {
     if (!canvasRef.current || !audioElement) {
       toast.error("Canvas or audio not available");
@@ -34,11 +44,28 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     }
 
     try {
+      // Store logo reference and preload image
+      logoRef.current = logo || null;
+      if (logo?.url) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = logo.url;
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            logoImageRef.current = img;
+            resolve();
+          };
+          img.onerror = () => resolve();
+        });
+      } else {
+        logoImageRef.current = null;
+      }
+
       // Set resolution based on quality - 16:9 horizontal format
       const height = quality === '4k' ? 2160 : 1080;
       const width = quality === '4k' ? 3840 : 1920;  // 16:9 ratio
-      // Reduced bitrates for smoother encoding
-      const bitrate = quality === '4k' ? 35_000_000 : 12_000_000; // 35 Mbps for 4K, 12 Mbps for 1080p
+      // Higher bitrates for better quality
+      const bitrate = quality === '4k' ? 50_000_000 : 20_000_000; // 50 Mbps for 4K, 20 Mbps for 1080p
 
       const srcCanvas = canvasRef.current;
       const exportCanvas = document.createElement("canvas");
@@ -50,8 +77,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         return;
       }
       
-      // Disable image smoothing for faster rendering
-      ctx.imageSmoothingEnabled = false;
+      // Enable high quality image smoothing for better export
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       
       exportCanvasRef.current = exportCanvas;
       ctxRef.current = ctx;
@@ -153,6 +181,18 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           ctx.fillStyle = backgroundColorRef.current;
           ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
           ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+          
+          // Draw logo overlay if present
+          if (logoRef.current?.url && logoImageRef.current) {
+            const { position, size, opacity } = logoRef.current;
+            ctx.globalAlpha = opacity / 100;
+            const logoWidth = size * (exportCanvas.width / srcCanvas.width);
+            const logoHeight = (logoImageRef.current.height / logoImageRef.current.width) * logoWidth;
+            const x = (position.x / 100) * exportCanvas.width - logoWidth / 2;
+            const y = (position.y / 100) * exportCanvas.height - logoHeight / 2;
+            ctx.drawImage(logoImageRef.current, x, y, logoWidth, logoHeight);
+            ctx.globalAlpha = 1;
+          }
         }
 
         requestAnimationFrame(render);
