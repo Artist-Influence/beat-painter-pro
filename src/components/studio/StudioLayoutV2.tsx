@@ -26,16 +26,24 @@ export function StudioLayoutV2() {
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">
-      {/* Logo Behind Visualizer */}
-      {logo.layer === 'behind' && <LogoOverlay />}
+      {/* Logo Behind Visualizer - lower z-index */}
+      {logo.layer === 'behind' && (
+        <div className="absolute inset-0 z-[1]">
+          <LogoOverlay />
+        </div>
+      )}
 
       {/* Full-Screen Visualizer Canvas */}
-      <div className="absolute inset-0">
-        <VisualizerCanvas canvasRef={canvasRef} />
+      <div className="absolute inset-0 z-[2]">
+        <VisualizerCanvas canvasRef={canvasRef} logoBehind={logo.layer === 'behind'} />
       </div>
 
-      {/* Logo In Front of Visualizer */}
-      {logo.layer === 'front' && <LogoOverlay />}
+      {/* Logo In Front of Visualizer - higher z-index */}
+      {logo.layer === 'front' && (
+        <div className="absolute inset-0 z-[10] pointer-events-none">
+          <LogoOverlay />
+        </div>
+      )}
 
       {/* Top Bar - Minimal, Transparent */}
       <TopBar canvasRef={canvasRef} />
