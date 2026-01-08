@@ -1,10 +1,8 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES, isCustomVisualizer } from "@/components/visualizers";
-import type { VisualizerKey } from "@/components/visualizers";
 import type { AudioData } from "@/hooks/useAudioAnalysis";
 import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
 import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
@@ -16,24 +14,54 @@ interface VisualizerCanvasProps {
   logoBehind?: boolean;
 }
 
-const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
-  const { selected, background, zoomLevel, audioElement, filters } = useStudioStore();
-  const { customVisualizers } = useCustomVisualizers();
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const [recordingDpr, setRecordingDpr] = useState<number | null>(null);
-
-  // Listen for recording events to adjust DPR for high-quality export
+// Component inside Canvas to directly control renderer for high-quality recording
+function RecordingController() {
+  const { gl, size, camera, scene } = useThree();
+  const originalPixelRatioRef = useRef<number>(window.devicePixelRatio);
+  
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
-      const { width } = (e as CustomEvent).detail;
-      const screenWidth = window.innerWidth;
-      // Calculate required DPR to render at export resolution
-      const requiredDpr = Math.ceil(width / screenWidth);
-      setRecordingDpr(Math.min(requiredDpr, 4)); // Cap at 4x for performance
+      const { width, height, onReady } = (e as CustomEvent).detail;
+      
+      // Store original pixel ratio
+      originalPixelRatioRef.current = gl.getPixelRatio();
+      
+      // Calculate required pixel ratio to reach target resolution
+      const requiredDpr = width / size.width;
+      
+      console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr}`);
+      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}`);
+      
+      // Directly set the pixel ratio on the WebGL renderer
+      gl.setPixelRatio(requiredDpr);
+      
+      // Update camera aspect ratio for the target resolution
+      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+        (camera as THREE.PerspectiveCamera).aspect = width / height;
+        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+      }
+      
+      // Force a resize of the drawing buffer
+      gl.setSize(size.width, size.height, true);
+      
+      // Render a frame immediately at the new resolution
+      gl.render(scene, camera);
+      
+      console.log(`Canvas buffer after setup: ${gl.domElement.width}x${gl.domElement.height}`);
+      
+      // Signal that recording can start
+      if (onReady) onReady();
     };
     
     const handleRecordingStop = () => {
-      setRecordingDpr(null);
+      // Restore original pixel ratio
+      gl.setPixelRatio(originalPixelRatioRef.current);
+      gl.setSize(size.width, size.height, true);
+      
+      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+        (camera as THREE.PerspectiveCamera).aspect = size.width / size.height;
+        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+      }
     };
     
     window.addEventListener('recording:start', handleRecordingStart);
@@ -42,8 +70,16 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       window.removeEventListener('recording:start', handleRecordingStart);
       window.removeEventListener('recording:stop', handleRecordingStop);
     };
-  }, []);
+  }, [gl, size, camera, scene]);
   
+  return null;
+}
+
+const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
+  const { selected, background, zoomLevel, audioElement, filters } = useStudioStore();
+  const { customVisualizers } = useCustomVisualizers();
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+
   const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
     if (isCustomVisualizer(selected)) {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
@@ -156,7 +192,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     return () => window.removeEventListener("style:applied", handler);
   }, []);
 
-
   // Update renderer clear color when logo is behind or custom background
   useEffect(() => {
     if (rendererRef.current) {
@@ -184,16 +219,13 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     }
   }, [canvasRef, background.color, background.type, logoBehind]);
 
-
-  
-
   const filterStyle = {
     filter: `brightness(${((filters.brightness ?? 100) - 0) / 100}) saturate(${((filters.saturation ?? 100) - 0) / 100}) contrast(${((filters.contrast ?? 100) - 0) / 100})`
   } as React.CSSProperties;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-0">
-        <div 
+      <div 
         className="w-full h-full" 
         style={{ 
           backgroundColor: (logoBehind || background.type !== 'color') ? 'transparent' : background.color 
@@ -209,10 +241,11 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
             stencil: false,
             depth: true,
           }}
-          dpr={recordingDpr ? [recordingDpr, recordingDpr] : [1, 2]}
+          dpr={[1, 2]}
           camera={{ position: [0, 0, 5], fov: 50 }}
           style={{ width: '100%', height: '100%', ...filterStyle }}
         >
+          <RecordingController />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={0.5} />
           <group position={[0, 0, 0]} scale={zoomLevel * scale}>
