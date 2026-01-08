@@ -75,6 +75,58 @@ export const AudioResponseControls: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Audio EQ Response */}
+      <div className="space-y-3">
+        <span className="text-white/80 text-sm">Audio EQ Response</span>
+        
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-white/80 text-sm">Bass (0-250 Hz)</span>
+            <span className="text-xs text-white/60">{audioSensitivity.bassMultiplier.toFixed(1)}x</span>
+          </div>
+          <ResettableSlider
+            value={[audioSensitivity.bassMultiplier]}
+            min={0}
+            max={8}
+            step={0.1}
+            defaultValue={2.5}
+            onValueChange={([v]) => setAudioSensitivity({ bassMultiplier: v })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-white/80 text-sm">Mids (250-4000 Hz)</span>
+            <span className="text-xs text-white/60">{audioSensitivity.midsMultiplier.toFixed(1)}x</span>
+          </div>
+          <ResettableSlider
+            value={[audioSensitivity.midsMultiplier]}
+            min={0}
+            max={8}
+            step={0.1}
+            defaultValue={1.5}
+            onValueChange={([v]) => setAudioSensitivity({ midsMultiplier: v })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-white/80 text-sm">Highs (4000+ Hz)</span>
+            <span className="text-xs text-white/60">{audioSensitivity.highsMultiplier.toFixed(1)}x</span>
+          </div>
+          <ResettableSlider
+            value={[audioSensitivity.highsMultiplier]}
+            min={0}
+            max={8}
+            step={0.1}
+            defaultValue={1.0}
+            onValueChange={([v]) => setAudioSensitivity({ highsMultiplier: v })}
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-white/10 my-4"></div>
+
       {/* Background */}
       <div className="space-y-3">
           <span className="text-white/80 text-sm">Background</span>
