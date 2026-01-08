@@ -20,6 +20,29 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
   const { selected, background, zoomLevel, audioElement, filters } = useStudioStore();
   const { customVisualizers } = useCustomVisualizers();
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const [recordingDpr, setRecordingDpr] = useState<number | null>(null);
+
+  // Listen for recording events to adjust DPR for high-quality export
+  useEffect(() => {
+    const handleRecordingStart = (e: Event) => {
+      const { width } = (e as CustomEvent).detail;
+      const screenWidth = window.innerWidth;
+      // Calculate required DPR to render at export resolution
+      const requiredDpr = Math.ceil(width / screenWidth);
+      setRecordingDpr(Math.min(requiredDpr, 4)); // Cap at 4x for performance
+    };
+    
+    const handleRecordingStop = () => {
+      setRecordingDpr(null);
+    };
+    
+    window.addEventListener('recording:start', handleRecordingStart);
+    window.addEventListener('recording:stop', handleRecordingStop);
+    return () => {
+      window.removeEventListener('recording:start', handleRecordingStart);
+      window.removeEventListener('recording:stop', handleRecordingStop);
+    };
+  }, []);
   
   const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
     if (isCustomVisualizer(selected)) {
@@ -186,7 +209,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
             stencil: false,
             depth: true,
           }}
-          dpr={[1, 2]}
+          dpr={recordingDpr ? [recordingDpr, recordingDpr] : [1, 2]}
           camera={{ position: [0, 0, 5], fov: 50 }}
           style={{ width: '100%', height: '100%', ...filterStyle }}
         >
