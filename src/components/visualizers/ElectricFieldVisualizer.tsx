@@ -139,8 +139,11 @@ function ElectricField({ audioData }: any) {
       if (hasAudio) {
         fieldGroupRef.current.rotation.y += bassFinal * 0.03;
       }
-      // SCALE: Returns to default when silent
-      fieldGroupRef.current.scale.setScalar(hasAudio ? (0.7 + bassFinal * 0.7 + (isPeakMoment ? 0.3 : 0)) : 0.7);
+      // SCALE: BASE + reactivity
+      const baseScale = 0.7;
+      const bassScaleBoost = Math.min(bassFinal * 0.5, 0.7);
+      const peakBoost = isPeakMoment ? 0.2 : 0;
+      fieldGroupRef.current.scale.setScalar(baseScale + bassScaleBoost + peakBoost);
     }
     
     // Animate charges - PURE AUDIO-REACTIVE MOVEMENT

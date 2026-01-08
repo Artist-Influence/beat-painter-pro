@@ -180,13 +180,20 @@ function StandaloneShape({
     // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
     const raw = analyzeAudioData(audioData.frequency);
     const sens = audioSensitivityRef.current;
-    const targetBass = Math.min(raw.bass * sens.bassMultiplier, 1.5);
-    const targetMids = Math.min(raw.mids * sens.midsMultiplier, 1.5);
-    const targetHighs = Math.min(raw.highs * sens.highsMultiplier, 1.5);
     
-    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
-    const attackLerp = 0.55;
-    const decayLerp = 0.35;
+    // Step 1: Detect raw audio (0-1) - for hasAudio check
+    const detectedBass = raw.bass;
+    const detectedMids = raw.mids;
+    const detectedHighs = raw.highs;
+    
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const targetBass = Math.min(detectedBass * sens.bassMultiplier, 2.0);
+    const targetMids = Math.min(detectedMids * sens.midsMultiplier, 2.0);
+    const targetHighs = Math.min(detectedHighs * sens.highsMultiplier, 2.0);
+    
+    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for 170+ BPM)
+    const attackLerp = 0.85;  // Near-instant attack
+    const decayLerp = 0.50;   // Fast decay
     const lerpAudio = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -197,33 +204,36 @@ function StandaloneShape({
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
     smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
     
-    // Transient blend: 30% raw audio for immediate punch
-    const bass = smoothedBassRef.current * 0.7 + targetBass * 0.3;
-    const mids = smoothedMidsRef.current * 0.7 + targetMids * 0.3;
-    const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
+    // Transient blend: 60% raw audio for immediate punch
+    const bassEffect = smoothedBassRef.current * 0.4 + targetBass * 0.6;
+    const midsEffect = smoothedMidsRef.current * 0.4 + targetMids * 0.6;
+    const highsEffect = smoothedHighsRef.current * 0.4 + targetHighs * 0.6;
     const beat = smoothedBeatRef.current;
     
-    // Audio threshold - only animate when audio is actually playing
+    // Audio threshold - use DETECTED values (not multiplied) so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Beat pop effect - spike on strong beats
-    const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
+    // Beat pop effect - lower threshold for snappier response
+    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
     
     if (groupRef.current) {
       const g = groupRef.current;
       const spinSpeed = sens.spinSpeed ?? 0;
       
-      // Scale reacts to audio (returns to 1.8 when silent)
-      g.scale.setScalar(1.8 * (1 + bass * 0.3) * beatPop);
+      // Scale: BASE + reactivity (multipliers control how much each band affects scale)
+      const baseScale = 1.8;
+      const bassScaleBoost = Math.min(bassEffect * 0.4, 1.0);
+      const midsScaleBoost = Math.min(midsEffect * 0.15, 0.4);
+      g.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
       
       // ONLY spin when audio is playing AND spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
         // Base spin from slider + audio amplification
         g.rotation.y += spinSpeed * 0.05;
-        g.rotation.y += bass * 0.08 * (spinSpeed / 2);
-        g.rotation.x += mids * 0.03 * (spinSpeed / 2);
-        g.rotation.z += highs * 0.02 * (spinSpeed / 2);
+        g.rotation.y += bassEffect * 0.1 * (spinSpeed / 2);
+        g.rotation.x += midsEffect * 0.04 * (spinSpeed / 2);
+        g.rotation.z += highsEffect * 0.025 * (spinSpeed / 2);
       }
       // NO rotation when music is paused or spinSpeed <= 0.1
       
@@ -233,28 +243,29 @@ function StandaloneShape({
     
     // Animate inner group for twist effect - only when audio present
     if (innerGroupRef.current && variant.twisted > 0 && hasAudio) {
-      innerGroupRef.current.rotation.y += bass * variant.twisted * 0.1;
+      innerGroupRef.current.rotation.y += bassEffect * variant.twisted * 0.12;
     }
     
     // Animate orbit rings - only when audio present
     ringRefs.current.forEach((ring, i) => {
       if (!ring) return;
-      // Scale reacts to audio
-      const ringScale = 1 + bass * 0.15;
-      ring.scale.setScalar(ringScale);
+      // Scale: BASE + reactivity
+      const baseRingScale = 1.0;
+      const ringScaleBoost = Math.min(bassEffect * 0.2, 0.4);
+      ring.scale.setScalar(baseRingScale + ringScaleBoost);
       // Rotation only when audio present
       if (hasAudio) {
-        ring.rotation.z += mids * 0.05 * (i % 2 === 0 ? 1 : -1);
+        ring.rotation.z += midsEffect * 0.06 * (i % 2 === 0 ? 1 : -1);
       }
     });
     
     // Animate particles - only when audio present
     if (particlesRef.current && variant.hasParticleHalo) {
       const material = particlesRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.3 + bass * 0.4 + highs * 0.2;
+      material.opacity = 0.3 + bassEffect * 0.4 + highsEffect * 0.2;
       if (hasAudio) {
-        particlesRef.current.rotation.y += bass * 0.02;
-        particlesRef.current.rotation.x += mids * 0.01;
+        particlesRef.current.rotation.y += bassEffect * 0.025;
+        particlesRef.current.rotation.x += midsEffect * 0.012;
       }
     }
     
@@ -263,13 +274,13 @@ function StandaloneShape({
       meshRefs.current.forEach((mesh, i) => {
         if (!mesh || i >= fracturedPieces.length) return;
         const piece = fracturedPieces[i];
-        const explosionAmount = bass * 0.5;
+        const explosionAmount = bassEffect * 0.6;
         const dir = new THREE.Vector3(...piece.position).normalize();
         mesh.position.x = piece.position[0] + dir.x * explosionAmount;
         mesh.position.y = piece.position[1] + dir.y * explosionAmount;
         mesh.position.z = piece.position[2] + dir.z * explosionAmount;
-        mesh.rotation.x += bass * 0.1;
-        mesh.rotation.y += mids * 0.15;
+        mesh.rotation.x += bassEffect * 0.12;
+        mesh.rotation.y += midsEffect * 0.18;
       });
     }
   });
@@ -1399,9 +1410,14 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
 
   // Animation frame - AUDIO-FIRST: no motion when audio is silent
   useFrame(() => {
-    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for accurate beat tracking)
-    const attackLerp = 0.55;
-    const decayLerp = 0.35;
+    // Step 1: Detect raw audio (0-1) WITHOUT multipliers - for hasAudio check
+    const detectedBass = targetBass / Math.max(audioSensitivity.bassMultiplier, 0.01);
+    const detectedMids = targetMids / Math.max(audioSensitivity.midsMultiplier, 0.01);
+    const detectedHighs = targetHighs / Math.max(audioSensitivity.highsMultiplier, 0.01);
+    
+    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for 170+ BPM)
+    const attackLerp = 0.85;  // Near-instant attack
+    const decayLerp = 0.50;   // Fast decay
     const lerpAudio = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -1412,31 +1428,34 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
     smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
     
-    // Transient blend: 30% raw audio for immediate punch
-    const bass = smoothedBassRef.current * 0.7 + targetBass * 0.3;
-    const mids = smoothedMidsRef.current * 0.7 + targetMids * 0.3;
-    const highs = smoothedHighsRef.current * 0.7 + targetHighs * 0.3;
+    // Transient blend: 60% raw audio for immediate punch
+    const bassEffect = smoothedBassRef.current * 0.4 + targetBass * 0.6;
+    const midsEffect = smoothedMidsRef.current * 0.4 + targetMids * 0.6;
+    const highsEffect = smoothedHighsRef.current * 0.4 + targetHighs * 0.6;
     const beat = smoothedBeatRef.current;
     
-    // Audio threshold - only animate when audio is actually playing
+    // Audio threshold - use DETECTED values (not multiplied) so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Beat pop effect - spike on strong beats
-    const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
+    // Beat pop effect - lower threshold for snappier response
+    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
     
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Scale reacts to audio (returns to 1 when silent)
-      groupRef.current.scale.setScalar((1 + bass * 0.25) * beatPop);
+      // Scale: BASE + reactivity (multipliers control how much each band affects scale)
+      const baseScale = 1.0;
+      const bassScaleBoost = Math.min(bassEffect * 0.4, 0.8);
+      const midsScaleBoost = Math.min(midsEffect * 0.15, 0.3);
+      groupRef.current.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
       
       // ONLY rotate when audio is playing AND spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
         // Base spin from slider + audio amplification
         groupRef.current.rotation.y += spinSpeed * 0.05;
-        groupRef.current.rotation.y += bass * 0.06 * (spinSpeed / 2);
-        groupRef.current.rotation.x += mids * 0.02 * (spinSpeed / 2);
+        groupRef.current.rotation.y += bassEffect * 0.08 * (spinSpeed / 2);
+        groupRef.current.rotation.x += midsEffect * 0.03 * (spinSpeed / 2);
       }
       // NO rotation when music is paused or spinSpeed <= 0.1
       
@@ -1464,46 +1483,50 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       
       // Single-element shapes get audio-reactive animations
       if (isSingleElementShape) {
-        const intensity = 1 + bass * 0.8 + mids * 0.4;
+        // Reactivity controlled by multipliers
+        const bassReactivity = Math.min(bassEffect * 0.6, 1.0);
+        const midsReactivity = Math.min(midsEffect * 0.3, 0.5);
+        const intensity = 1 + bassReactivity + midsReactivity;
         
         // Scale reacts to audio (returns to base when silent)
         mesh.scale.setScalar(baseScale * intensity * beatPop);
         
         // Rotation ONLY if spinSpeed is enabled
         if (spinSpeed > 0.1 && hasAudio) {
-          mesh.rotation.x += bass * 0.08 * (spinSpeed / 2);
-          mesh.rotation.y += mids * 0.12 * (spinSpeed / 2);
-          mesh.rotation.z += highs * 0.04 * (spinSpeed / 2);
+          mesh.rotation.x += bassEffect * 0.1 * (spinSpeed / 2);
+          mesh.rotation.y += midsEffect * 0.15 * (spinSpeed / 2);
+          mesh.rotation.z += highsEffect * 0.06 * (spinSpeed / 2);
         }
         return;
       }
       
       // Multi-element: keep position, scale reacts to audio
       mesh.position.set(...config.position);
-      mesh.scale.setScalar(baseScale * (1 + freqValue * 0.4) * beatPop);
+      const freqReactivity = Math.min(freqValue * 0.5, 0.6);
+      mesh.scale.setScalar(baseScale * (1 + freqReactivity) * beatPop);
       
       // Rotation ONLY if spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
-        mesh.rotation.y += mids * 0.03 * (spinSpeed / 2);
-        mesh.rotation.x += bass * 0.02 * (spinSpeed / 2);
+        mesh.rotation.y += midsEffect * 0.04 * (spinSpeed / 2);
+        mesh.rotation.x += bassEffect * 0.03 * (spinSpeed / 2);
       }
     });
 
     // Animate particles - only rotate when audio present
     if (particlesRef.current) {
       const material = particlesRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.3 + bass * 0.5 + highs * 0.2;
+      material.opacity = 0.3 + bassEffect * 0.5 + highsEffect * 0.2;
       
       if (hasAudio) {
-        particlesRef.current.rotation.y += bass * 0.02;
-        particlesRef.current.rotation.x += mids * 0.01;
+        particlesRef.current.rotation.y += bassEffect * 0.03;
+        particlesRef.current.rotation.x += midsEffect * 0.015;
       }
     }
     
     // Animate connection lines - opacity reacts to audio
     if (linesRef.current && linePositions) {
       const material = linesRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.3 + bass * 0.5;
+      material.opacity = 0.3 + bassEffect * 0.5;
     }
   });
 

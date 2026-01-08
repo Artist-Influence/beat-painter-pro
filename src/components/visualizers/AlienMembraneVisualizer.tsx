@@ -254,11 +254,14 @@ function AlienMembrane({ audioData }: any) {
       const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
       
       // Beat pop - lower threshold
-      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.5 : 1;
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.4 : 1;
       
-      // AUDIO-FIRST scale with beat pop - reduced multipliers and capped to prevent overflow
-      const beatScale = Math.min(hasAudio ? (1 + bass * 0.25 + mids * 0.1) * beatPop : 1, 1.4);
-      groupRef.current.scale.setScalar(0.3 * beatScale);
+      // Scale: BASE + reactivity (multipliers control effect, not base size)
+      const baseScale = 0.35;  // Constant base size
+      const bassScaleBoost = Math.min(bass * 0.15, 0.25);
+      const midsScaleBoost = Math.min(mids * 0.05, 0.1);
+      const finalScale = Math.min((baseScale + bassScaleBoost + midsScaleBoost) * beatPop, 0.6);
+      groupRef.current.scale.setScalar(finalScale);
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;

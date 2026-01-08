@@ -73,9 +73,10 @@ function GlassShard({ index, audioData, textureData }: any) {
         meshRef.current.position.set(x, 0, z);
       }
       
-      // SCALE: Lower threshold, higher multiplier with beat pop
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.5, 0.7), 3.0) * beatPop : 1; // Increased from 3.0
-      meshRef.current.scale.setScalar(beatScale);
+      // SCALE: BASE + reactivity (multipliers control effect)
+      const baseScale = 1.0;
+      const bassScaleBoost = Math.min(bass * 1.0, 2.0);
+      meshRef.current.scale.setScalar((baseScale + bassScaleBoost) * beatPop);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
@@ -161,9 +162,10 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
         meshRef.current.lookAt(0, 0, 0);
       }
       
-      // SCALE: Lower threshold, higher multiplier with beat pop
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.0, 0.7), 2.5) * beatPop : 1; // Increased from 2.5
-      meshRef.current.scale.setScalar(beatScale);
+      // SCALE: BASE + reactivity
+      const capBase = 1.0;
+      const capBassBoost = Math.min(bass * 1.0, 1.5);
+      meshRef.current.scale.setScalar((capBase + capBassBoost) * beatPop);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
@@ -252,15 +254,18 @@ function GlassSphereVisualizer({ audioData }: any) {
       // POSITION: Proportional to audio
       groupRef.current.position.y = bass * 3.0; // Increased from 2.0
       
-      // SCALE: Lower threshold, higher multiplier with beat pop
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.0, 0.7), 2.5) * beatPop : 1; // Increased from 3.0
-      groupRef.current.scale.setScalar(beatScale);
+      // SCALE: BASE + reactivity
+      const groupBase = 1.0;
+      const groupBassBoost = Math.min(bass * 0.8, 1.2);
+      groupRef.current.scale.setScalar((groupBase + groupBassBoost) * beatPop);
     }
     
     if (centerSphereRef.current) {
-      // SCALE: Much bigger pulse with beat pop
-      const spherePulse = hasAudio ? (1 + bass * 4.5 + highs * 2.5) * beatPop : 1; // Increased from 3.0
-      centerSphereRef.current.scale.setScalar(spherePulse);
+      // SCALE: BASE + reactivity
+      const sphereBase = 1.0;
+      const sphereBassBoost = Math.min(bass * 1.2, 1.8);
+      const sphereHighsBoost = Math.min(highs * 0.4, 0.6);
+      centerSphereRef.current.scale.setScalar((sphereBase + sphereBassBoost + sphereHighsBoost) * beatPop);
       
       // Update material emissive intensity
       if (centerSphereRef.current.material) {

@@ -93,10 +93,11 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
         meshRef.current.rotation.z += bass * 0.15 + highs * 0.06;
       }
       
-      // Scale reacts to audio with beat pop - lower threshold, bigger multiplier
-      const beatScale = bass > 0.2 ? 1 + bass * 3.5 : 1; // Threshold 0.2, multiplier 3.5
-      const midsScale = mids > 0.15 ? 1 + mids * 1.0 : 1;
-      meshRef.current.scale.setScalar(beatScale * midsScale * beatPop);
+      // Scale: BASE + reactivity (multipliers control effect, not base size)
+      const baseScale = 1.0;
+      const bassScaleBoost = Math.min(bass * 0.8, 1.5);  // Effect controlled by multiplied value
+      const midsScaleBoost = Math.min(mids * 0.3, 0.5);
+      meshRef.current.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
     }
   });
 
@@ -193,15 +194,18 @@ function OrbitingCubesVisualizer({ audioData }: any) {
       // Position proportional to audio (returns to 0 when silent)
       groupRef.current.position.y = bass * 1.5; // Increased from 1.0
       
-      // Scale reacts to audio with beat pop - lower threshold, bigger multiplier
-      const beatScale = bass > 0.2 ? 1 + bass * 2.5 : 1; // Threshold 0.2, multiplier 2.5
-      groupRef.current.scale.setScalar(beatScale * beatPop);
+      // SCALE: BASE + reactivity pattern
+      const baseScale = 1.0;
+      const bassScaleBoost = Math.min(bass * 0.6, 1.0);
+      groupRef.current.scale.setScalar((baseScale + bassScaleBoost) * beatPop);
     }
     
     if (centerSphereRef.current) {
-      // Scale reacts to audio - much bigger pulse
-      const spherePulse = 1 + bass * 3.5 + highs * 0.8; // Increased from 2.0
-      centerSphereRef.current.scale.setScalar(spherePulse * beatPop);
+      // Scale: BASE + reactivity
+      const sphereBase = 1.0;
+      const sphereBassBoost = Math.min(bass * 1.0, 1.5);
+      const sphereHighsBoost = Math.min(highs * 0.3, 0.5);
+      centerSphereRef.current.scale.setScalar((sphereBase + sphereBassBoost + sphereHighsBoost) * beatPop);
       
       // Rotation ONLY when audio is present - faster
       if (hasAudio) {

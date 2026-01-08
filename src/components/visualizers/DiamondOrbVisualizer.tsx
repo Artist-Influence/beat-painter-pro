@@ -85,10 +85,12 @@ function CrackedCrystalOrb({ audioData }: any) {
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Scale variations - enhanced for bigger bass response
-    const beatExplosion = finalBeat > 0.2 ? 1 + finalBeat * 0.6 : 1; // Lower threshold, higher multiplier
-    const baseScale = 0.4 + 0.3 * amplitude;
-    const scalePulse = 1 + 0.5 * finalBeat; // Increased from 0.3
+    // Scale: BASE + reactivity pattern (multipliers control effect, not base size)
+    const beatExplosion = finalBeat > 0.2 ? 1 + (finalBeat - 0.2) * 0.5 : 1;
+    const baseScale = 0.5;  // Constant base size
+    // Reactivity boosts controlled by multiplied values
+    const bassScaleBoost = Math.min(finalBass * 0.3, 0.6);
+    const midsScaleBoost = Math.min(finalMids * 0.1, 0.2);
 
     if (group.current) {
       const animSpeed = audioSensitivity.animationSpeed;
@@ -100,28 +102,31 @@ function CrackedCrystalOrb({ audioData }: any) {
         baseRotation.current.x += hasAudio ? 0.001 * animSpeed : 0;
       }
       
-      // Audio OFFSET - snaps to beat, returns when silent
-      const audioOffsetY = hasAudio ? finalMids * Math.PI * 0.3 : 0;
-      const audioOffsetX = hasAudio ? finalBeat * Math.PI * 0.2 : 0;
+      // Audio OFFSET - snaps to beat, returns when silent (uses effect values)
+      const audioOffsetY = hasAudio ? finalMids * Math.PI * 0.25 : 0;
+      const audioOffsetX = hasAudio ? finalBeat * Math.PI * 0.15 : 0;
       
       // Final rotation = slow base + audio snap
       group.current.rotation.y = baseRotation.current.y + audioOffsetY;
       group.current.rotation.x = baseRotation.current.x + audioOffsetX;
       
-      // Position proportional to audio (returns to 0 when silent) - reduced offset
-      group.current.position.y = finalBeat * 0.3;
+      // Position proportional to audio (returns to 0 when silent)
+      group.current.position.y = hasAudio ? finalBeat * 0.25 : 0;
       
-      // Scale reacts to audio (returns to base when silent) - much bigger
-      group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
+      // Scale: BASE + reactivity boosts (clamped)
+      const finalScale = Math.min((baseScale + bassScaleBoost + midsScaleBoost) * beatExplosion, 1.5);
+      group.current.scale.setScalar(finalScale);
     }
 
     if (orb.current) {
-      // Scale reacts to audio (returns to 1 when silent) - capped
-      const orbPulse = Math.min(1 + finalBeat * 0.5 + finalHighs * 0.3, 1.8);
-      orb.current.scale.setScalar(orbPulse);
+      // Scale: BASE + reactivity
+      const orbBase = 1.0;
+      const orbBeatBoost = Math.min(finalBeat * 0.4, 0.6);
+      const orbHighsBoost = Math.min(finalHighs * 0.2, 0.3);
+      orb.current.scale.setScalar(orbBase + orbBeatBoost + orbHighsBoost);
       
       // Shake effect proportional to audio (returns to 0 when silent)
-      const shakeIntensity = finalBeat * 0.4;
+      const shakeIntensity = hasAudio ? finalBeat * 0.3 : 0;
       orb.current.position.x = hasAudio ? Math.sin(Date.now() * 0.02) * shakeIntensity : 0;
       orb.current.position.z = hasAudio ? Math.cos(Date.now() * 0.018) * shakeIntensity : 0;
     }
@@ -136,16 +141,17 @@ function CrackedCrystalOrb({ audioData }: any) {
         innerCoreBaseRotation.current.x += hasAudio ? 0.002 * animSpeed : 0;
       }
       
-      // Audio offset for inner core
-      const coreOffsetY = hasAudio ? finalMids * Math.PI * 0.4 : 0;
-      const coreOffsetX = hasAudio ? finalHighs * Math.PI * 0.3 : 0;
+      // Audio offset for inner core (uses effect values)
+      const coreOffsetY = hasAudio ? finalMids * Math.PI * 0.3 : 0;
+      const coreOffsetX = hasAudio ? finalHighs * Math.PI * 0.2 : 0;
       
       innerCore.current.rotation.y = innerCoreBaseRotation.current.y + coreOffsetY;
       innerCore.current.rotation.x = innerCoreBaseRotation.current.x + coreOffsetX;
       
-      // Scale reacts to audio - bigger range
-      const coreScale = 0.3 + finalBeat * 1.8;
-      innerCore.current.scale.setScalar(coreScale);
+      // Scale: BASE + reactivity
+      const coreBase = 0.3;
+      const coreBeatBoost = Math.min(finalBeat * 1.2, 1.5);
+      innerCore.current.scale.setScalar(coreBase + coreBeatBoost);
     }
 
     shards.current.forEach((shard, i) => {
@@ -160,25 +166,29 @@ function CrackedCrystalOrb({ audioData }: any) {
           shardBaseRotations.current[i].z += hasAudio ? 0.0015 * animSpeed : 0;
         }
         
-        // Audio offset for shards
-        const shardOffsetY = hasAudio ? finalMids * Math.PI * 0.35 : 0;
-        const shardOffsetX = hasAudio ? finalBeat * Math.PI * 0.5 : 0;
-        const shardOffsetZ = hasAudio ? finalHighs * Math.PI * 0.4 : 0;
+        // Audio offset for shards (uses effect values)
+        const shardOffsetY = hasAudio ? finalMids * Math.PI * 0.25 : 0;
+        const shardOffsetX = hasAudio ? finalBeat * Math.PI * 0.35 : 0;
+        const shardOffsetZ = hasAudio ? finalHighs * Math.PI * 0.3 : 0;
         
         shard.rotation.y = shardBaseRotations.current[i].y + shardOffsetY;
         shard.rotation.x = shardBaseRotations.current[i].x + shardOffsetX;
         shard.rotation.z = shardBaseRotations.current[i].z + shardOffsetZ;
         
-        // Scale reacts to audio - capped
-        const shardScale = Math.min(0.6 + finalBeat * 0.5 + finalHighs * 0.3, 1.4);
-        shard.scale.setScalar(shardScale);
+        // Scale: BASE + reactivity
+        const shardBase = 0.6;
+        const shardBeatBoost = Math.min(finalBeat * 0.4, 0.5);
+        const shardHighsBoost = Math.min(finalHighs * 0.2, 0.3);
+        shard.scale.setScalar(shardBase + shardBeatBoost + shardHighsBoost);
         
-        // Position expansion proportional to audio - reduced radius
+        // Position expansion: BASE + reactivity
         const angle = (i / shards.current.length) * Math.PI * 2;
-        const radius = 0.8 + finalBeat * 0.6;
+        const baseRadius = 0.8;
+        const radiusBoost = hasAudio ? finalBeat * 0.5 : 0;
+        const radius = baseRadius + radiusBoost;
         const targetX = Math.cos(angle) * radius;
         const targetZ = Math.sin(angle) * radius;
-        const targetY = finalBeat * 0.4;
+        const targetY = hasAudio ? finalBeat * 0.3 : 0;
         
         // Direct position (no lerp) for zero latency
         shard.position.x = targetX;
