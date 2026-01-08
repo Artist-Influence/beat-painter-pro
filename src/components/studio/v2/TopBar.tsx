@@ -23,8 +23,10 @@ const getSongName = (fileName: string | null): string => {
 };
 
 export function TopBar({ canvasRef }: TopBarProps) {
-  const { audioElement, background, logo, exportMode, selected, audioFileName } = useStudioStore();
-  const { isRecording, startRecording, stopRecording, frameCount } = useWebMRecorder({ canvasRef, audioElement });
+  const studioState = useStudioStore();
+  const { audioElement, background, logo, exportMode, selected, audioFileName } = studioState;
+  const recorder = useWebMRecorder({ canvasRef, audioElement });
+  const { isRecording, startRecording, stopRecording, frameCount } = recorder;
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
 
   const handleRecord = () => {
