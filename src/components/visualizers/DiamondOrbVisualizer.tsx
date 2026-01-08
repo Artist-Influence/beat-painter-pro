@@ -85,12 +85,12 @@ function CrackedCrystalOrb({ audioData }: any) {
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Scale: BASE + reactivity pattern (multipliers control effect, not base size)
-    const beatExplosion = finalBeat > 0.2 ? 1 + (finalBeat - 0.2) * 0.5 : 1;
+    // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
+    const beatExplosion = finalBeat > 0.2 ? 1 + (finalBeat - 0.2) * 0.3 : 1;
     const baseScale = 0.5;  // Constant base size
-    // Reactivity boosts controlled by multiplied values
-    const bassScaleBoost = Math.min(finalBass * 0.3, 0.6);
-    const midsScaleBoost = Math.min(finalMids * 0.1, 0.2);
+    // Each boost is clamped independently so high multipliers can't overflow
+    const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.2);
+    const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1);
 
     if (group.current) {
       const animSpeed = audioSensitivity.animationSpeed;
@@ -113,9 +113,9 @@ function CrackedCrystalOrb({ audioData }: any) {
       // Position proportional to audio (returns to 0 when silent)
       group.current.position.y = hasAudio ? finalBeat * 0.25 : 0;
       
-      // Scale: BASE + reactivity boosts (clamped)
-      const finalScale = Math.min((baseScale + bassScaleBoost + midsScaleBoost) * beatExplosion, 1.5);
-      group.current.scale.setScalar(finalScale);
+      // Scale: BASE + reactivity boosts with hard cap to prevent going off-screen
+      const finalScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 0.85);
+      group.current.scale.setScalar(finalScale * beatExplosion);
     }
 
     if (orb.current) {

@@ -93,11 +93,14 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
         meshRef.current.rotation.z += bass * 0.15 + highs * 0.06;
       }
       
-      // Scale: BASE + reactivity (multipliers control effect, not base size)
+      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
       const baseScale = 1.0;
-      const bassScaleBoost = Math.min(bass * 0.8, 1.5);  // Effect controlled by multiplied value
-      const midsScaleBoost = Math.min(mids * 0.3, 0.5);
-      meshRef.current.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
+      // Each boost is clamped independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.1, 0.15);
+      // Final scale has a hard cap
+      const finalCubeScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 1.5);
+      meshRef.current.scale.setScalar(finalCubeScale * beatPop);
     }
   });
 
@@ -194,18 +197,22 @@ function OrbitingCubesVisualizer({ audioData }: any) {
       // Position proportional to audio (returns to 0 when silent)
       groupRef.current.position.y = bass * 1.5; // Increased from 1.0
       
-      // SCALE: BASE + reactivity pattern
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const baseScale = 1.0;
-      const bassScaleBoost = Math.min(bass * 0.6, 1.0);
-      groupRef.current.scale.setScalar((baseScale + bassScaleBoost) * beatPop);
+      // Clamp independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      // Hard cap on final scale
+      const finalGroupScale = Math.min(baseScale + bassScaleBoost, 1.3);
+      groupRef.current.scale.setScalar(finalGroupScale * beatPop);
     }
     
     if (centerSphereRef.current) {
-      // Scale: BASE + reactivity
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
       const sphereBase = 1.0;
-      const sphereBassBoost = Math.min(bass * 1.0, 1.5);
-      const sphereHighsBoost = Math.min(highs * 0.3, 0.5);
-      centerSphereRef.current.scale.setScalar((sphereBase + sphereBassBoost + sphereHighsBoost) * beatPop);
+      const sphereBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      const sphereHighsBoost = Math.min(detectedHighs * audioSensitivity.highsMultiplier * 0.1, 0.15);
+      const finalSphereScale = Math.min(sphereBase + sphereBassBoost + sphereHighsBoost, 1.5);
+      centerSphereRef.current.scale.setScalar(finalSphereScale * beatPop);
       
       // Rotation ONLY when audio is present - faster
       if (hasAudio) {

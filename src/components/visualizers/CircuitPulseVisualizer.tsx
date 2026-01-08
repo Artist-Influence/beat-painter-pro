@@ -78,9 +78,11 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
           const audioOffset = pathIntensity * 2;
           pulse.position.x = basePos + audioOffset;
           
-          // SCALE: Audio-first with beat pop
-          const audioScale = (0.5 + pathIntensity * 1.5) * beatPop;
-          pulse.scale.setScalar(audioScale);
+          // SCALE: BASE + TIGHTLY CLAMPED reactivity
+          const pulseBase = 0.4;
+          const pulseBoost = Math.min(pathIntensity * 0.25, 0.4);
+          const audioScale = Math.min(pulseBase + pulseBoost, 0.9);
+          pulse.scale.setScalar(audioScale * beatPop);
         } else {
           // STATIC: Return to evenly spaced positions when silent
           pulse.position.x = (i * 2) - 3;
@@ -172,9 +174,11 @@ function CircuitNode({ position, index, audioData, textureData }) {
       // Beat pop - lower threshold, higher multiplier
       const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.2 : 1;
       
-      // SCALE: Returns to default when silent - bigger multiplier
-      const scale = hasAudio ? (0.8 + nodeIntensity * 1.5) * beatPop : 0.8;
-      nodeRef.current.scale.setScalar(scale);
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
+      const nodeBase = 0.8;
+      const nodeBoost = hasAudio ? Math.min(nodeIntensity * 0.2, 0.3) : 0;
+      const nodeScale = Math.min(nodeBase + nodeBoost, 1.15);
+      nodeRef.current.scale.setScalar(nodeScale * beatPop);
       
       nodeRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2]));
       

@@ -83,9 +83,11 @@ function Feather({ index, side, audioData, totalFeathers }: any) {
         meshRef.current.rotation.x = Math.sin(t * 0.6 + rippleDelay * 0.5) * 0.1 * (hasAudio ? (1 + bass) : 0.3);
       }
       
-      // Beat-reactive scale - more dramatic response
-      const beatScale = hasAudio ? 1 + bass * 1.2 + mids * 0.5 : 1;
-      meshRef.current.scale.setScalar(beatScale);
+      // Beat-reactive scale: BASE + TIGHTLY CLAMPED reactivity
+      const featherBase = 1.0;
+      const featherBoost = hasAudio ? Math.min(bass * 0.2 + mids * 0.1, 0.35) : 0;
+      const featherScale = Math.min(featherBase + featherBoost, 1.4);
+      meshRef.current.scale.setScalar(featherScale);
       
       // Position offset for more dramatic movement
       meshRef.current.position.y = hasAudio ? bass * 0.2 : 0;
@@ -179,8 +181,10 @@ function Wing({ side, audioData }: any) {
         groupRef.current.rotation.y = baseRotation.current;
       }
       
-      // Scale response - organic breathing + audio
-      const wingScale = hasAudio ? 1 + bass * 1.8 + mids * 0.6 : 1 + Math.sin(t * 0.5) * 0.05;
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const wingBase = 1.0;
+      const wingBoost = hasAudio ? Math.min(bass * 0.15 + mids * 0.08, 0.25) : Math.sin(t * 0.5) * 0.03;
+      const wingScale = Math.min(wingBase + wingBoost, 1.3);
       groupRef.current.scale.setScalar(wingScale);
       
       // Position bob - gentle breathing motion + audio

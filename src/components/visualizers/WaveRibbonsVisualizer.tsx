@@ -94,8 +94,8 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
       const audioThreshold = 0.02;
       const hasAudio = ribbonFreq > audioThreshold || beat > audioThreshold;
       
-      // Beat pop - lower threshold
-      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.0 : 1;
+      // Beat pop - TIGHTLY CLAMPED
+      const beatPop = beat > 0.2 ? 1 + Math.min((beat - 0.2) * 0.3, 0.2) : 1;
       
       // Update ribbon wave positions - ONLY when audio present
       const positions = meshRef.current.geometry.attributes.position;
