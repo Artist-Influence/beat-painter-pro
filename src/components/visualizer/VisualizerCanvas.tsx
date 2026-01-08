@@ -35,11 +35,8 @@ function RecordingController() {
       // Directly set the pixel ratio on the WebGL renderer
       gl.setPixelRatio(requiredDpr);
       
-      // Update camera aspect ratio for the target resolution
-      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-        (camera as THREE.PerspectiveCamera).aspect = width / height;
-        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-      }
+      // NOTE: Do NOT change camera aspect ratio - it distorts the 3D geometry
+      // The 2D compositing in useWebMRecorder handles letterboxing for the export aspect ratio
       
       // Force a resize of the drawing buffer
       gl.setSize(size.width, size.height, true);
@@ -57,11 +54,6 @@ function RecordingController() {
       // Restore original pixel ratio
       gl.setPixelRatio(originalPixelRatioRef.current);
       gl.setSize(size.width, size.height, true);
-      
-      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-        (camera as THREE.PerspectiveCamera).aspect = size.width / size.height;
-        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-      }
     };
     
     window.addEventListener('recording:start', handleRecordingStart);
