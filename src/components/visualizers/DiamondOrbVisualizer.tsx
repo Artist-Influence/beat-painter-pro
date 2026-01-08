@@ -79,10 +79,10 @@ function CrackedCrystalOrb({ audioData }: any) {
     const audioThreshold = 0.02;
     const hasAudio = finalBass > audioThreshold || finalMids > audioThreshold || finalHighs > audioThreshold;
     
-    // Bigger scale variations - lower threshold, bigger effect
-    const beatExplosion = finalBeat > 0.4 ? 1 + finalBeat * 1.2 : 1;
-    const baseScale = 0.6 + 0.5 * amplitude;
-    const scalePulse = 1 + 0.8 * finalBeat;
+    // Scale variations - CAPPED to prevent overflow
+    const beatExplosion = finalBeat > 0.4 ? 1 + finalBeat * 0.4 : 1;
+    const baseScale = 0.4 + 0.2 * amplitude;
+    const scalePulse = 1 + 0.3 * finalBeat;
 
     if (group.current) {
       const animSpeed = audioSensitivity.animationSpeed;
@@ -102,16 +102,16 @@ function CrackedCrystalOrb({ audioData }: any) {
       group.current.rotation.y = baseRotation.current.y + audioOffsetY;
       group.current.rotation.x = baseRotation.current.x + audioOffsetX;
       
-      // Position proportional to audio (returns to 0 when silent)
-      group.current.position.y = finalBeat * 2.0;
+      // Position proportional to audio (returns to 0 when silent) - reduced offset
+      group.current.position.y = finalBeat * 0.3;
       
       // Scale reacts to audio (returns to base when silent) - much bigger
       group.current.scale.setScalar(baseScale * scalePulse * beatExplosion);
     }
 
     if (orb.current) {
-      // Scale reacts to audio (returns to 1 when silent) - much bigger
-      const orbPulse = 1 + finalBeat * 1.8 + finalHighs * 1.2;
+      // Scale reacts to audio (returns to 1 when silent) - capped
+      const orbPulse = Math.min(1 + finalBeat * 0.5 + finalHighs * 0.3, 1.8);
       orb.current.scale.setScalar(orbPulse);
       
       // Shake effect proportional to audio (returns to 0 when silent)
@@ -163,16 +163,16 @@ function CrackedCrystalOrb({ audioData }: any) {
         shard.rotation.x = shardBaseRotations.current[i].x + shardOffsetX;
         shard.rotation.z = shardBaseRotations.current[i].z + shardOffsetZ;
         
-        // Scale reacts to audio - starts smaller, grows bigger
-        const shardScale = 0.8 + finalBeat * 1.5 + finalHighs * 1.0;
+        // Scale reacts to audio - capped
+        const shardScale = Math.min(0.6 + finalBeat * 0.5 + finalHighs * 0.3, 1.4);
         shard.scale.setScalar(shardScale);
         
-        // Position expansion proportional to audio
+        // Position expansion proportional to audio - reduced radius
         const angle = (i / shards.current.length) * Math.PI * 2;
-        const radius = 1.2 + finalBeat * 2.0;
+        const radius = 0.8 + finalBeat * 0.6;
         const targetX = Math.cos(angle) * radius;
         const targetZ = Math.sin(angle) * radius;
-        const targetY = finalBeat * 1.5;
+        const targetY = finalBeat * 0.4;
         
         // Direct position (no lerp) for zero latency
         shard.position.x = targetX;
@@ -197,7 +197,7 @@ function CrackedCrystalOrb({ audioData }: any) {
   }, []);
 
   return (
-    <group ref={group} scale={1.0}>
+    <group ref={group} scale={0.5}>
       <mesh ref={orb} geometry={outerGeom}>
         <meshStandardMaterial 
           color={primaryColor} 
