@@ -1144,7 +1144,13 @@ CRITICAL STRUCTURE REQUIREMENTS:
    const material = createVisualizerMaterial();
    <primitive object={material} />
 
-7. Target scale: entire scene should fit in ~8-12 unit radius
+7. CRITICAL SIZE CONSTRAINTS (MUST FOLLOW):
+   - Base group scale should be between 0.5-0.8 (NEVER exceed 1.0)
+   - All dynamic scaling MUST be capped with Math.min() to prevent overflow
+   - Cap all beat-reactive scaling: Math.min(scaleFactor, 1.5)
+   - Keep all mesh positions within a 3-unit radius from origin
+   - Position.y offsets should not exceed ±0.5 units
+   - The entire scene must fit comfortably in a 5-unit radius at maximum expansion
 
 8. Component signature: 
    export default function CustomVisualizer({ audioData }: { audioData: { frequency: number[]; amplitude: number; beatStrength: number; } })
@@ -1164,7 +1170,7 @@ Requirements:
 - Use audioData.beatStrength for beat-synced effects - this is critical for kick/808 response
 - Use ASYMMETRIC smoothing: attack 0.55, decay 0.35, plus 30% raw audio blend for transient punch
 - Make it visually impressive and clearly reactive to audio with obvious beat pops
-- Make it visually impressive and clearly reactive to audio`;
+- CRITICAL SIZE: Base group scale 0.5-0.8, cap ALL dynamic scaling with Math.min(..., 1.5), keep positions within 3-unit radius`;
 
       const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
       if (!openaiApiKey) {

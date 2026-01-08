@@ -242,11 +242,11 @@ function AlienMembrane({ audioData }: any) {
       const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
       
       // Beat pop
-      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.5 : 1;
       
-      // AUDIO-FIRST scale with beat pop (returns to default when silent)
-      const beatScale = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
-      groupRef.current.scale.setScalar(0.5 * beatScale);
+      // AUDIO-FIRST scale with beat pop (returns to default when silent) - CAPPED to prevent overflow
+      const beatScale = Math.min(hasAudio ? (1 + bass * 0.3 + mids * 0.1) * beatPop : 1, 1.5);
+      groupRef.current.scale.setScalar(0.35 * beatScale);
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
@@ -275,7 +275,7 @@ function AlienMembrane({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={1.1}>
+    <group ref={groupRef} scale={0.6}>
       <mesh ref={meshRef}>
         <icosahedronGeometry args={[1.2, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />
