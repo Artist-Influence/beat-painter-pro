@@ -71,6 +71,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   const songNameRef = useRef<string>('Untitled');
   const visualizerNameRef = useRef<string>('Visualizer');
+  
+  // Store screen dimensions at start of recording for consistent logo scaling
+  const screenWidthRef = useRef<number>(window.innerWidth);
 
   const startRecording = useCallback(async (
     startAtSeconds: number, 
@@ -185,13 +188,30 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
       const { width, height, bitrate } = RESOLUTIONS[quality];
       
+      // Store screen width at start for consistent logo scaling
+      screenWidthRef.current = window.innerWidth;
+      
       // Signal canvas to render at export resolution for high-quality capture
       window.dispatchEvent(new CustomEvent('recording:start', { 
         detail: { width, height } 
       }));
       
-      // Wait for canvas to resize (two frames for safety)
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      // Wait for canvas to actually resize (poll until dimensions change or timeout)
+      const targetDpr = Math.ceil(width / window.innerWidth);
+      const expectedWidth = srcCanvas.clientWidth * targetDpr;
+      await new Promise<void>((resolve) => {
+        let attempts = 0;
+        const checkSize = () => {
+          attempts++;
+          // Check if canvas has resized to expected dimensions (with 10% tolerance)
+          if (srcCanvas.width >= expectedWidth * 0.9 || attempts > 60) {
+            resolve();
+          } else {
+            requestAnimationFrame(checkSize);
+          }
+        };
+        requestAnimationFrame(checkSize);
+      });
       
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = width;
@@ -312,15 +332,34 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           
           // Draw logo BEHIND visualizer if layer is 'behind'
           if (logo?.url && logoImageRef.current && logo.layer === 'behind') {
-            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, srcCanvas);
+            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
           }
           
-          // Draw visualizer
-          ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+          // Draw visualizer with correct aspect ratio (no stretching)
+          const srcAspect = srcCanvas.width / srcCanvas.height;
+          const exportAspect = exportCanvas.width / exportCanvas.height;
+          
+          let drawWidth: number, drawHeight: number, drawX: number, drawY: number;
+          
+          if (srcAspect > exportAspect) {
+            // Source is wider - fit to width, letterbox top/bottom
+            drawWidth = exportCanvas.width;
+            drawHeight = exportCanvas.width / srcAspect;
+            drawX = 0;
+            drawY = (exportCanvas.height - drawHeight) / 2;
+          } else {
+            // Source is taller - fit to height, pillarbox sides
+            drawHeight = exportCanvas.height;
+            drawWidth = exportCanvas.height * srcAspect;
+            drawX = (exportCanvas.width - drawWidth) / 2;
+            drawY = 0;
+          }
+          
+          ctx.drawImage(srcCanvas, drawX, drawY, drawWidth, drawHeight);
           
           // Draw logo IN FRONT of visualizer if layer is 'front'
           if (logo?.url && logoImageRef.current && logo.layer === 'front') {
-            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, srcCanvas);
+            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
           }
 
           // Capture PNG frame for sequence mode
@@ -446,12 +485,14 @@ function drawLogoWithSettings(
   logoImage: HTMLImageElement,
   logo: { position: { x: number; y: number }; size: number; opacity: number; colorMode: 'original' | 'invert' },
   exportCanvas: HTMLCanvasElement,
-  srcCanvas: HTMLCanvasElement
+  screenWidth: number
 ) {
   ctx.save();
   ctx.globalAlpha = logo.opacity / 100;
   
-  const logoWidth = logo.size * (exportCanvas.width / srcCanvas.width);
+  // Scale logo based on screen width at start of recording (not srcCanvas which changes with DPR)
+  const scaleFactor = exportCanvas.width / screenWidth;
+  const logoWidth = logo.size * scaleFactor;
   const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
   const x = (logo.position.x / 100) * exportCanvas.width - logoWidth / 2;
   const y = (logo.position.y / 100) * exportCanvas.height - logoHeight / 2;
