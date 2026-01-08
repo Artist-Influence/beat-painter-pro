@@ -57,13 +57,13 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier;
+      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier * 1.3; // 1.3x boost
       const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
       const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
       
-      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Faster asymmetric smoothing for punchier response
+      const attackLerp = 0.65;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -129,9 +129,9 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           float violentSidePulse = audioMult * 0.4 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
           float chaoticDetailPulse = audioMult * 0.3 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
           
-          // Enhanced beat explosion
-          float beatExplosion = uBass > 0.4 ? (1.0 + uBass * 1.2) : 1.0;
-          float midsExpansion = uMids > 0.3 ? (1.0 + uMids * 0.8) : 1.0;
+          // Enhanced beat explosion - lower threshold, higher multiplier
+          float beatExplosion = uBass > 0.2 ? (1.0 + uBass * 1.8) : 1.0;
+          float midsExpansion = uMids > 0.2 ? (1.0 + uMids * 1.2) : 1.0;
           
           vec3 antMovement = normal * (antTrails1 + antTrails2 + antTrails3 + surfaceCrawl + deepMovement);
           vec3 audioPulse = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * beatExplosion * midsExpansion;
@@ -214,14 +214,14 @@ function AlienMembrane({ audioData }: any) {
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier;
+      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier * 1.3;
       const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
       const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
       const rawBeat = Math.max(safeAudioData.beatStrength || 0, rawBass * 0.8);
       
-      // ASYMMETRIC smoothing: fast attack (0.5), slow decay (0.1)
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Faster asymmetric smoothing
+      const attackLerp = 0.65;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -241,11 +241,11 @@ function AlienMembrane({ audioData }: any) {
       const audioThreshold = 0.02;
       const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
       
-      // Beat pop
-      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.5 : 1;
+      // Beat pop - lower threshold
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
       
-      // AUDIO-FIRST scale with beat pop (returns to default when silent) - CAPPED to prevent overflow
-      const beatScale = Math.min(hasAudio ? (1 + bass * 0.3 + mids * 0.1) * beatPop : 1, 1.5);
+      // AUDIO-FIRST scale with beat pop - higher multiplier
+      const beatScale = Math.min(hasAudio ? (1 + bass * 0.5 + mids * 0.15) * beatPop : 1, 1.8);
       groupRef.current.scale.setScalar(0.35 * beatScale);
       
       // Get spinSpeed from store

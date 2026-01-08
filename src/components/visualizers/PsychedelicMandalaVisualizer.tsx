@@ -35,9 +35,9 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
       const rawBeat = Math.max(beatStrength, rawBass * 0.8);
       
-      // ASYMMETRIC smoothing: faster attack (0.7), slow decay (0.15)
-      const attackLerp = 0.7;
-      const decayLerp = 0.15;
+      // Faster asymmetric smoothing for punchier response
+      const attackLerp = 0.8;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -56,8 +56,8 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       const audioThreshold = 0.02;
       const hasAudio = bass > audioThreshold || mids > audioThreshold;
       
-      // Beat pop effect - stronger
-      const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 1.5 : 1;
+      // Beat pop effect - lower threshold, bigger effect
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 2.0 : 1;
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;

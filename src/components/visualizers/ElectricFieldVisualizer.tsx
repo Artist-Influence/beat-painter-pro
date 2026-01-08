@@ -101,9 +101,9 @@ function ElectricField({ audioData }: any) {
     const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
     const rawBeat = Math.max(beatStrength, rawBass);
     
-    // Asymmetric smoothing: fast attack (0.55), fast decay (0.35) for accurate beat tracking
+    // Faster asymmetric smoothing for punchy response
     const lerp = (current: number, target: number) => {
-      const factor = target > current ? 0.55 : 0.35;
+      const factor = target > current ? 0.7 : 0.4;
       return current + (target - current) * factor;
     };
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
