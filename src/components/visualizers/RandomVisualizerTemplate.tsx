@@ -1,10 +1,66 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { RandomVisualizerParams, StandaloneVariant, GeometryType, AnimationStyle } from '@/lib/randomVisualizerGenerator';
+import type { RandomVisualizerParams, StandaloneVariant, GeometryType, AnimationStyle, ColorScheme } from '@/lib/randomVisualizerGenerator';
 import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
 import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
 import { useStudioStore } from '@/stores/studioStore';
+
+// Animation style behavior modifiers
+function getAnimationBehavior(style: AnimationStyle, bass: number, mids: number, highs: number, time: number) {
+  switch (style) {
+    case 'pulsing':
+      return {
+        scaleMultiplier: 1 + Math.sin(time * 4) * 0.1 * (1 + bass),
+        rotationBoost: 0.02,
+        positionJitter: 0,
+        explosionFactor: 0,
+      };
+    case 'breathing':
+      return {
+        scaleMultiplier: 1 + Math.sin(time * 1.5) * 0.15 * (1 + bass * 0.5),
+        rotationBoost: 0.01,
+        positionJitter: 0,
+        explosionFactor: 0,
+      };
+    case 'chaotic':
+      return {
+        scaleMultiplier: 1 + (Math.random() - 0.5) * 0.3 * bass,
+        rotationBoost: 0.15 * (1 + mids),
+        positionJitter: 0.1 * highs,
+        explosionFactor: 0,
+      };
+    case 'explosive':
+      return {
+        scaleMultiplier: 1 + bass * 0.4,
+        rotationBoost: 0.05,
+        positionJitter: 0,
+        explosionFactor: bass > 0.4 ? (bass - 0.4) * 2 : 0,
+      };
+    case 'smooth':
+      return {
+        scaleMultiplier: 1,
+        rotationBoost: 0.005,
+        positionJitter: 0,
+        explosionFactor: 0,
+      };
+    case 'flowing':
+      return {
+        scaleMultiplier: 1 + Math.sin(time * 2) * 0.08,
+        rotationBoost: 0.03,
+        positionJitter: Math.sin(time * 3) * 0.05,
+        explosionFactor: 0,
+      };
+    case 'rotating':
+    default:
+      return {
+        scaleMultiplier: 1,
+        rotationBoost: 0.1,
+        positionJitter: 0,
+        explosionFactor: 0,
+      };
+  }
+}
 interface RandomVisualizerTemplateProps {
   params: RandomVisualizerParams;
   audioData: {
@@ -1003,22 +1059,37 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
   // Get applied visual style texture and colors
   const textureData = useVisualizerTexture();
   
-  // Use applied style colors, falling back to mono palette if no style applied
-  const colors = useMemo(() => {
-    return [
-      new THREE.Color(textureData.colors.primary),
-      new THREE.Color(textureData.colors.secondary),
-      new THREE.Color(textureData.colors.accent),
-    ];
-  }, [textureData.colors.primary, textureData.colors.secondary, textureData.colors.accent]);
+  // Get glow intensity from params (fallback to 1.0)
+  const glowIntensity = params.glowIntensity ?? 1.0;
   
-  // Create texture-aware material for meshes
+  // Use params colorScheme if no style applied, otherwise use style colors
+  const colors = useMemo(() => {
+    // If there's an applied style, use it
+    if (textureData.colors.primary !== '#8B5CF6') {
+      return [
+        new THREE.Color(textureData.colors.primary),
+        new THREE.Color(textureData.colors.secondary),
+        new THREE.Color(textureData.colors.accent),
+      ];
+    }
+    
+    // Otherwise, use the colorScheme from params
+    const palette = COLOR_PALETTES[params.colorScheme] || COLOR_PALETTES.neon;
+    return palette.slice(0, 3).map(hex => new THREE.Color(hex));
+  }, [textureData.colors.primary, textureData.colors.secondary, textureData.colors.accent, params.colorScheme]);
+  
+  // Create texture-aware material for meshes with glow intensity
   const createStyledMaterial = useMemo(() => {
-    return (colorIndex: number, wireframe: boolean, emissiveIntensity: number) => {
+    return (colorIndex: number, wireframe: boolean, baseEmissiveIntensity: number) => {
+      const color = colors[colorIndex % colors.length];
+      // Apply glowIntensity multiplier from params
+      const finalEmissive = (textureData.colors.isNeon ? 0.8 : 0.5) + baseEmissiveIntensity;
+      const glowMultiplied = finalEmissive * glowIntensity;
+      
       const mat = new THREE.MeshStandardMaterial({
-        color: colors[colorIndex % colors.length],
-        emissive: colors[colorIndex % colors.length],
-        emissiveIntensity: textureData.colors.isNeon ? 0.8 + emissiveIntensity : 0.5 + emissiveIntensity,
+        color,
+        emissive: color,
+        emissiveIntensity: glowMultiplied,
         metalness: textureData.colors.isMetallic ? 0.9 : 0.7,
         roughness: textureData.colors.isMetallic ? 0.1 : 0.3,
         wireframe,
@@ -1032,7 +1103,7 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       
       return mat;
     };
-  }, [colors, textureData.texture, textureData.colors.isNeon, textureData.colors.isMetallic]);
+  }, [colors, textureData.texture, textureData.colors.isNeon, textureData.colors.isMetallic, glowIntensity]);
 
   // Get audio sensitivity settings from store
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
@@ -1412,8 +1483,15 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     };
   }, [meshConfigs, params.connectionLines, params.seed, colors]);
 
+  // Track animation time for animation styles
+  const animTimeRef = useRef(0);
+
   // Animation frame - AUDIO-FIRST: no motion when audio is silent
-  useFrame(() => {
+  useFrame((_, delta) => {
+    // Update animation time
+    animTimeRef.current += delta;
+    const time = animTimeRef.current;
+    
     // Step 1: Detect raw audio (0-1) WITHOUT multipliers - for hasAudio check
     const detectedBass = targetBass / Math.max(audioSensitivity.bassMultiplier, 0.01);
     const detectedMids = targetMids / Math.max(audioSensitivity.midsMultiplier, 0.01);
@@ -1442,6 +1520,9 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
+    // Get animation style behavior
+    const animBehavior = getAnimationBehavior(params.animationStyle, bassEffect, midsEffect, highsEffect, time);
+    
     // Beat pop effect - lower threshold for snappier response
     const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
     
@@ -1453,14 +1534,17 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       // Each boost is clamped independently so high multipliers can't overflow
       const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.22);
       const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1);
+      // Apply animation style scale multiplier
+      const styleScale = animBehavior.scaleMultiplier;
       // Final scale has a hard cap to prevent going off-screen
-      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 1.35);
+      const finalGroupScale = Math.min((baseScale + bassScaleBoost + midsScaleBoost) * styleScale, 1.5);
       groupRef.current.scale.setScalar(finalGroupScale * beatPop);
       
       // ONLY rotate when audio is playing AND spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
-        // Base spin from slider + audio amplification
-        groupRef.current.rotation.y += spinSpeed * 0.05;
+        // Base spin from slider + audio amplification + animation style boost
+        const styleRotBoost = animBehavior.rotationBoost;
+        groupRef.current.rotation.y += spinSpeed * 0.05 + styleRotBoost;
         groupRef.current.rotation.y += bassEffect * 0.08 * (spinSpeed / 2);
         groupRef.current.rotation.x += midsEffect * 0.03 * (spinSpeed / 2);
       }
@@ -1473,7 +1557,7 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     // Check if we're using a single-element shape (elementCount is 1)
     const isSingleElementShape = params.elementCount === 1;
 
-    // Animate individual meshes - AUDIO-FIRST
+    // Animate individual meshes - AUDIO-FIRST with animation style effects
     meshRefs.current.forEach((mesh, i) => {
       if (!mesh) return;
       
@@ -1495,27 +1579,46 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
         const midsReactivity = Math.min(midsEffect * 0.3, 0.5);
         const intensity = 1 + bassReactivity + midsReactivity;
         
+        // Apply animation style scale multiplier
+        const styleScale = animBehavior.scaleMultiplier;
+        
         // Scale reacts to audio (returns to base when silent)
-        mesh.scale.setScalar(baseScale * intensity * beatPop);
+        mesh.scale.setScalar(baseScale * intensity * beatPop * styleScale);
         
         // Rotation ONLY if spinSpeed is enabled
         if (spinSpeed > 0.1 && hasAudio) {
-          mesh.rotation.x += bassEffect * 0.1 * (spinSpeed / 2);
-          mesh.rotation.y += midsEffect * 0.15 * (spinSpeed / 2);
-          mesh.rotation.z += highsEffect * 0.06 * (spinSpeed / 2);
+          const styleRotBoost = animBehavior.rotationBoost;
+          mesh.rotation.x += (bassEffect * 0.1 + styleRotBoost) * (spinSpeed / 2);
+          mesh.rotation.y += (midsEffect * 0.15 + styleRotBoost) * (spinSpeed / 2);
+          mesh.rotation.z += (highsEffect * 0.06) * (spinSpeed / 2);
         }
         return;
       }
       
-      // Multi-element: keep position, scale reacts to audio
-      mesh.position.set(...config.position);
+      // Multi-element: position with animation style jitter and explosion effect
+      const jitter = animBehavior.positionJitter;
+      const explosion = animBehavior.explosionFactor;
+      
+      // Calculate explosion direction (away from center)
+      const explosionDir = new THREE.Vector3(...config.position).normalize();
+      const explosionOffset = explosionDir.multiplyScalar(explosion * 2);
+      
+      mesh.position.set(
+        config.position[0] + (jitter > 0 ? (Math.random() - 0.5) * jitter : 0) + explosionOffset.x,
+        config.position[1] + (jitter > 0 ? (Math.random() - 0.5) * jitter : 0) + explosionOffset.y,
+        config.position[2] + (jitter > 0 ? (Math.random() - 0.5) * jitter : 0) + explosionOffset.z
+      );
+      
+      // Apply animation style scale
       const freqReactivity = Math.min(freqValue * 0.5, 0.6);
-      mesh.scale.setScalar(baseScale * (1 + freqReactivity) * beatPop);
+      const styleScale = animBehavior.scaleMultiplier;
+      mesh.scale.setScalar(baseScale * (1 + freqReactivity) * beatPop * styleScale);
       
       // Rotation ONLY if spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
-        mesh.rotation.y += midsEffect * 0.04 * (spinSpeed / 2);
-        mesh.rotation.x += bassEffect * 0.03 * (spinSpeed / 2);
+        const styleRotBoost = animBehavior.rotationBoost;
+        mesh.rotation.y += (midsEffect * 0.04 + styleRotBoost * 0.5) * (spinSpeed / 2);
+        mesh.rotation.x += (bassEffect * 0.03 + styleRotBoost * 0.5) * (spinSpeed / 2);
       }
     });
 
