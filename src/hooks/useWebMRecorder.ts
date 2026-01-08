@@ -191,26 +191,24 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       // Store screen width at start for consistent logo scaling
       screenWidthRef.current = window.innerWidth;
       
-      // Signal canvas to render at export resolution for high-quality capture
-      window.dispatchEvent(new CustomEvent('recording:start', { 
-        detail: { width, height } 
-      }));
-      
-      // Wait for canvas to actually resize (poll until dimensions change or timeout)
-      const targetDpr = Math.ceil(width / window.innerWidth);
-      const expectedWidth = srcCanvas.clientWidth * targetDpr;
+      // Signal canvas to render at export resolution and wait for confirmation
       await new Promise<void>((resolve) => {
-        let attempts = 0;
-        const checkSize = () => {
-          attempts++;
-          // Check if canvas has resized to expected dimensions (with 10% tolerance)
-          if (srcCanvas.width >= expectedWidth * 0.9 || attempts > 60) {
-            resolve();
-          } else {
-            requestAnimationFrame(checkSize);
-          }
-        };
-        requestAnimationFrame(checkSize);
+        const timeoutId = setTimeout(() => {
+          console.warn('Recording: Timeout waiting for high-res frame, proceeding anyway');
+          resolve();
+        }, 2000);
+        
+        window.dispatchEvent(new CustomEvent('recording:start', { 
+          detail: { 
+            width, 
+            height,
+            onReady: () => {
+              clearTimeout(timeoutId);
+              console.log(`Recording ready: Canvas buffer is ${srcCanvas.width}x${srcCanvas.height}`);
+              resolve();
+            }
+          } 
+        }));
       });
       
       const exportCanvas = document.createElement("canvas");
