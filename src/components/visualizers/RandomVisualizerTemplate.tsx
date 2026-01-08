@@ -217,18 +217,15 @@ function StandaloneShape({
       // Scale reacts to audio (returns to 1.8 when silent)
       g.scale.setScalar(1.8 * (1 + bass * 0.3) * beatPop);
       
-      // ONLY spin if spinSpeed is above 0.1 threshold
-      if (spinSpeed > 0.1) {
-        // Base spin from slider
+      // ONLY spin when audio is playing AND spinSpeed is enabled
+      if (spinSpeed > 0.1 && hasAudio) {
+        // Base spin from slider + audio amplification
         g.rotation.y += spinSpeed * 0.05;
-        // Audio amplifies spin (only when audio present AND spin enabled)
-        if (hasAudio) {
-          g.rotation.y += bass * 0.08 * (spinSpeed / 2);
-          g.rotation.x += mids * 0.03 * (spinSpeed / 2);
-          g.rotation.z += highs * 0.02 * (spinSpeed / 2);
-        }
+        g.rotation.y += bass * 0.08 * (spinSpeed / 2);
+        g.rotation.x += mids * 0.03 * (spinSpeed / 2);
+        g.rotation.z += highs * 0.02 * (spinSpeed / 2);
       }
-      // NO rotation when spinSpeed <= 0.1
+      // NO rotation when music is paused or spinSpeed <= 0.1
       
       // Position stays centered (no drift)
       g.position.set(0, 0, 0);
@@ -1434,17 +1431,14 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       // Scale reacts to audio (returns to 1 when silent)
       groupRef.current.scale.setScalar((1 + bass * 0.25) * beatPop);
       
-      // ONLY rotate if spinSpeed is above 0.1 threshold
-      if (spinSpeed > 0.1) {
-        // Base spin from slider
+      // ONLY rotate when audio is playing AND spinSpeed is enabled
+      if (spinSpeed > 0.1 && hasAudio) {
+        // Base spin from slider + audio amplification
         groupRef.current.rotation.y += spinSpeed * 0.05;
-        // Audio amplifies spin (only when audio present AND spin enabled)
-        if (hasAudio) {
-          groupRef.current.rotation.y += bass * 0.06 * (spinSpeed / 2);
-          groupRef.current.rotation.x += mids * 0.02 * (spinSpeed / 2);
-        }
+        groupRef.current.rotation.y += bass * 0.06 * (spinSpeed / 2);
+        groupRef.current.rotation.x += mids * 0.02 * (spinSpeed / 2);
       }
-      // NO rotation when spinSpeed <= 0.1
+      // NO rotation when music is paused or spinSpeed <= 0.1
       
       // Position stays centered (no drift)
       groupRef.current.position.set(0, 0, 0);
