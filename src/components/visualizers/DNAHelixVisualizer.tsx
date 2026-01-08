@@ -43,9 +43,10 @@ function DNAStrand({ isTop, audioData, textureData }) {
   useFrame(() => {
     if (groupRef.current) {
       // Calculate audio per-frame
+      // TRUE EQ SEPARATION: Bass 0-250Hz for DNA strand movement
       let sum = 0;
-      for (let i = 0; i < 128; i++) sum += freqData[i] || 0;
-      const rawIntensity = Math.min(sum / 128 / 255, 1.0);
+      for (let i = 0; i <= 2; i++) sum += freqData[i] || 0;      // 0-250 Hz (kick/sub-bass)
+      const rawIntensity = Math.min(sum / 3 / 255, 1.0);
       
       // Asymmetric smoothing
       const factor = rawIntensity > smoothedIntensity.current ? 0.5 : 0.2;
@@ -127,9 +128,10 @@ export default function DNAHelixVisualizer({
 
   useFrame(() => {
     // Calculate bass per-frame
+    // TRUE EQ SEPARATION: Bass 0-250Hz
     let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    const rawBass = Math.min(sum / 86 / 255, 1.0);
+    for (let i = 0; i <= 2; i++) sum += freqData[i] || 0;      // 0-250 Hz (kick/sub-bass)
+    const rawBass = Math.min(sum / 3 / 255, 1.0);
     
     // Asymmetric smoothing
     const factor = rawBass > smoothedBass.current ? 0.5 : 0.2;

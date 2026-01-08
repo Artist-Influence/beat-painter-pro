@@ -75,131 +75,8 @@ export const AudioResponseControls: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-white/80 text-sm font-medium">Audio Response</h3>
-      <div className="space-y-4">
-        {/* Preset Buttons */}
-        <div className="grid grid-cols-1 gap-2">
-          {presets.map((preset) => (
-            <button
-              key={preset.key}
-              onClick={() => setAudioPreset(preset.key)}
-              className={`h-auto py-3 px-3 text-left rounded-xl border transition-all ${
-                audioSensitivity.preset === preset.key
-                  ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-600/20'
-                  : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10'
-              }`}
-            >
-              <div className="flex flex-col items-start w-full">
-                <span className="font-medium text-sm text-white">{preset.label}</span>
-                <span className="text-xs text-white/60 mt-0.5">{preset.description}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Individual Controls - Show when custom or allow override */}
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white/80 text-sm">Bass Response</span>
-              <span className="text-xs text-white/60">
-                {audioSensitivity.bassMultiplier.toFixed(1)}x
-              </span>
-            </div>
-            <ResettableSlider
-              value={[audioSensitivity.bassMultiplier]}
-              min={0.1}
-              max={8.0}
-              step={0.2}
-              defaultValue={1.0}
-              onValueChange={([v]) => setAudioSensitivity({ bassMultiplier: v })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white/80 text-sm">Mids Response</span>
-              <span className="text-xs text-white/60">
-                {audioSensitivity.midsMultiplier.toFixed(1)}x
-              </span>
-            </div>
-            <ResettableSlider
-              value={[audioSensitivity.midsMultiplier]}
-              min={0.1}
-              max={8.0}
-              step={0.2}
-              defaultValue={0.7}
-              onValueChange={([v]) => setAudioSensitivity({ midsMultiplier: v })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white/80 text-sm">Highs Response</span>
-              <span className="text-xs text-white/60">
-                {audioSensitivity.highsMultiplier.toFixed(1)}x
-              </span>
-            </div>
-            <ResettableSlider
-              value={[audioSensitivity.highsMultiplier]}
-              min={0.1}
-              max={8.0}
-              step={0.2}
-              defaultValue={0.4}
-              onValueChange={([v]) => setAudioSensitivity({ highsMultiplier: v })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white/80 text-sm">Animation Speed</span>
-              <span className="text-xs text-white/60">
-                {audioSensitivity.animationSpeed.toFixed(1)}x
-              </span>
-            </div>
-            <ResettableSlider
-              value={[audioSensitivity.animationSpeed]}
-              min={0.1}
-              max={4.0}
-              step={0.2}
-              defaultValue={1.0}
-              onValueChange={([v]) => setAudioSensitivity({ animationSpeed: v })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white/80 text-sm">Spin Speed</span>
-              <span className="text-xs text-white/60">
-                {(audioSensitivity.spinSpeed ?? 0).toFixed(1)}x
-              </span>
-            </div>
-            <ResettableSlider
-              value={[audioSensitivity.spinSpeed ?? 0]}
-              min={0}
-              max={8.0}
-              step={0.1}
-              defaultValue={0}
-              onValueChange={([v]) => setAudioSensitivity({ spinSpeed: v })}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {audioSensitivity.preset === 'custom' && (
-          <p className="text-xs text-white/60">
-            Custom settings active
-          </p>
-        )}
-
-        <div className="border-t border-white/10 my-4"></div>
-
-        {/* Background */}
-        <div className="space-y-3">
+      {/* Background */}
+      <div className="space-y-3">
           <span className="text-white/80 text-sm">Background</span>
           
           {/* Hidden file input for custom background */}
@@ -437,7 +314,6 @@ export const AudioResponseControls: React.FC = () => {
             />
           </div>
         </div>
-      </div>
     </div>
   );
 };

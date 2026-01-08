@@ -15,12 +15,13 @@ interface RandomVisualizerTemplateProps {
   isPlaying?: boolean;
 }
 
-// Audio analysis helper
+// Audio analysis helper - TRUE EQ SEPARATION
 function analyzeAudioData(frequency: number[]) {
   const freq = frequency || [];
-  const bassRange = freq.slice(0, Math.floor(freq.length * 0.2));
-  const midRange = freq.slice(Math.floor(freq.length * 0.2), Math.floor(freq.length * 0.6));
-  const highRange = freq.slice(Math.floor(freq.length * 0.6));
+  // TRUE EQ SEPARATION: Bass 0-250Hz (bins 0-2), Mids 250-4000Hz (bins 3-46), Highs 4000Hz+ (bins 47-255)
+  const bassRange = freq.slice(0, 3);     // Bins 0-2: 0-250 Hz (kick/sub-bass)
+  const midRange = freq.slice(3, 47);     // Bins 3-46: 250-4000 Hz (vocals/snare)
+  const highRange = freq.slice(47);       // Bins 47-255: 4000+ Hz (hi-hats/cymbals)
   
   return {
     bass: bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0,

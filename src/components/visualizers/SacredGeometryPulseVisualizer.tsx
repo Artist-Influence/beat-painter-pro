@@ -29,13 +29,14 @@ function FlowerOfLife({ audioData, textureData }) {
       const animSpeed = audioSensitivity.animationSpeed;
       
       // Calculate audio - DETECT first, then apply multipliers for EFFECT
+      // TRUE EQ SEPARATION: Bass 0-250Hz, Mids 250-4000Hz
       let bassSum = 0, midsSum = 0;
-      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-      for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+      for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0;      // 0-250 Hz (kick/sub-bass)
+      for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0;    // 250-4000 Hz (vocals/snare)
       
       // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
-      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
-      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+      const detectedBass = Math.min(bassSum / 3 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 44 / 255, 1.0);
       
       // Step 2: Apply multipliers for EFFECT
       const rawBass = detectedBass * audioSensitivity.bassMultiplier;
@@ -168,11 +169,12 @@ function Metatron({ audioData, textureData }) {
       const animSpeed = audioSensitivity.animationSpeed;
       
       // Calculate audio - DETECT first, then apply multipliers for EFFECT
+      // TRUE EQ SEPARATION: Highs 4000Hz+
       let highsSum = 0;
-      for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+      for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz (hi-hats/cymbals)
       
       // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
-      const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
+      const detectedHighs = Math.min(highsSum / 209 / 255, 1.0);
       
       // Step 2: Apply multipliers for EFFECT
       const rawHighs = detectedHighs * audioSensitivity.highsMultiplier;
@@ -281,11 +283,12 @@ export default function SacredGeometryPulseVisualizer({
       const animSpeed = audioSensitivity.animationSpeed;
       
       // Calculate audio - DETECT first, then apply multipliers for EFFECT
+      // TRUE EQ SEPARATION: Bass 0-250Hz
       let bassSum = 0;
-      for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+      for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0;      // 0-250 Hz (kick/sub-bass)
       
       // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
-      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedBass = Math.min(bassSum / 3 / 255, 1.0);
       
       // Step 2: Apply multipliers for EFFECT
       const rawBass = detectedBass * audioSensitivity.bassMultiplier;
