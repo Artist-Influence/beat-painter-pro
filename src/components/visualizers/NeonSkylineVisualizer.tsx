@@ -157,9 +157,10 @@ export default function NeonSkylineVisualizer({
 
   useFrame(() => {
     // Calculate bass per-frame
+    // TRUE EQ SEPARATION: Bass 0-250Hz
     let sum = 0;
-    for (let i = 0; i <= 85; i++) sum += freqData[i] || 0;
-    const rawBass = Math.min(sum / 86 / 255 * 3, 1.0);
+    for (let i = 0; i <= 2; i++) sum += freqData[i] || 0;      // 0-250 Hz (kick/sub-bass)
+    const rawBass = Math.min(sum / 3 / 255 * 3, 1.0);
     
     // Asymmetric smoothing
     const factor = rawBass > smoothedBass.current ? 0.5 : 0.2;

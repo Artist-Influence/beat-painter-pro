@@ -44,12 +44,13 @@ function Feather({ index, side, audioData, totalFeathers }: any) {
     const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
+    // TRUE EQ SEPARATION: Bass 0-250Hz, Mids 250-4000Hz
     let midsSum = 0, bassSum = 0;
-    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0;    // 250-4000 Hz (vocals/snare)
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0;      // 0-250 Hz (kick/sub-bass)
     
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.5);
+    const rawBass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack for snappy response
     const lerpVal = (current: number, target: number) => {
@@ -138,12 +139,13 @@ function Wing({ side, audioData }: any) {
     const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
+    // TRUE EQ SEPARATION: Bass 0-250Hz, Mids 250-4000Hz
     let bassSum = 0, midsSum = 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0;      // 0-250 Hz (kick/sub-bass)
+    for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0;    // 250-4000 Hz (vocals/snare)
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
+    const rawBass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack
     const lerpVal = (current: number, target: number) => {
@@ -223,12 +225,13 @@ function HologramWings({ audioData }: any) {
     const spinSpeed = audioSensitivity.spinSpeed ?? 0;
     
     // Calculate audio per-frame with sensitivity multipliers
+    // TRUE EQ SEPARATION: Bass 0-250Hz, Highs 4000Hz+
     let highsSum = 0, bassSum = 0;
-    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
+    for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz (hi-hats/cymbals)
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0;      // 0-250 Hz (kick/sub-bass)
     
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
+    const rawHighs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.5);
+    const rawBass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier, 1.5);
     
     // Asymmetric smoothing - fast attack
     const lerpVal = (current: number, target: number) => {
