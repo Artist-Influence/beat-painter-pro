@@ -76,9 +76,12 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
       meshRef.current.rotation.z = baseRotation.current + audioOffset;
       
-      // Scale reacts to audio - reduced response for less jarring motion
-      const pulse = (1 + bass * 0.5 + mids * 0.25) * beatPop;
-      meshRef.current.scale.setScalar(Math.min(pulse, 1.6));
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const ringBase = 1.0;
+      const ringBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.2);
+      const ringMidsBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1);
+      const ringScale = Math.min(ringBase + ringBassBoost + ringMidsBoost, 1.3);
+      meshRef.current.scale.setScalar(ringScale * beatPop);
       
       // Position driven by audio - reduced for smoother motion
       meshRef.current.position.z = bass * 0.6;
@@ -196,9 +199,12 @@ export default function PsychedelicMandalaVisualizer({
       const audioOffset = hasAudio ? (bass * 0.2 + mids * 0.12) * Math.PI : 0;
       groupRef.current.rotation.z = mainBaseRotation.current + audioOffset;
       
-      // Scale reacts to audio - reduced for less jarring motion
-      const breathe = (1 + bass * 0.4 + mids * 0.2) * beatPop;
-      groupRef.current.scale.setScalar(Math.min(breathe, 1.5));
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const groupBase = 1.0;
+      const groupBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.1, 0.18);
+      const groupMidsBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.05, 0.08);
+      const groupScale = Math.min(groupBase + groupBassBoost + groupMidsBoost, 1.3);
+      groupRef.current.scale.setScalar(groupScale * beatPop);
       
       // Position driven by audio - reduced for smoother motion
       groupRef.current.position.y = bass * 0.4;

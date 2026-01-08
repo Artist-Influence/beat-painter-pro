@@ -73,10 +73,12 @@ function GlassShard({ index, audioData, textureData }: any) {
         meshRef.current.position.set(x, 0, z);
       }
       
-      // SCALE: BASE + reactivity (multipliers control effect)
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const baseScale = 1.0;
-      const bassScaleBoost = Math.min(bass * 1.0, 2.0);
-      meshRef.current.scale.setScalar((baseScale + bassScaleBoost) * beatPop);
+      // Clamp independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      const finalShardScale = Math.min(baseScale + bassScaleBoost, 1.4);
+      meshRef.current.scale.setScalar(finalShardScale * beatPop);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
@@ -162,10 +164,11 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
         meshRef.current.lookAt(0, 0, 0);
       }
       
-      // SCALE: BASE + reactivity
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const capBase = 1.0;
-      const capBassBoost = Math.min(bass * 1.0, 1.5);
-      meshRef.current.scale.setScalar((capBase + capBassBoost) * beatPop);
+      const capBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      const finalCapScale = Math.min(capBase + capBassBoost, 1.4);
+      meshRef.current.scale.setScalar(finalCapScale * beatPop);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
@@ -254,18 +257,20 @@ function GlassSphereVisualizer({ audioData }: any) {
       // POSITION: Proportional to audio
       groupRef.current.position.y = bass * 3.0; // Increased from 2.0
       
-      // SCALE: BASE + reactivity
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const groupBase = 1.0;
-      const groupBassBoost = Math.min(bass * 0.8, 1.2);
-      groupRef.current.scale.setScalar((groupBase + groupBassBoost) * beatPop);
+      const groupBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      const finalGroupScale = Math.min(groupBase + groupBassBoost, 1.3);
+      groupRef.current.scale.setScalar(finalGroupScale * beatPop);
     }
     
     if (centerSphereRef.current) {
-      // SCALE: BASE + reactivity
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const sphereBase = 1.0;
-      const sphereBassBoost = Math.min(bass * 1.2, 1.8);
-      const sphereHighsBoost = Math.min(highs * 0.4, 0.6);
-      centerSphereRef.current.scale.setScalar((sphereBase + sphereBassBoost + sphereHighsBoost) * beatPop);
+      const sphereBassBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      const sphereHighsBoost = Math.min(detectedHighs * audioSensitivity.highsMultiplier * 0.1, 0.15);
+      const finalSphereScale = Math.min(sphereBase + sphereBassBoost + sphereHighsBoost, 1.5);
+      centerSphereRef.current.scale.setScalar(finalSphereScale * beatPop);
       
       // Update material emissive intensity
       if (centerSphereRef.current.material) {

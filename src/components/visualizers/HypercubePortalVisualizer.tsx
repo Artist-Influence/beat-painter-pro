@@ -70,12 +70,14 @@ function Tesseract({ audioData, textureData }) {
         outerRef.current.rotation.z += highs * 0.06 * audioSensitivity.animationSpeed;
       }
       
-      // Scale driven by audio (returns to base when silent)
-      const shift = 0.6 + bass * 1.5;
-      innerRef.current.scale.setScalar(shift);
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const innerBase = 0.6;
+      const innerBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
+      innerRef.current.scale.setScalar(Math.min(innerBase + innerBoost, 1.0));
       
-      const portal = 1 + bass * 1.2;
-      outerRef.current.scale.setScalar(portal);
+      const outerBase = 1.0;
+      const outerBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      outerRef.current.scale.setScalar(Math.min(outerBase + outerBoost, 1.3));
       
       // Position proportional to audio
       innerRef.current.position.x = bass * 0.2;
@@ -192,10 +194,12 @@ export default function HypercubePortalVisualizer({
       if (hasAudio) {
         portalRef.current.rotation.y += bass * 0.1 * audioSensitivity.animationSpeed;
       }
-      portalRef.current.rotation.x = bass * 0.3;
-      const scale = 1 + bass * 0.5;
-      portalRef.current.scale.setScalar(scale);
-      portalRef.current.position.y = bass * 0.3;
+      portalRef.current.rotation.x = detectedBass * audioSensitivity.bassMultiplier * 0.15;
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const portalBase = 1.0;
+      const portalBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.2);
+      portalRef.current.scale.setScalar(Math.min(portalBase + portalBoost, 1.25));
+      portalRef.current.position.y = Math.min(bass * 0.2, 0.3);
     }
   });
   

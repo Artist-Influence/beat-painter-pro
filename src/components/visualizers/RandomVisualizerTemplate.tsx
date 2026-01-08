@@ -221,11 +221,14 @@ function StandaloneShape({
       const g = groupRef.current;
       const spinSpeed = sens.spinSpeed ?? 0;
       
-      // Scale: BASE + reactivity (multipliers control how much each band affects scale)
+      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
       const baseScale = 1.8;
-      const bassScaleBoost = Math.min(bassEffect * 0.4, 1.0);
-      const midsScaleBoost = Math.min(midsEffect * 0.15, 0.4);
-      g.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
+      // Each boost is clamped independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.12, 0.22);
+      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.06, 0.1);
+      // Final scale has a hard cap to prevent going off-screen
+      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 2.15);
+      g.scale.setScalar(finalGroupScale * beatPop);
       
       // ONLY spin when audio is playing AND spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {
@@ -1444,11 +1447,14 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Scale: BASE + reactivity (multipliers control how much each band affects scale)
+      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
       const baseScale = 1.0;
-      const bassScaleBoost = Math.min(bassEffect * 0.4, 0.8);
-      const midsScaleBoost = Math.min(midsEffect * 0.15, 0.3);
-      groupRef.current.scale.setScalar((baseScale + bassScaleBoost + midsScaleBoost) * beatPop);
+      // Each boost is clamped independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.22);
+      const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1);
+      // Final scale has a hard cap to prevent going off-screen
+      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 1.35);
+      groupRef.current.scale.setScalar(finalGroupScale * beatPop);
       
       // ONLY rotate when audio is playing AND spinSpeed is enabled
       if (spinSpeed > 0.1 && hasAudio) {

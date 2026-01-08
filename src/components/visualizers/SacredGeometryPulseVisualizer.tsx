@@ -77,9 +77,12 @@ function FlowerOfLife({ audioData, textureData }) {
       const audioOffset = hasAudio ? (bass * 0.15 + mids * 0.08) * Math.PI : 0;
       groupRef.current.rotation.z = baseRotation.current + audioOffset;
       
-      // SCALE: Returns to default when silent
-      const breathe = hasAudio ? (1 + bass * 0.5 + mids * 0.2) * beatPop : 1;
-      groupRef.current.scale.setScalar(breathe);
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
+      const flowerBase = 1.0;
+      const flowerBassBoost = hasAudio ? Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.2) : 0;
+      const flowerMidsBoost = hasAudio ? Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1) : 0;
+      const flowerScale = Math.min(flowerBase + flowerBassBoost + flowerMidsBoost, 1.3);
+      groupRef.current.scale.setScalar(flowerScale * beatPop);
       
       // POSITION: Proportional to audio (returns to 0 when silent)
       groupRef.current.position.y = bass * 0.3;
@@ -215,9 +218,11 @@ function Metatron({ audioData, textureData }) {
       meshRef.current.rotation.y = metatronBaseRotation.current.y + offsetY;
       meshRef.current.rotation.z = metatronBaseRotation.current.z + offsetZ;
       
-      // SCALE: Returns to default when silent
-      const expand = hasAudio ? (1 + highs * 0.8) * beatPop : 1;
-      meshRef.current.scale.setScalar(expand);
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
+      const metatronBase = 1.0;
+      const metatronBoost = hasAudio ? Math.min(detectedHighs * audioSensitivity.highsMultiplier * 0.15, 0.25) : 0;
+      const metatronScale = Math.min(metatronBase + metatronBoost, 1.3);
+      meshRef.current.scale.setScalar(metatronScale * beatPop);
       
       // POSITION: Proportional to audio (returns to 0 when silent)
       meshRef.current.position.x = highs * 0.25;
@@ -319,9 +324,11 @@ export default function SacredGeometryPulseVisualizer({
       const audioOffset = hasAudio ? bass * Math.PI * 0.1 : 0;
       containerRef.current.rotation.z = containerBaseRotation.current + audioOffset;
       
-      // SCALE: Returns to default when silent
-      const breathe = hasAudio ? (1 + bass * 0.4) * beatPop : 1;
-      containerRef.current.scale.setScalar(breathe);
+      // SCALE: BASE + TIGHTLY CLAMPED reactivity
+      const containerBase = 1.0;
+      const containerBoost = hasAudio ? Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.1, 0.18) : 0;
+      const containerScale = Math.min(containerBase + containerBoost, 1.2);
+      containerRef.current.scale.setScalar(containerScale * beatPop);
       
       // POSITION: Proportional to audio (returns to 0 when silent)
       containerRef.current.position.y = bass * 0.2;

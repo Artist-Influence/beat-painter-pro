@@ -66,9 +66,12 @@ function StrobeRing({ distance, index, audioData, textureData }) {
       }
       meshRef.current.position.z = currentZ.current;
       
-      // Scale driven by audio (returns to 1 when silent)
-      const scale = 1 + Math.abs(currentZ.current) * 0.1 + bass * 1.2;
-      meshRef.current.scale.setScalar(scale);
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const ringBase = 1.0;
+      const ringBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      const zBoost = Math.abs(currentZ.current) * 0.06;
+      const ringScale = Math.min(ringBase + zBoost + ringBoost, 1.4);
+      meshRef.current.scale.setScalar(ringScale);
       
       // Only rotate when audio is present
       const animSpeed = audioSensitivity.animationSpeed;
@@ -177,8 +180,10 @@ export default function StroboscopicTunnelVisualizer({
       const audioOffset = hasAudio ? mids * bass * Math.PI * 0.4 : 0;
       tunnelRef.current.rotation.z = tunnelBaseRotation.current + audioOffset;
       
-      // Scale driven by audio (returns to 1 when silent)
-      const tunnelScale = 1 + bass * 0.4;
+      // Scale: BASE + TIGHTLY CLAMPED reactivity
+      const tunnelBase = 1.0;
+      const tunnelBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.1, 0.18);
+      const tunnelScale = Math.min(tunnelBase + tunnelBoost, 1.2);
       tunnelRef.current.scale.setScalar(tunnelScale);
     }
     

@@ -74,11 +74,14 @@ function NeuralLattice({ audioData }: any) {
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Scale: BASE + reactivity (multipliers control effect, not base size)
-      const baseScale = 1.0;
-      const bassScaleBoost = Math.min(bass * 0.6, 1.0);
-      const midsScaleBoost = Math.min(mids * 0.2, 0.3);
-      groupRef.current.scale.setScalar(baseScale + bassScaleBoost + midsScaleBoost);
+      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
+      const baseScale = 0.65;  // Constant base size
+      // Each boost is clamped independently so high multipliers can't overflow
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.08, 0.12);
+      // Final scale has a hard cap to prevent going off-screen
+      const finalScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 1.0);
+      groupRef.current.scale.setScalar(finalScale);
       
       // Only rotate when spinSpeed > 0 OR audio is present
       if (spinSpeed > 0 || hasAudio) {
