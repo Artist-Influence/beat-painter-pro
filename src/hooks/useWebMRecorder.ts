@@ -34,6 +34,23 @@ const RESOLUTIONS: Record<ExportQuality, { width: number; height: number; bitrat
   '8k': { width: 7680, height: 4320, bitrate: 150_000_000 },
 };
 
+// Check for supported mime types with fallbacks
+const getSupportedMimeType = (): string => {
+  const types = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+  return '';
+};
+
 export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -64,9 +81,45 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     logo?: LogoState,
     exportMode: ExportMode = 'video'
   ) => {
-    if (!canvasRef.current || !audioElement) {
-      toast.error("Canvas or audio not available");
+    // Validate canvas
+    if (!canvasRef.current) {
+      toast.error("Canvas not ready. Please wait a moment and try again.");
       return;
+    }
+
+    // Validate audio
+    if (!audioElement) {
+      toast.error("Please upload an audio file first.");
+      return;
+    }
+
+    // Check if MediaRecorder is available
+    if (typeof MediaRecorder === 'undefined') {
+      toast.error("Recording not supported in this browser. Try Chrome or Firefox.");
+      return;
+    }
+
+    // Check canvas validity
+    const srcCanvas = canvasRef.current;
+    if (srcCanvas.width === 0 || srcCanvas.height === 0) {
+      toast.error("Canvas is not ready. Try switching visualizers.");
+      return;
+    }
+
+    // Check WebGL context
+    const gl = srcCanvas.getContext('webgl2') || srcCanvas.getContext('webgl');
+    if (gl && (gl as WebGLRenderingContext).isContextLost?.()) {
+      toast.error("Graphics context lost. Please refresh the page.");
+      return;
+    }
+
+    // Check for supported mime type in video mode
+    if (exportMode === 'video') {
+      const mimeType = getSupportedMimeType();
+      if (!mimeType) {
+        toast.error("Video recording not supported. Try PNG sequence mode instead.");
+        return;
+      }
     }
 
     try {
@@ -131,7 +184,6 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       }
 
       const { width, height, bitrate } = RESOLUTIONS[quality];
-      const srcCanvas = canvasRef.current;
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = width;
       exportCanvas.height = height;
@@ -139,7 +191,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       // For PNG sequence, we need alpha support
       const ctx = exportCanvas.getContext("2d", { alpha: exportMode === 'png-sequence' });
       if (!ctx) {
-        toast.error("Failed to create export canvas");
+        toast.error("Failed to create export canvas.");
         return;
       }
       
@@ -156,14 +208,26 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       // Only set up MediaRecorder for video mode
       if (exportMode === 'video') {
         const videoStream = exportCanvas.captureStream(60);
-        const audioStream = (audioElement as any).captureStream ? (audioElement as any).captureStream() : null;
+        
+        // Safely capture audio stream
+        let audioStream: MediaStream | null = null;
+        try {
+          if (typeof (audioElement as any).captureStream === 'function') {
+            audioStream = (audioElement as any).captureStream();
+          } else if (typeof (audioElement as any).mozCaptureStream === 'function') {
+            audioStream = (audioElement as any).mozCaptureStream();
+          }
+        } catch (streamError) {
+          console.warn('Audio capture not available, recording video only:', streamError);
+        }
 
         const videoTracks = videoStream.getVideoTracks();
         const audioTracks = audioStream ? audioStream.getAudioTracks() : [];
         const combinedStream = new MediaStream([...videoTracks, ...audioTracks]);
 
+        const mimeType = getSupportedMimeType();
         const mediaRecorder = new MediaRecorder(combinedStream, {
-          mimeType: "video/webm;codecs=vp9,opus",
+          mimeType,
           videoBitsPerSecond: bitrate,
           audioBitsPerSecond: 320_000,
         });
@@ -195,7 +259,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         mediaRecorder.onerror = (event) => {
           console.error("MediaRecorder error:", event);
           setIsRecording(false);
-          toast.error("Recording failed");
+          toast.error("Recording failed during capture.");
         };
 
         mediaRecorder.start(100);
@@ -271,7 +335,18 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     } catch (error) {
       console.error("Start recording error:", error);
       setIsRecording(false);
-      toast.error("Failed to start recording");
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('NotSupportedError')) {
+        toast.error("Recording format not supported. Try a different browser.");
+      } else if (errorMessage.includes('NotAllowedError')) {
+        toast.error("Recording permission denied.");
+      } else if (errorMessage.includes('InvalidStateError')) {
+        toast.error("Canvas not ready. Please try again.");
+      } else {
+        toast.error(`Recording failed: ${errorMessage.substring(0, 50)}`);
+      }
     }
   }, [canvasRef, audioElement]);
 
