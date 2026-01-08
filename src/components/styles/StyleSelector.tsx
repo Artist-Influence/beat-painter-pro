@@ -129,8 +129,12 @@ export function StyleSelector() {
     setIsGenerating(true);
     setProgress(0);
     setPreviews([]);
+    
+    // Random base seed for variety on each regeneration
+    const baseSeed = Math.floor(Math.random() * 10000);
+    
     for (let i = 0; i < 3; i++) {
-      const { textureUrl } = await generateStyleTexture(selectedStyles, i);
+      const { textureUrl } = await generateStyleTexture(selectedStyles, baseSeed + i);
       setPreviews((prev) => [...prev, textureUrl]);
       setProgress(i + 1);
     }

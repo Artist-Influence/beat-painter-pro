@@ -26,11 +26,11 @@ interface CustomVisualizerGeneratorProps {
   onSuccess?: (visualizer: any) => void;
 }
 
-// Mock audio data for preview
+// STATIC preview - no audio for a still visualizer
 const PREVIEW_AUDIO = {
-  frequency: Array(128).fill(0).map((_, i) => Math.sin(i * 0.1) * 127 + 128),
-  amplitude: 0.5,
-  beatStrength: 0.3,
+  frequency: Array(128).fill(0),
+  amplitude: 0,
+  beatStrength: 0,
 };
 
 
