@@ -35,34 +35,39 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   const orbitAngle = useRef(angle);
 
   useFrame(() => {
-    // Calculate audio per-frame with proper Hz-to-bin mapping
-    // Bass: 0-250 Hz (bins 0-2 at 44.1kHz/256 bins = ~86Hz per bin)
+    // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz (kick/sub-bass)
     for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
     for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const rawBass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5); // 1.5x boost for sub-bass
-    const rawMids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawHighs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min((bassSum / 3 / 255), 1.0);
+    const detectedMids = Math.min((midsSum / 44 / 255), 1.0);
+    const detectedHighs = Math.min((highsSum / 209 / 255), 1.0);
     
-    // Faster asymmetric smoothing for punchy response
+    // Step 2: Apply multipliers for EFFECT (controls reactivity, not detection)
+    const bassEffect = detectedBass * audioSensitivity.bassMultiplier;
+    const midsEffect = detectedMids * audioSensitivity.midsMultiplier;
+    const highsEffect = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Faster asymmetric smoothing for 170+ BPM support
     const lerpVal = (current: number, target: number) => {
-      const factor = target > current ? 0.65 : 0.4; // Faster attack and decay
+      const factor = target > current ? 0.85 : 0.50; // Near-instant attack, fast decay
       return current + (target - current) * factor;
     };
     
-    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
-    smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
-    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    smoothedBass.current = lerpVal(smoothedBass.current, bassEffect);
+    smoothedMids.current = lerpVal(smoothedMids.current, midsEffect);
+    smoothedHighs.current = lerpVal(smoothedHighs.current, highsEffect);
     
     const bass = smoothedBass.current;
     const mids = smoothedMids.current;
     const highs = smoothedHighs.current;
     
-    // Audio threshold check
+    // Audio threshold check - use DETECTED values so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Beat pop effect for dramatic kick response
     const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
@@ -141,29 +146,34 @@ function OrbitingCubesVisualizer({ audioData }: any) {
   const smoothedHighs = useRef(0);
 
   useFrame(() => {
-    // Calculate audio per-frame with proper Hz-to-bin mapping
+    // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz (kick/sub-bass)
     for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const rawBass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5);
-    const rawHighs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min((bassSum / 3 / 255), 1.0);
+    const detectedHighs = Math.min((highsSum / 209 / 255), 1.0);
+    
+    // Step 2: Apply multipliers for EFFECT
+    const bassEffect = detectedBass * audioSensitivity.bassMultiplier;
+    const highsEffect = detectedHighs * audioSensitivity.highsMultiplier;
     
     // Faster asymmetric smoothing
     const lerpVal = (current: number, target: number) => {
-      const factor = target > current ? 0.65 : 0.4;
+      const factor = target > current ? 0.85 : 0.50;
       return current + (target - current) * factor;
     };
     
-    smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
-    smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+    smoothedBass.current = lerpVal(smoothedBass.current, bassEffect);
+    smoothedHighs.current = lerpVal(smoothedHighs.current, highsEffect);
     
     const bass = smoothedBass.current;
     const highs = smoothedHighs.current;
     
-    // Audio threshold check
+    // Audio threshold check - use DETECTED values
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedHighs > audioThreshold;
     
     // Beat pop effect
     const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;

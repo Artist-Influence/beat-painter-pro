@@ -41,16 +41,23 @@ function NeuralLattice({ audioData }: any) {
   const baseRotation = useRef({ x: 0, y: 0, z: 0 });
 
   useFrame(() => {
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = bassSum / 86 / 255;
-    const rawMids = midsSum / 85 / 255;
-    const rawHighs = highsSum / 85 / 255;
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+    const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+    const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
     
-    // Faster lerp for immediate response
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+    const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+    const rawHighs = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Faster lerp for 170+ BPM
     const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.85 : 0.5);
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
     smoothedMids.current = lerp(smoothedMids.current, rawMids);
@@ -61,7 +68,8 @@ function NeuralLattice({ audioData }: any) {
     const mids = smoothedMids.current * 0.4 + rawMids * 0.6;
     const highs = smoothedHighs.current * 0.4 + rawHighs * 0.6;
     
-    const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
+    // Audio threshold check - use DETECTED values
+    const hasAudio = detectedBass > 0.02 || detectedMids > 0.02 || detectedHighs > 0.02;
 
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;

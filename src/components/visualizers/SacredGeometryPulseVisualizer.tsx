@@ -28,18 +28,23 @@ function FlowerOfLife({ audioData, textureData }) {
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame
+      // Calculate audio - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0, midsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       
-      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
-      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
       
-      // Faster asymmetric smoothing
-      const attackLerp = 0.7;
-      const decayLerp = 0.25;
+      // Step 2: Apply multipliers for EFFECT
+      const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+      const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+      const rawBeat = Math.max(beatStrength, detectedBass * 0.8);
+      
+      // Faster asymmetric smoothing for 170+ BPM
+      const attackLerp = 0.85;
+      const decayLerp = 0.50;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -53,9 +58,9 @@ function FlowerOfLife({ audioData, textureData }) {
       const mids = smoothedMids.current;
       const beat = smoothedBeat.current;
       
-      // Audio threshold check - completely still when silent
+      // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
-      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold;
       
       // Beat pop - lower threshold
       const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.5 : 1;
@@ -159,16 +164,20 @@ function Metatron({ audioData, textureData }) {
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame
+      // Calculate audio - DETECT first, then apply multipliers for EFFECT
       let highsSum = 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
-      const rawBeat = Math.max(beatStrength, rawHighs * 0.5);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
       
-      // ASYMMETRIC smoothing
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Step 2: Apply multipliers for EFFECT
+      const rawHighs = detectedHighs * audioSensitivity.highsMultiplier;
+      const rawBeat = Math.max(beatStrength, detectedHighs * 0.5);
+      
+      // Faster asymmetric smoothing for 170+ BPM
+      const attackLerp = 0.85;
+      const decayLerp = 0.50;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -180,9 +189,9 @@ function Metatron({ audioData, textureData }) {
       const highs = smoothedHighs.current;
       const beat = smoothedBeat.current;
       
-      // Audio threshold check - completely still when silent
+      // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
-      const hasAudio = highs > audioThreshold;
+      const hasAudio = detectedHighs > audioThreshold;
       
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
@@ -266,16 +275,20 @@ export default function SacredGeometryPulseVisualizer({
       const t = clock.getElapsedTime();
       const animSpeed = audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame
+      // Calculate audio - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       
-      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
       
-      // ASYMMETRIC smoothing
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Step 2: Apply multipliers for EFFECT
+      const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+      const rawBeat = Math.max(beatStrength, detectedBass * 0.8);
+      
+      // Faster asymmetric smoothing for 170+ BPM
+      const attackLerp = 0.85;
+      const decayLerp = 0.50;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -287,9 +300,9 @@ export default function SacredGeometryPulseVisualizer({
       const bass = smoothedBass.current;
       const beat = smoothedBeat.current;
       
-      // Audio threshold check - completely still when silent
+      // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
-      const hasAudio = bass > audioThreshold;
+      const hasAudio = detectedBass > audioThreshold;
       
       // Beat pop
       const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;

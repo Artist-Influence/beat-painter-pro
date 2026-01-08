@@ -24,19 +24,25 @@ function Tesseract({ audioData, textureData }) {
   const smoothedHighs = useRef(0);
   
   useFrame(() => {
-    // Calculate audio per-frame
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+    const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+    const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
     
-    // Asymmetric smoothing
+    // Step 2: Apply multipliers for EFFECT
+    const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+    const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+    const rawHighs = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Faster asymmetric smoothing for 170+ BPM
     const lerpVal = (current: number, target: number) => {
-      const factor = target > current ? 0.5 : 0.2;
+      const factor = target > current ? 0.85 : 0.50;
       return current + (target - current) * factor;
     };
     
@@ -48,9 +54,9 @@ function Tesseract({ audioData, textureData }) {
     const mids = smoothedMids.current;
     const highs = smoothedHighs.current;
     
-    // Audio threshold check
+    // Audio threshold check - use DETECTED values
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     if (innerRef.current && outerRef.current) {
       // Rotation ONLY when audio is present
@@ -153,19 +159,28 @@ export default function HypercubePortalVisualizer({
   const smoothedMids = useRef(0);
 
   useFrame(() => {
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
     
-    const lerpVal = (c: number, t: number) => c + (t - c) * (t > c ? 0.5 : 0.2);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+    const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+    
+    // Step 2: Apply multipliers for EFFECT
+    const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+    const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+    
+    const lerpVal = (c: number, t: number) => c + (t - c) * (t > c ? 0.85 : 0.50);
     smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
     smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
     
     const bass = smoothedBass.current;
     const mids = smoothedMids.current;
-    const hasAudio = bass > 0.02 || mids > 0.02;
+    
+    // Audio threshold check - use DETECTED values
+    const hasAudio = detectedBass > 0.02 || detectedMids > 0.02;
 
     if (portalRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
