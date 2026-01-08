@@ -81,6 +81,10 @@ export interface RandomVisualizerParams {
   scaleVariation: number;
   positionSpread: number;
   rotationOffset: number;
+  // NEW: Color scheme for the visualizer
+  colorScheme: ColorScheme;
+  // NEW: Glow intensity (0.0 - 2.0)
+  glowIntensity: number;
   // Standalone variant for single-element procedural generation
   standaloneVariant?: StandaloneVariant;
 }
@@ -198,13 +202,14 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
 
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const backgroundEffect = preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
+  const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
   
   // Element count: use preference or random between 8-40
   const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
@@ -216,6 +221,9 @@ export function generateRandomParams(
   // Generate standalone variant only when in standalone mode (elementCount === 1)
   const isStandalone = elementCount === 1;
   const standaloneVariant = isStandalone ? generateStandaloneVariant(seed) : undefined;
+  
+  // Glow intensity: 0.3 - 2.0 (default random or from preferences)
+  const glowIntensity = preferences?.glowIntensity ?? (0.3 + random() * 1.7);
   
   return {
     seed,
@@ -232,6 +240,8 @@ export function generateRandomParams(
     scaleVariation: 0.5 + random() * 1.0,
     positionSpread: 2 + random() * 4,
     rotationOffset: random() * Math.PI * 2,
+    colorScheme,
+    glowIntensity,
     standaloneVariant,
   };
 }
