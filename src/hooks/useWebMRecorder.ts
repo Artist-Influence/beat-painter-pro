@@ -184,6 +184,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       }
 
       const { width, height, bitrate } = RESOLUTIONS[quality];
+      
+      // Signal canvas to render at export resolution for high-quality capture
+      window.dispatchEvent(new CustomEvent('recording:start', { 
+        detail: { width, height } 
+      }));
+      
+      // Wait for canvas to resize (two frames for safety)
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = width;
       exportCanvas.height = height;
@@ -192,6 +201,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       const ctx = exportCanvas.getContext("2d", { alpha: exportMode === 'png-sequence' });
       if (!ctx) {
         toast.error("Failed to create export canvas.");
+        window.dispatchEvent(new CustomEvent('recording:stop'));
         return;
       }
       
@@ -352,7 +362,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
   const stopRecording = useCallback(async () => {
     keepRenderingRef.current = false;
-    window.dispatchEvent(new CustomEvent('recording:transparency', { detail: { enabled: false } }));
+    // Signal canvas to return to normal resolution
+    window.dispatchEvent(new CustomEvent('recording:stop'));
     
     try {
       if (exportModeRef.current === 'video') {
