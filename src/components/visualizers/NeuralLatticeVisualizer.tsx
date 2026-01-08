@@ -74,9 +74,11 @@ function NeuralLattice({ audioData }: any) {
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Direct scale - no lerp for zero latency - bigger multiplier
-      const targetScale = 1 + bass * 2.2; // Increased from 1.5
-      groupRef.current.scale.setScalar(targetScale);
+      // Scale: BASE + reactivity (multipliers control effect, not base size)
+      const baseScale = 1.0;
+      const bassScaleBoost = Math.min(bass * 0.6, 1.0);
+      const midsScaleBoost = Math.min(mids * 0.2, 0.3);
+      groupRef.current.scale.setScalar(baseScale + bassScaleBoost + midsScaleBoost);
       
       // Only rotate when spinSpeed > 0 OR audio is present
       if (spinSpeed > 0 || hasAudio) {
