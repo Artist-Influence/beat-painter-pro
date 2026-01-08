@@ -48,18 +48,24 @@ function CrackedCrystalOrb({ audioData }: any) {
   );
 
   useFrame(() => {
-    // Calculate audio per-frame
+    // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
-    const rawBeat = Math.max(beatStrength, rawBass);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+    const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+    const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
     
-    // Faster asymmetric smoothing for punchy response
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+    const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+    const rawHighs = detectedHighs * audioSensitivity.highsMultiplier;
+    const rawBeat = Math.max(beatStrength, detectedBass);
+    
+    // Faster asymmetric smoothing for 170+ BPM
     const lerp = (current: number, target: number) => {
       const factor = target > current ? 0.9 : 0.5; // Very fast attack
       return current + (target - current) * factor;
@@ -75,9 +81,9 @@ function CrackedCrystalOrb({ audioData }: any) {
     const finalHighs = smoothedHighs.current * 0.4 + rawHighs * 0.6;
     const finalBeat = smoothedBeat.current * 0.4 + rawBeat * 0.6;
     
-    // Audio threshold check
+    // Audio threshold check - use DETECTED values so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = finalBass > audioThreshold || finalMids > audioThreshold || finalHighs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Scale variations - enhanced for bigger bass response
     const beatExplosion = finalBeat > 0.2 ? 1 + finalBeat * 0.6 : 1; // Lower threshold, higher multiplier

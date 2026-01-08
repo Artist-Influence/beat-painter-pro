@@ -31,19 +31,25 @@ function GlassShard({ index, audioData, textureData }: any) {
   }, [textureData, primaryColor]);
 
   useFrame(() => {
-    // Calculate audio with proper Hz-to-bin mapping
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz (kick/sub-bass)
     for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
     for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5); // 1.5x boost
-    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min((bassSum / 3 / 255), 1.0);
+    const detectedMids = Math.min((midsSum / 44 / 255), 1.0);
+    const detectedHighs = Math.min((highsSum / 209 / 255), 1.0);
     
-    // Audio threshold check - completely still when silent
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const bass = detectedBass * audioSensitivity.bassMultiplier;
+    const mids = detectedMids * audioSensitivity.midsMultiplier;
+    const highs = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Audio threshold check - use DETECTED values so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Beat pop effect for dramatic kick response
     const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
@@ -111,19 +117,25 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
   }, [textureData, accentColor]);
 
   useFrame(() => {
-    // Calculate audio with proper Hz-to-bin mapping
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz
     for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
     for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5);
-    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min((bassSum / 3 / 255), 1.0);
+    const detectedMids = Math.min((midsSum / 44 / 255), 1.0);
+    const detectedHighs = Math.min((highsSum / 209 / 255), 1.0);
     
-    // Audio threshold check - completely still when silent
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const bass = detectedBass * audioSensitivity.bassMultiplier;
+    const mids = detectedMids * audioSensitivity.midsMultiplier;
+    const highs = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Audio threshold check - use DETECTED values
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Beat pop effect
     const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
@@ -198,23 +210,29 @@ function GlassSphereVisualizer({ audioData }: any) {
   }, [textureData, primaryColor]);
 
   useFrame(() => {
-    // Calculate audio with proper Hz-to-bin mapping
+    // Calculate audio - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz
     for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
     for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5);
-    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min((bassSum / 3 / 255), 1.0);
+    const detectedMids = Math.min((midsSum / 44 / 255), 1.0);
+    const detectedHighs = Math.min((highsSum / 209 / 255), 1.0);
     
-    // Update smoothed values for Sparkles - faster smoothing
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const bass = detectedBass * audioSensitivity.bassMultiplier;
+    const mids = detectedMids * audioSensitivity.midsMultiplier;
+    const highs = detectedHighs * audioSensitivity.highsMultiplier;
+    
+    // Update smoothed values for Sparkles
     smoothedBass.current = smoothedBass.current * 0.85 + bass * 0.15;
     smoothedHighs.current = smoothedHighs.current * 0.85 + highs * 0.15;
     
-    // Audio threshold check - completely still when silent
+    // Audio threshold check - use DETECTED values
     const audioThreshold = 0.02;
-    const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Beat pop effect
     const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;

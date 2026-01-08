@@ -51,27 +51,33 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
     if (shaderRef.current) {
       const t = clock.getElapsedTime() * audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame
+      // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0, midsSum = 0, highsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier * 1.3; // 1.3x boost
-      const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
-      const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+      const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
+      
+      // Step 2: Apply multipliers for EFFECT (controls reactivity, not detection)
+      const bassEffect = detectedBass * audioSensitivity.bassMultiplier;
+      const midsEffect = detectedMids * audioSensitivity.midsMultiplier;
+      const highsEffect = detectedHighs * audioSensitivity.highsMultiplier;
       
       // Faster asymmetric smoothing for punchier response
-      const attackLerp = 0.65;
-      const decayLerp = 0.25;
+      const attackLerp = 0.85; // Near-instant attack
+      const decayLerp = 0.50;  // Faster decay for fast tempos
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
       };
       
-      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
-      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
-      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      smoothedBass.current = lerpVal(smoothedBass.current, bassEffect);
+      smoothedMids.current = lerpVal(smoothedMids.current, midsEffect);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, highsEffect);
       
       shaderRef.current.uniforms.uTime.value = t;
       shaderRef.current.uniforms.uBass.value = smoothedBass.current;
@@ -115,27 +121,27 @@ function AlienMembraneShaderMaterial({ audioData }: any) {
           float audioActivity = uBass + uMids + uHighs;
           float audioMult = audioActivity > 0.02 ? 1.0 : 0.0;
           
-          // Ant-like movement patterns under the skin - GATED by audio
-          float antTrails1 = audioMult * 0.4 * sin(uTime * 8.0 + position.x * 25.0 + position.y * 15.0 + uBass * 4.0);
-          float antTrails2 = audioMult * 0.3 * sin(uTime * 12.0 + position.z * 20.0 + position.y * 18.0 + uMids * 3.0);
-          float antTrails3 = audioMult * 0.2 * sin(uTime * 16.0 + position.x * 18.0 + position.z * 22.0 + uHighs * 5.0);
+          // Ant-like movement patterns under the skin - GATED by audio (reduced multipliers)
+          float antTrails1 = audioMult * 0.25 * sin(uTime * 8.0 + position.x * 25.0 + position.y * 15.0 + uBass * 4.0);
+          float antTrails2 = audioMult * 0.2 * sin(uTime * 12.0 + position.z * 20.0 + position.y * 18.0 + uMids * 3.0);
+          float antTrails3 = audioMult * 0.1 * sin(uTime * 16.0 + position.x * 18.0 + position.z * 22.0 + uHighs * 5.0);
           
-          // Crawling surface movements - GATED by audio
-          float surfaceCrawl = audioMult * 0.15 * sin(uTime * 20.0 + position.x * 30.0 + position.z * 35.0);
-          float deepMovement = audioMult * 0.25 * sin(uTime * 6.0 + position.y * 12.0 + uBass * 6.0);
+          // Crawling surface movements - GATED by audio (reduced)
+          float surfaceCrawl = audioMult * 0.1 * sin(uTime * 20.0 + position.x * 30.0 + position.z * 35.0);
+          float deepMovement = audioMult * 0.15 * sin(uTime * 6.0 + position.y * 12.0 + uBass * 6.0);
           
-          // Enhanced audio-reactive pulsing - GATED by audio
-          float extremeTopPulse = audioMult * smoothstep(-0.8, 1.5, position.y) * 0.6 * sin(uTime * 8.0 + uBass * 4.0);
-          float violentSidePulse = audioMult * 0.4 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
-          float chaoticDetailPulse = audioMult * 0.3 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
+          // Enhanced audio-reactive pulsing - GATED by audio (reduced)
+          float extremeTopPulse = audioMult * smoothstep(-0.8, 1.5, position.y) * 0.3 * sin(uTime * 8.0 + uBass * 4.0);
+          float violentSidePulse = audioMult * 0.25 * sin(uTime * 12.0 + position.y * 20.0 + uBass * 3.0);
+          float chaoticDetailPulse = audioMult * 0.15 * sin(uTime * 18.0 + position.x * 12.0 + position.z * 12.0);
           
-          // Enhanced beat explosion - lower threshold, higher multiplier
-          float beatExplosion = uBass > 0.2 ? (1.0 + uBass * 1.8) : 1.0;
-          float midsExpansion = uMids > 0.2 ? (1.0 + uMids * 1.2) : 1.0;
+          // Beat explosion - lower threshold, moderate multiplier
+          float beatExplosion = uBass > 0.2 ? (1.0 + uBass * 1.0) : 1.0;
+          float midsExpansion = uMids > 0.2 ? (1.0 + uMids * 0.6) : 1.0;
           
           vec3 antMovement = normal * (antTrails1 + antTrails2 + antTrails3 + surfaceCrawl + deepMovement);
           vec3 audioPulse = normal * (extremeTopPulse + violentSidePulse + chaoticDetailPulse) * beatExplosion * midsExpansion;
-          vec3 displacement = (antMovement + audioPulse) * (0.8 + uBass * 0.8 + uMids * 0.6);
+          vec3 displacement = (antMovement + audioPulse) * (0.5 + uBass * 0.4 + uMids * 0.3);
           
           vec3 pos = position + displacement;
           
@@ -208,28 +214,34 @@ function AlienMembrane({ audioData }: any) {
       const t = clock.getElapsedTime();
       const speed = audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame
+      // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0, midsSum = 0, highsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
       
-      const rawBass = (bassSum / 86 / 255) * audioSensitivity.bassMultiplier * 1.3;
-      const rawMids = (midsSum / 85 / 255) * audioSensitivity.midsMultiplier;
-      const rawHighs = (highsSum / 85 / 255) * audioSensitivity.highsMultiplier;
-      const rawBeat = Math.max(safeAudioData.beatStrength || 0, rawBass * 0.8);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers (for hasAudio check)
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+      const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
       
-      // Faster asymmetric smoothing
-      const attackLerp = 0.65;
-      const decayLerp = 0.25;
+      // Step 2: Apply multipliers for EFFECT (controls how much each band affects visuals)
+      const bassEffect = detectedBass * audioSensitivity.bassMultiplier;
+      const midsEffect = detectedMids * audioSensitivity.midsMultiplier;
+      const highsEffect = detectedHighs * audioSensitivity.highsMultiplier;
+      const rawBeat = Math.max(safeAudioData.beatStrength || 0, detectedBass * 0.8);
+      
+      // Faster asymmetric smoothing for 170+ BPM support
+      const attackLerp = 0.85; // Near-instant attack
+      const decayLerp = 0.50;  // Faster decay
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
       };
       
-      smoothedBass.current = lerpVal(smoothedBass.current, rawBass);
-      smoothedMids.current = lerpVal(smoothedMids.current, rawMids);
-      smoothedHighs.current = lerpVal(smoothedHighs.current, rawHighs);
+      smoothedBass.current = lerpVal(smoothedBass.current, bassEffect);
+      smoothedMids.current = lerpVal(smoothedMids.current, midsEffect);
+      smoothedHighs.current = lerpVal(smoothedHighs.current, highsEffect);
       smoothedBeat.current = lerpVal(smoothedBeat.current, rawBeat);
       
       const bass = smoothedBass.current;
@@ -237,16 +249,16 @@ function AlienMembrane({ audioData }: any) {
       const highs = smoothedHighs.current;
       const beat = smoothedBeat.current;
       
-      // Audio threshold check - completely still when silent
+      // Audio threshold check - use DETECTED values (not effects) so hasAudio works correctly
       const audioThreshold = 0.02;
-      const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+      const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
       
       // Beat pop - lower threshold
-      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.5 : 1;
       
-      // AUDIO-FIRST scale with beat pop - higher multiplier
-      const beatScale = Math.min(hasAudio ? (1 + bass * 0.5 + mids * 0.15) * beatPop : 1, 1.8);
-      groupRef.current.scale.setScalar(0.35 * beatScale);
+      // AUDIO-FIRST scale with beat pop - reduced multipliers and capped to prevent overflow
+      const beatScale = Math.min(hasAudio ? (1 + bass * 0.25 + mids * 0.1) * beatPop : 1, 1.4);
+      groupRef.current.scale.setScalar(0.3 * beatScale);
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
@@ -275,7 +287,7 @@ function AlienMembrane({ audioData }: any) {
   });
 
   return (
-    <group ref={groupRef} scale={0.6}>
+    <group ref={groupRef} scale={0.4}>
       <mesh ref={meshRef}>
         <icosahedronGeometry args={[1.2, 8]} />
         <AlienMembraneShaderMaterial audioData={audioData} />

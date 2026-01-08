@@ -26,18 +26,23 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
     if (meshRef.current) {
       const speed = audioSensitivity.animationSpeed;
       
-      // Calculate audio per-frame (NOT in useMemo)
+      // Calculate audio - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0, midsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       
-      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
-      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
       
-      // Faster asymmetric smoothing for punchier response
-      const attackLerp = 0.8;
-      const decayLerp = 0.25;
+      // Step 2: Apply multipliers for EFFECT
+      const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+      const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+      const rawBeat = Math.max(beatStrength, detectedBass * 0.8);
+      
+      // Faster asymmetric smoothing for 170+ BPM
+      const attackLerp = 0.85;
+      const decayLerp = 0.50;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -52,9 +57,9 @@ function MandalaRing({ radius, segments, depth, audioData, textureData }) {
       const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
       const beat = smoothedBeat.current * 0.5 + rawBeat * 0.5;
       
-      // Audio threshold check
+      // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
-      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold;
       
       // Beat pop effect - lower threshold, bigger effect
       const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 2.0 : 1;
@@ -140,18 +145,23 @@ export default function PsychedelicMandalaVisualizer({
 
   useFrame(() => {
     if (groupRef.current) {
-      // Calculate audio per-frame
+      // Calculate audio - DETECT first, then apply multipliers for EFFECT
       let bassSum = 0, midsSum = 0;
       for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
       for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
       
-      const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-      const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
-      const rawBeat = Math.max(beatStrength, rawBass * 0.8);
+      // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+      const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+      const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
       
-      // ASYMMETRIC smoothing - faster attack
-      const attackLerp = 0.7;
-      const decayLerp = 0.15;
+      // Step 2: Apply multipliers for EFFECT
+      const rawBass = detectedBass * audioSensitivity.bassMultiplier;
+      const rawMids = detectedMids * audioSensitivity.midsMultiplier;
+      const rawBeat = Math.max(beatStrength, detectedBass * 0.8);
+      
+      // Faster asymmetric smoothing for 170+ BPM
+      const attackLerp = 0.85;
+      const decayLerp = 0.50;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -166,9 +176,9 @@ export default function PsychedelicMandalaVisualizer({
       const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
       const beat = smoothedBeat.current * 0.5 + rawBeat * 0.5;
       
-      // Audio threshold check
+      // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
-      const hasAudio = bass > audioThreshold || mids > audioThreshold;
+      const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold;
       
       // Beat pop - moderate
       const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 0.6 : 1;

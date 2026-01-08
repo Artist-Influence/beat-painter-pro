@@ -90,20 +90,26 @@ function ElectricField({ audioData }: any) {
     const time = state.clock.elapsedTime;
     const animSpeed = audioSensitivity.animationSpeed;
     
-    // Calculate frequency bands per-frame
+    // Calculate frequency bands per-frame - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
     for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
     for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
     
-    const rawBass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.5);
-    const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
-    const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.5);
-    const rawBeat = Math.max(beatStrength, rawBass);
+    // Step 1: Detect normalized audio (0-1) WITHOUT multipliers
+    const detectedBass = Math.min(bassSum / 86 / 255, 1.0);
+    const detectedMids = Math.min(midsSum / 85 / 255, 1.0);
+    const detectedHighs = Math.min(highsSum / 85 / 255, 1.0);
     
-    // Faster asymmetric smoothing for punchy response
+    // Step 2: Apply multipliers for EFFECT (controls reactivity)
+    const rawBass = Math.min(detectedBass * audioSensitivity.bassMultiplier, 1.5);
+    const rawMids = Math.min(detectedMids * audioSensitivity.midsMultiplier, 1.5);
+    const rawHighs = Math.min(detectedHighs * audioSensitivity.highsMultiplier, 1.5);
+    const rawBeat = Math.max(beatStrength, detectedBass);
+    
+    // Faster asymmetric smoothing for 170+ BPM
     const lerp = (current: number, target: number) => {
-      const factor = target > current ? 0.7 : 0.4;
+      const factor = target > current ? 0.85 : 0.50;
       return current + (target - current) * factor;
     };
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
@@ -119,9 +125,9 @@ function ElectricField({ audioData }: any) {
     
     const isPeakMoment = beatFinal > 0.7;
     
-    // Audio threshold check - completely still when silent
+    // Audio threshold check - use DETECTED values so hasAudio works correctly
     const audioThreshold = 0.02;
-    const hasAudio = bassFinal > audioThreshold || midsFinal > audioThreshold || highsFinal > audioThreshold;
+    const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
     // Field group - rotation only when spinSpeed > 0 OR audio present
     if (fieldGroupRef.current) {

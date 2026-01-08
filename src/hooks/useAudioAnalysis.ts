@@ -29,9 +29,9 @@ export const useAudioAnalysis = (
   useEffect(() => {
     if (!analyser) return;
 
-    // Optimize analyser for maximum audio reactivity - minimal smoothing for punchy response
+    // Optimize analyser for maximum audio reactivity - near-zero smoothing for instant response
     analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.1; // Very low for immediate transient response
+    analyser.smoothingTimeConstant = 0.05; // Near-zero for instant transient response (was 0.1)
     dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
     const updateAudioData = () => {
@@ -81,14 +81,14 @@ export const useAudioAnalysis = (
       }
       
       // Decay beat peak quickly (asymmetric: instant attack, fast decay)
-      beatPeakRef.current *= 0.75; // Decay by 25% per frame for sharper pulses
+      beatPeakRef.current *= 0.65; // Decay by 35% per frame for sharper pulses (was 0.75)
       
       // beatStrength combines peak detection with instant energy for responsiveness
-      const newBeatStrength = Math.max(beatPeakRef.current, instantEnergy * 0.6);
+      const newBeatStrength = Math.max(beatPeakRef.current, instantEnergy * 0.7);
       
-      // Asymmetric smoothing: very fast attack (0.75), fast decay (0.45) for maximum responsiveness
-      const attackFactor = 0.75;
-      const decayFactor = 0.45;
+      // Asymmetric smoothing: near-instant attack (0.85), fast decay (0.55) for 170+ BPM support
+      const attackFactor = 0.85; // Was 0.75 - now near-instant
+      const decayFactor = 0.55;  // Was 0.45 - faster decay for fast tempos
       
       const lerpValue = (current: number, target: number) => {
         const factor = target > current ? attackFactor : decayFactor;
