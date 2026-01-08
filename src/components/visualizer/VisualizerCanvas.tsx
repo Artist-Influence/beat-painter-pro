@@ -173,8 +173,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         <div 
         className="w-full h-full" 
         style={{ 
-          paddingBottom: '100px', // Account for audio bar height
-          paddingTop: '80px',    // Account for top bar
           backgroundColor: (logoBehind || background.type !== 'color') ? 'transparent' : background.color 
         }}
       >
