@@ -217,13 +217,18 @@ function StandaloneShape({
       // Scale reacts to audio (returns to 1.8 when silent)
       g.scale.setScalar(1.8 * (1 + bass * 0.3) * beatPop);
       
-      // Constant spin speed + audio-reactive rotation
-      g.rotation.y += spinSpeed * 0.05;
-      if (hasAudio) {
-        g.rotation.y += bass * 0.08;
-        g.rotation.x += mids * 0.03;
-        g.rotation.z += highs * 0.02;
+      // ONLY spin if spinSpeed is above 0.1 threshold
+      if (spinSpeed > 0.1) {
+        // Base spin from slider
+        g.rotation.y += spinSpeed * 0.05;
+        // Audio amplifies spin (only when audio present AND spin enabled)
+        if (hasAudio) {
+          g.rotation.y += bass * 0.08 * (spinSpeed / 2);
+          g.rotation.x += mids * 0.03 * (spinSpeed / 2);
+          g.rotation.z += highs * 0.02 * (spinSpeed / 2);
+        }
       }
+      // NO rotation when spinSpeed <= 0.1
       
       // Position stays centered (no drift)
       g.position.set(0, 0, 0);
@@ -1424,14 +1429,22 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     const beatPop = beat > 0.5 ? 1 + (beat - 0.5) * 0.6 : 1;
     
     if (groupRef.current) {
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
       // Scale reacts to audio (returns to 1 when silent)
       groupRef.current.scale.setScalar((1 + bass * 0.25) * beatPop);
       
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        groupRef.current.rotation.y += bass * 0.06;
-        groupRef.current.rotation.x += mids * 0.02;
+      // ONLY rotate if spinSpeed is above 0.1 threshold
+      if (spinSpeed > 0.1) {
+        // Base spin from slider
+        groupRef.current.rotation.y += spinSpeed * 0.05;
+        // Audio amplifies spin (only when audio present AND spin enabled)
+        if (hasAudio) {
+          groupRef.current.rotation.y += bass * 0.06 * (spinSpeed / 2);
+          groupRef.current.rotation.x += mids * 0.02 * (spinSpeed / 2);
+        }
       }
+      // NO rotation when spinSpeed <= 0.1
       
       // Position stays centered (no drift)
       groupRef.current.position.set(0, 0, 0);
@@ -1453,6 +1466,8 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       // Base scale from config
       const baseScale = config.scale || 0.3;
       
+      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      
       // Single-element shapes get audio-reactive animations
       if (isSingleElementShape) {
         const intensity = 1 + bass * 0.8 + mids * 0.4;
@@ -1460,11 +1475,11 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
         // Scale reacts to audio (returns to base when silent)
         mesh.scale.setScalar(baseScale * intensity * beatPop);
         
-        // Rotation ONLY when audio is present
-        if (hasAudio) {
-          mesh.rotation.x += bass * 0.08;
-          mesh.rotation.y += mids * 0.12;
-          mesh.rotation.z += highs * 0.04;
+        // Rotation ONLY if spinSpeed is enabled
+        if (spinSpeed > 0.1 && hasAudio) {
+          mesh.rotation.x += bass * 0.08 * (spinSpeed / 2);
+          mesh.rotation.y += mids * 0.12 * (spinSpeed / 2);
+          mesh.rotation.z += highs * 0.04 * (spinSpeed / 2);
         }
         return;
       }
@@ -1473,10 +1488,10 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       mesh.position.set(...config.position);
       mesh.scale.setScalar(baseScale * (1 + freqValue * 0.4) * beatPop);
       
-      // Rotation ONLY when audio is present
-      if (hasAudio) {
-        mesh.rotation.y += mids * 0.03;
-        mesh.rotation.x += bass * 0.02;
+      // Rotation ONLY if spinSpeed is enabled
+      if (spinSpeed > 0.1 && hasAudio) {
+        mesh.rotation.y += mids * 0.03 * (spinSpeed / 2);
+        mesh.rotation.x += bass * 0.02 * (spinSpeed / 2);
       }
     });
 
