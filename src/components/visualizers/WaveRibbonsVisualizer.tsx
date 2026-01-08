@@ -76,9 +76,9 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
       const rawFreq = Math.min(sum / 30 / 255 * 2.5, 1.5);
       const rawBeat = Math.max(beatStrength, rawFreq * 0.6);
       
-      // ASYMMETRIC smoothing
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Faster asymmetric smoothing
+      const attackLerp = 0.7;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -94,8 +94,8 @@ function RibbonMesh({ position, ribbonIndex, audioData, textureData }) {
       const audioThreshold = 0.02;
       const hasAudio = ribbonFreq > audioThreshold || beat > audioThreshold;
       
-      // Beat pop
-      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.6 : 1;
+      // Beat pop - lower threshold
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.0 : 1;
       
       // Update ribbon wave positions - ONLY when audio present
       const positions = meshRef.current.geometry.attributes.position;

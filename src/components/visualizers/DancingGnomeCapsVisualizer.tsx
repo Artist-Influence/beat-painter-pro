@@ -31,32 +31,35 @@ function GlassShard({ index, audioData, textureData }: any) {
   }, [textureData, primaryColor]);
 
   useFrame(() => {
-    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    // Calculate audio with proper Hz-to-bin mapping
     let bassSum = 0, midsSum = 0, highsSum = 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz (kick/sub-bass)
+    for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
+    for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5); // 1.5x boost
+    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
     
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    
+    // Beat pop effect for dramatic kick response
+    const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
 
     if (meshRef.current) {
-      // POSITION: Audio-reactive orbit (stays at base position when silent)
+      // POSITION: Audio-reactive orbit with explosion effect
       if (hasAudio) {
-        const x = Math.cos(angle) * radius * (1 + bass * 2.5);
-        const z = Math.sin(angle) * radius * (1 + bass * 2.5);
-        const y = bass * 2.0 + highs * 1.0;
+        const x = Math.cos(angle) * radius * (1 + bass * 4.0); // Increased from 2.5
+        const z = Math.sin(angle) * radius * (1 + bass * 4.0);
+        const y = bass * 3.5 + highs * 1.5; // Increased from 2.0
         meshRef.current.position.set(x, y, z);
         
-        // ROTATION: Only when audio is present
-        meshRef.current.rotation.x += (mids * 0.08 + bass * 0.1);
-        meshRef.current.rotation.y += (mids * 0.06 + highs * 0.08);
-        meshRef.current.rotation.z += (bass * 0.04 + highs * 0.06);
+        // ROTATION: Faster when audio is present
+        meshRef.current.rotation.x += (mids * 0.12 + bass * 0.15);
+        meshRef.current.rotation.y += (mids * 0.1 + highs * 0.12);
+        meshRef.current.rotation.z += (bass * 0.08 + highs * 0.1);
       } else {
         // Return to base position when silent
         const x = Math.cos(angle) * radius;
@@ -64,13 +67,13 @@ function GlassShard({ index, audioData, textureData }: any) {
         meshRef.current.position.set(x, 0, z);
       }
       
-      // SCALE: Returns to default when silent (no time-based fallback)
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 3.0, 0.7), 2.0) : 1;
+      // SCALE: Lower threshold, higher multiplier with beat pop
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.5, 0.7), 3.0) * beatPop : 1; // Increased from 3.0
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = hasAudio ? (0.8 + highs * 4.0 + bass * 3.0) : 0.8;
+        mat.emissiveIntensity = hasAudio ? (0.8 + highs * 5.0 + bass * 4.0) : 0.8;
         mat.opacity = 0.9 + highs * 0.1;
       }
     }
@@ -108,33 +111,36 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
   }, [textureData, accentColor]);
 
   useFrame(() => {
-    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    // Calculate audio with proper Hz-to-bin mapping
     let bassSum = 0, midsSum = 0, highsSum = 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz
+    for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
+    for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5);
+    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
     
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    
+    // Beat pop effect
+    const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
 
     if (meshRef.current) {
-      // POSITION: Audio-reactive (stays at base position when silent)
+      // POSITION: Audio-reactive with explosion effect
       if (hasAudio) {
-        const x = Math.cos(angle) * radius * (1 + bass * 2.0);
-        const z = Math.sin(angle) * radius * (1 + bass * 2.0);
-        const y = bass * 1.5 + mids * 0.8;
+        const x = Math.cos(angle) * radius * (1 + bass * 3.5); // Increased from 2.0
+        const z = Math.sin(angle) * radius * (1 + bass * 3.5);
+        const y = bass * 2.5 + mids * 1.2; // Increased from 1.5
         meshRef.current.position.set(x, y, z);
         
         // Face towards center for cap effect
         meshRef.current.lookAt(0, y, 0);
         
-        // ROTATION: Only when audio is present
-        meshRef.current.rotation.z += (bass * 0.06 + highs * 0.04);
+        // ROTATION: Faster when audio is present
+        meshRef.current.rotation.z += (bass * 0.1 + highs * 0.06);
       } else {
         // Return to base position when silent
         const x = Math.cos(angle) * radius;
@@ -143,13 +149,13 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
         meshRef.current.lookAt(0, 0, 0);
       }
       
-      // SCALE: Returns to default when silent (no time-based fallback)
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 2.5, 0.7), 2.0) : 1;
+      // SCALE: Lower threshold, higher multiplier with beat pop
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.0, 0.7), 2.5) * beatPop : 1; // Increased from 2.5
       meshRef.current.scale.setScalar(beatScale);
       
       if (meshRef.current.material) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = hasAudio ? (0.6 + highs * 3.5 + bass * 2.5) : 0.6;
+        mat.emissiveIntensity = hasAudio ? (0.6 + highs * 4.5 + bass * 3.5) : 0.6;
         mat.opacity = 0.8 + mids * 0.2;
       }
     }
@@ -192,23 +198,26 @@ function GlassSphereVisualizer({ audioData }: any) {
   }, [textureData, primaryColor]);
 
   useFrame(() => {
-    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
+    // Calculate audio with proper Hz-to-bin mapping
     let bassSum = 0, midsSum = 0, highsSum = 0;
-    for (let i = 0; i <= 85; i++) bassSum += frequency[i] || 0;
-    for (let i = 86; i <= 170; i++) midsSum += frequency[i] || 0;
-    for (let i = 171; i <= 255; i++) highsSum += frequency[i] || 0;
+    for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz
+    for (let i = 3; i <= 46; i++) midsSum += frequency[i] || 0; // 250-4000 Hz
+    for (let i = 47; i <= 255; i++) highsSum += frequency[i] || 0; // 4000+ Hz
     
-    const bass = Math.min((bassSum / 86 / 255) * audioSensitivity.bassMultiplier, 1.0);
-    const mids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.0);
-    const highs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
+    const bass = Math.min((bassSum / 3 / 255) * audioSensitivity.bassMultiplier * 1.5, 1.5);
+    const mids = Math.min((midsSum / 44 / 255) * audioSensitivity.midsMultiplier, 1.0);
+    const highs = Math.min((highsSum / 209 / 255) * audioSensitivity.highsMultiplier, 1.0);
     
-    // Update smoothed values for Sparkles
-    smoothedBass.current = smoothedBass.current * 0.9 + bass * 0.1;
-    smoothedHighs.current = smoothedHighs.current * 0.9 + highs * 0.1;
+    // Update smoothed values for Sparkles - faster smoothing
+    smoothedBass.current = smoothedBass.current * 0.85 + bass * 0.15;
+    smoothedHighs.current = smoothedHighs.current * 0.85 + highs * 0.15;
     
     // Audio threshold check - completely still when silent
     const audioThreshold = 0.02;
     const hasAudio = bass > audioThreshold || mids > audioThreshold || highs > audioThreshold;
+    
+    // Beat pop effect
+    const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
     
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
@@ -218,34 +227,34 @@ function GlassSphereVisualizer({ audioData }: any) {
         groupRef.current.rotation.y += spinSpeed * 0.05;
       }
       if (hasAudio) {
-        groupRef.current.rotation.y += bass * 0.15 + mids * 0.08;
-        groupRef.current.rotation.x += bass * 0.05;
+        groupRef.current.rotation.y += bass * 0.2 + mids * 0.12; // Increased from 0.15
+        groupRef.current.rotation.x += bass * 0.08;
       }
       
-      // POSITION: Proportional to audio (returns to 0 when silent)
-      groupRef.current.position.y = bass * 2.0;
+      // POSITION: Proportional to audio
+      groupRef.current.position.y = bass * 3.0; // Increased from 2.0
       
-      // SCALE: Returns to default when silent (no time-based fallback)
-      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 3.0, 0.7), 2.0) : 1;
+      // SCALE: Lower threshold, higher multiplier with beat pop
+      const beatScale = hasAudio ? Math.min(Math.max(1 + bass * 4.0, 0.7), 2.5) * beatPop : 1; // Increased from 3.0
       groupRef.current.scale.setScalar(beatScale);
     }
     
     if (centerSphereRef.current) {
-      // SCALE: Audio-reactive (returns to default when silent)
-      const spherePulse = hasAudio ? (1 + bass * 3.0 + highs * 2.0) : 1;
+      // SCALE: Much bigger pulse with beat pop
+      const spherePulse = hasAudio ? (1 + bass * 4.5 + highs * 2.5) * beatPop : 1; // Increased from 3.0
       centerSphereRef.current.scale.setScalar(spherePulse);
       
       // Update material emissive intensity
       if (centerSphereRef.current.material) {
         const mat = centerSphereRef.current.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = 2.0 + bass * 4.0;
+        mat.emissiveIntensity = 2.0 + bass * 6.0;
       }
       
-      // ROTATION: Only when audio is present (frozen when silent)
+      // ROTATION: Faster when audio is present
       if (hasAudio) {
-        centerSphereRef.current.rotation.x += bass * 0.2;
-        centerSphereRef.current.rotation.y += highs * 0.15;
-        centerSphereRef.current.rotation.z += mids * 0.1;
+        centerSphereRef.current.rotation.x += bass * 0.25;
+        centerSphereRef.current.rotation.y += highs * 0.2;
+        centerSphereRef.current.rotation.z += mids * 0.15;
       }
     }
   });

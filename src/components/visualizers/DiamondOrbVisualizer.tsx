@@ -59,9 +59,9 @@ function CrackedCrystalOrb({ audioData }: any) {
     const rawHighs = Math.min((highsSum / 85 / 255) * audioSensitivity.highsMultiplier, 1.0);
     const rawBeat = Math.max(beatStrength, rawBass);
     
-    // Asymmetric smoothing: faster attack (0.85), fast decay (0.45) for zero-latency beat tracking
+    // Faster asymmetric smoothing for punchy response
     const lerp = (current: number, target: number) => {
-      const factor = target > current ? 0.85 : 0.45;
+      const factor = target > current ? 0.9 : 0.5; // Very fast attack
       return current + (target - current) * factor;
     };
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
@@ -79,10 +79,10 @@ function CrackedCrystalOrb({ audioData }: any) {
     const audioThreshold = 0.02;
     const hasAudio = finalBass > audioThreshold || finalMids > audioThreshold || finalHighs > audioThreshold;
     
-    // Scale variations - CAPPED to prevent overflow
-    const beatExplosion = finalBeat > 0.4 ? 1 + finalBeat * 0.4 : 1;
-    const baseScale = 0.4 + 0.2 * amplitude;
-    const scalePulse = 1 + 0.3 * finalBeat;
+    // Scale variations - enhanced for bigger bass response
+    const beatExplosion = finalBeat > 0.2 ? 1 + finalBeat * 0.6 : 1; // Lower threshold, higher multiplier
+    const baseScale = 0.4 + 0.3 * amplitude;
+    const scalePulse = 1 + 0.5 * finalBeat; // Increased from 0.3
 
     if (group.current) {
       const animSpeed = audioSensitivity.animationSpeed;

@@ -51,23 +51,23 @@ function NeuralLattice({ audioData }: any) {
     const rawHighs = highsSum / 85 / 255;
     
     // Faster lerp for immediate response
-    const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.75 : 0.4);
+    const lerp = (c: number, t: number) => c + (t - c) * (t > c ? 0.85 : 0.5);
     smoothedBass.current = lerp(smoothedBass.current, rawBass);
     smoothedMids.current = lerp(smoothedMids.current, rawMids);
     smoothedHighs.current = lerp(smoothedHighs.current, rawHighs);
     
-    // 50/50 blend for zero latency
-    const bass = smoothedBass.current * 0.5 + rawBass * 0.5;
-    const mids = smoothedMids.current * 0.5 + rawMids * 0.5;
-    const highs = smoothedHighs.current * 0.5 + rawHighs * 0.5;
+    // 60/40 blend for even more immediate response
+    const bass = smoothedBass.current * 0.4 + rawBass * 0.6;
+    const mids = smoothedMids.current * 0.4 + rawMids * 0.6;
+    const highs = smoothedHighs.current * 0.4 + rawHighs * 0.6;
     
     const hasAudio = bass > 0.02 || mids > 0.02 || highs > 0.02;
 
     if (groupRef.current) {
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
       
-      // Direct scale - no lerp for zero latency
-      const targetScale = 1 + bass * 1.5;
+      // Direct scale - no lerp for zero latency - bigger multiplier
+      const targetScale = 1 + bass * 2.2; // Increased from 1.5
       groupRef.current.scale.setScalar(targetScale);
       
       // Only rotate when spinSpeed > 0 OR audio is present

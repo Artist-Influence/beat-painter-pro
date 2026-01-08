@@ -44,9 +44,9 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
     const rawIntensity = Math.min(sum / 100 / 255 * 2.5, 1.5);
     const rawBeat = Math.max(beatStrength, rawIntensity * 0.6);
     
-    // ASYMMETRIC smoothing
-    const attackLerp = 0.5;
-    const decayLerp = 0.1;
+    // Faster asymmetric smoothing
+    const attackLerp = 0.65;
+    const decayLerp = 0.25;
     const lerpVal = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -62,8 +62,8 @@ function CircuitPath({ position, rotation, pulseSpeed, audioData, textureData })
     const audioThreshold = 0.02;
     const hasAudio = pathIntensity > audioThreshold;
     
-    // Beat pop
-    const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+    // Beat pop - lower threshold, higher multiplier
+    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.2 : 1;
     
     if (lineRef.current && pathMaterial) {
       // AUDIO-FIRST emissive (dim when silent)
@@ -151,9 +151,9 @@ function CircuitNode({ position, index, audioData, textureData }) {
       const rawIntensity = Math.min(sum / 10 / 255, 1.5);
       const rawBeat = Math.max(beatStrength, rawIntensity * 0.6);
       
-      // ASYMMETRIC smoothing
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Faster asymmetric smoothing
+      const attackLerp = 0.65;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -169,11 +169,11 @@ function CircuitNode({ position, index, audioData, textureData }) {
       const audioThreshold = 0.02;
       const hasAudio = nodeIntensity > audioThreshold;
       
-      // Beat pop
-      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 0.8 : 1;
+      // Beat pop - lower threshold, higher multiplier
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.2 : 1;
       
-      // SCALE: Returns to default when silent
-      const scale = hasAudio ? (0.8 + nodeIntensity * 1.2) * beatPop : 0.8;
+      // SCALE: Returns to default when silent - bigger multiplier
+      const scale = hasAudio ? (0.8 + nodeIntensity * 1.5) * beatPop : 0.8;
       nodeRef.current.scale.setScalar(scale);
       
       nodeRef.current.position.copy(new THREE.Vector3(position[0], position[1], position[2]));

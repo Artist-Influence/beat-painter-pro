@@ -37,9 +37,9 @@ function FlowerOfLife({ audioData, textureData }) {
       const rawMids = Math.min((midsSum / 85 / 255) * audioSensitivity.midsMultiplier, 1.5);
       const rawBeat = Math.max(beatStrength, rawBass * 0.8);
       
-      // ASYMMETRIC smoothing
-      const attackLerp = 0.5;
-      const decayLerp = 0.1;
+      // Faster asymmetric smoothing
+      const attackLerp = 0.7;
+      const decayLerp = 0.25;
       const lerpVal = (current: number, target: number) => {
         const factor = target > current ? attackLerp : decayLerp;
         return current + (target - current) * factor;
@@ -57,8 +57,8 @@ function FlowerOfLife({ audioData, textureData }) {
       const audioThreshold = 0.02;
       const hasAudio = bass > audioThreshold || mids > audioThreshold;
       
-      // Beat pop
-      const beatPop = beat > 0.4 ? 1 + (beat - 0.4) * 1.0 : 1;
+      // Beat pop - lower threshold
+      const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.5 : 1;
       
       // Get spinSpeed from store
       const spinSpeed = audioSensitivity.spinSpeed ?? 0;
