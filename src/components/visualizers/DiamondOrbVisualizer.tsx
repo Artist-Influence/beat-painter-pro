@@ -184,8 +184,8 @@ function CrackedCrystalOrb({ audioData }: any) {
         
         // Position expansion: BASE + reactivity
         const angle = (i / shards.current.length) * Math.PI * 2;
-        const baseRadius = 0.8;
-        const radiusBoost = hasAudio ? finalBeat * 0.5 : 0;
+        const baseRadius = 1.3;
+        const radiusBoost = hasAudio ? finalBeat * 0.4 : 0;
         const radius = baseRadius + radiusBoost;
         const targetX = Math.cos(angle) * radius;
         const targetZ = Math.sin(angle) * radius;

@@ -123,6 +123,21 @@ export const AudioResponseControls: React.FC = () => {
             onValueChange={([v]) => setAudioSensitivity({ highsMultiplier: v })}
           />
         </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-white/80 text-sm">Spin Modulation</span>
+            <span className="text-xs text-white/60">{audioSensitivity.spinSpeed.toFixed(1)}x</span>
+          </div>
+          <ResettableSlider
+            value={[audioSensitivity.spinSpeed]}
+            min={0}
+            max={5}
+            step={0.1}
+            defaultValue={0}
+            onValueChange={([v]) => setAudioSensitivity({ spinSpeed: v })}
+          />
+        </div>
       </div>
 
       <div className="border-t border-white/10 my-4"></div>
