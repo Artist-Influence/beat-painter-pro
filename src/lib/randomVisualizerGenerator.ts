@@ -236,8 +236,14 @@ export function generateRandomParams(
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
   
-  // Element count: use preference or random between 8-40
-  const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
+  // Element count: use preference, or 30% multi-element (8-32), 70% standalone (1)
+  let elementCount: number;
+  if (preferences?.elementCount !== undefined) {
+    elementCount = preferences.elementCount;
+  } else {
+    // 30% chance of multi-element swarms/lattices for variety
+    elementCount = random() < 0.3 ? Math.floor(8 + random() * 24) : 1;
+  }
   
   // For standalone mode (elementCount === 1): NO background effects by default
   // Users can add particles/aurora/stars manually via Visual Effects section if desired
