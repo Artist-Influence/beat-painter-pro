@@ -1,6 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { EffectComposer, BrightnessContrast, HueSaturation } from "@react-three/postprocessing";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES, isCustomVisualizer } from "@/components/visualizers";
 import type { AudioData } from "@/hooks/useAudioAnalysis";
@@ -8,6 +9,21 @@ import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
 import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
 import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualizerLoader";
 import * as THREE from "three";
+
+// Post-processing effects component - only affects 3D content, not background
+function VisualizerEffects({ filters }: { filters: { brightness: number; saturation: number; contrast: number } }) {
+  // Convert 0-200 percentage to effect ranges (-1 to 1)
+  const brightness = ((filters.brightness ?? 100) - 100) / 100;
+  const contrast = ((filters.contrast ?? 100) - 100) / 100;
+  const saturation = ((filters.saturation ?? 100) - 100) / 100;
+  
+  return (
+    <EffectComposer>
+      <BrightnessContrast brightness={brightness} contrast={contrast} />
+      <HueSaturation saturation={saturation} />
+    </EffectComposer>
+  );
+}
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -226,10 +242,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     }
   }, [canvasRef, background.color, background.type, logoBehind]);
 
-  const filterStyle = {
-    filter: `brightness(${((filters.brightness ?? 100) - 0) / 100}) saturate(${((filters.saturation ?? 100) - 0) / 100}) contrast(${((filters.contrast ?? 100) - 0) / 100})`
-  } as React.CSSProperties;
-
   return (
     <div className="absolute inset-0 flex items-center justify-center z-0">
       <div 
@@ -250,7 +262,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
           }}
           dpr={[1, 2]}
           camera={{ position: [0, 0, 5], fov: 50 }}
-          style={{ width: '100%', height: '100%', ...filterStyle }}
+          style={{ width: '100%', height: '100%' }}
         >
           <RecordingController />
           <ambientLight intensity={0.5} />
@@ -274,6 +286,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
             </Suspense>
           </group>
           <OrbitControls enablePan={false} enableZoom={false} />
+          <VisualizerEffects filters={filters} />
         </Canvas>
       </div>
     </div>
