@@ -72,18 +72,25 @@ interface RandomVisualizerTemplateProps {
   isPlaying?: boolean;
 }
 
-// Audio analysis helper - TRUE EQ SEPARATION
+// Audio analysis helper - DRAMATICALLY improved for punchy reactivity
 function analyzeAudioData(frequency: number[]) {
   const freq = frequency || [];
-  // TRUE EQ SEPARATION: Bass 0-250Hz (bins 0-2), Mids 250-4000Hz (bins 3-46), Highs 4000Hz+ (bins 47-255)
-  const bassRange = freq.slice(0, 3);     // Bins 0-2: 0-250 Hz (kick/sub-bass)
-  const midRange = freq.slice(3, 47);     // Bins 3-46: 250-4000 Hz (vocals/snare)
-  const highRange = freq.slice(47);       // Bins 47-255: 4000+ Hz (hi-hats/cymbals)
+  // Wider frequency ranges for full bass punch detection
+  // At 44100Hz with 1024 bins, each bin is ~21.5Hz
+  const bassRange = freq.slice(0, 12);     // 0-260Hz: kick, sub-bass, bass guitar
+  const midRange = freq.slice(12, 90);     // 260-1935Hz: snare, vocals, guitars  
+  const highRange = freq.slice(90);        // 1935Hz+: hi-hats, cymbals, air
   
+  // Use PEAK detection for bass (more punchy), average for mids/highs
+  const bass = bassRange.length > 0 ? Math.max(...bassRange) / 255 : 0;
+  const mids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
+  const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
+  
+  // STRONG amplification for dramatic reactivity
   return {
-    bass: bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0,
-    mids: midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0,
-    highs: highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0,
+    bass: Math.min(bass * 2.5, 1.8),   // Strong bass punch
+    mids: Math.min(mids * 2.0, 1.5),   // Good mid presence
+    highs: Math.min(highs * 1.8, 1.4), // Crisp highs
   };
 }
 
@@ -249,25 +256,25 @@ function StandaloneShape({
     return pieces;
   }, [variant.fractured, variant.fracturedCount, seed]);
   
-  // Animation frame - AUDIO-FIRST: no motion when audio is silent
+  // Animation frame - AUDIO-FIRST: dramatic reactivity
   useFrame(() => {
     // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
     const raw = analyzeAudioData(audioData.frequency);
     const sens = audioSensitivityRef.current;
     
-    // Step 1: Detect raw audio (0-1) - for hasAudio check
+    // Step 1: Detect raw audio (0-1.8 after amplification)
     const detectedBass = raw.bass;
     const detectedMids = raw.mids;
     const detectedHighs = raw.highs;
     
     // Step 2: Apply multipliers for EFFECT (controls reactivity)
-    const targetBass = Math.min(detectedBass * sens.bassMultiplier, 2.0);
+    const targetBass = Math.min(detectedBass * sens.bassMultiplier, 2.5);
     const targetMids = Math.min(detectedMids * sens.midsMultiplier, 2.0);
     const targetHighs = Math.min(detectedHighs * sens.highsMultiplier, 2.0);
     
-    // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for 170+ BPM)
-    const attackLerp = 0.85;  // Near-instant attack
-    const decayLerp = 0.50;   // Fast decay
+    // FAST asymmetric lerp (instant attack, quick decay for punchy response)
+    const attackLerp = 0.9;   // Near-instant attack
+    const decayLerp = 0.6;    // Fast decay for quick release
     const lerpAudio = (current: number, target: number) => {
       const factor = target > current ? attackLerp : decayLerp;
       return current + (target - current) * factor;
@@ -278,86 +285,82 @@ function StandaloneShape({
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
     smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
     
-    // Transient blend: 60% raw audio for immediate punch
-    const bassEffect = smoothedBassRef.current * 0.4 + targetBass * 0.6;
-    const midsEffect = smoothedMidsRef.current * 0.4 + targetMids * 0.6;
-    const highsEffect = smoothedHighsRef.current * 0.4 + targetHighs * 0.6;
+    // Transient blend: 70% raw audio for MAXIMUM punch
+    const bassEffect = smoothedBassRef.current * 0.3 + targetBass * 0.7;
+    const midsEffect = smoothedMidsRef.current * 0.3 + targetMids * 0.7;
+    const highsEffect = smoothedHighsRef.current * 0.3 + targetHighs * 0.7;
     const beat = smoothedBeatRef.current;
     
-    // Audio threshold - use DETECTED values (not multiplied) so hasAudio works correctly
+    // Audio threshold - use raw values for hasAudio check
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Beat pop effect - lower threshold for snappier response
-    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
+    // STRONG beat pop effect
+    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.0 : 1;
     
     if (groupRef.current) {
       const g = groupRef.current;
       const spinSpeed = sens.spinSpeed ?? 0;
       
-      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
+      // Scale: BASE + DRAMATIC reactivity
       const baseScale = 1.8;
-      // Each boost is clamped independently so high multipliers can't overflow
-      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.12, 0.22);
-      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.06, 0.1);
-      // Final scale has a hard cap to prevent going off-screen
-      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 2.15);
+      // LARGER boosts for visible effect
+      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.25, 0.45);
+      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.12, 0.2);
+      // Final scale with beat pop
+      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 2.5);
       g.scale.setScalar(finalGroupScale * beatPop);
       
-      // ONLY spin when audio is playing AND spinSpeed is enabled
+      // STRONGER rotation when audio is playing
       if (spinSpeed > 0.1 && hasAudio) {
-        // Base spin from slider + audio amplification
         g.rotation.y += spinSpeed * 0.05;
-        g.rotation.y += bassEffect * 0.1 * (spinSpeed / 2);
-        g.rotation.x += midsEffect * 0.04 * (spinSpeed / 2);
-        g.rotation.z += highsEffect * 0.025 * (spinSpeed / 2);
+        g.rotation.y += bassEffect * 0.2 * (spinSpeed / 2);  // Doubled
+        g.rotation.x += midsEffect * 0.08 * (spinSpeed / 2); // Doubled
+        g.rotation.z += highsEffect * 0.05 * (spinSpeed / 2); // Doubled
       }
-      // NO rotation when music is paused or spinSpeed <= 0.1
       
-      // Position stays centered (no drift)
+      // Position stays centered
       g.position.set(0, 0, 0);
     }
     
-    // Animate inner group for twist effect - only when audio present
+    // Animate inner group for twist effect - STRONGER when audio present
     if (innerGroupRef.current && variant.twisted > 0 && hasAudio) {
-      innerGroupRef.current.rotation.y += bassEffect * variant.twisted * 0.12;
+      innerGroupRef.current.rotation.y += bassEffect * variant.twisted * 0.2;  // Increased
     }
     
-    // Animate orbit rings - only when audio present
+    // Animate orbit rings - STRONGER when audio present
     ringRefs.current.forEach((ring, i) => {
       if (!ring) return;
-      // Scale: BASE + reactivity
       const baseRingScale = 1.0;
-      const ringScaleBoost = Math.min(bassEffect * 0.2, 0.4);
+      const ringScaleBoost = Math.min(bassEffect * 0.35, 0.6);  // Increased
       ring.scale.setScalar(baseRingScale + ringScaleBoost);
-      // Rotation only when audio present
       if (hasAudio) {
-        ring.rotation.z += midsEffect * 0.06 * (i % 2 === 0 ? 1 : -1);
+        ring.rotation.z += midsEffect * 0.1 * (i % 2 === 0 ? 1 : -1);  // Increased
       }
     });
     
-    // Animate particles - only when audio present
+    // Animate particles - STRONGER when audio present
     if (particlesRef.current && variant.hasParticleHalo) {
       const material = particlesRef.current.material as THREE.PointsMaterial;
-      material.opacity = 0.3 + bassEffect * 0.4 + highsEffect * 0.2;
+      material.opacity = 0.3 + bassEffect * 0.5 + highsEffect * 0.3;  // Increased
       if (hasAudio) {
-        particlesRef.current.rotation.y += bassEffect * 0.025;
-        particlesRef.current.rotation.x += midsEffect * 0.012;
+        particlesRef.current.rotation.y += bassEffect * 0.04;   // Increased
+        particlesRef.current.rotation.x += midsEffect * 0.02;   // Increased
       }
     }
     
-    // Animate fractured pieces - only when audio present
+    // Animate fractured pieces - DRAMATIC explosion when audio present
     if (variant.fractured && fracturedPieces && hasAudio) {
       meshRefs.current.forEach((mesh, i) => {
         if (!mesh || i >= fracturedPieces.length) return;
         const piece = fracturedPieces[i];
-        const explosionAmount = bassEffect * 0.6;
+        const explosionAmount = bassEffect * 1.0;  // DOUBLED
         const dir = new THREE.Vector3(...piece.position).normalize();
         mesh.position.x = piece.position[0] + dir.x * explosionAmount;
         mesh.position.y = piece.position[1] + dir.y * explosionAmount;
         mesh.position.z = piece.position[2] + dir.z * explosionAmount;
-        mesh.rotation.x += bassEffect * 0.12;
-        mesh.rotation.y += midsEffect * 0.18;
+        mesh.rotation.x += bassEffect * 0.2;   // Increased
+        mesh.rotation.y += midsEffect * 0.25;  // Increased
       });
     }
   });
