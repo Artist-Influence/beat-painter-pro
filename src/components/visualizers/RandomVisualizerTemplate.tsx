@@ -8,57 +8,65 @@ import { useStudioStore } from '@/stores/studioStore';
 import { CreativeTemplateRenderer } from './CreativeTemplateRenderer';
 
 // Animation style behavior modifiers
+// SUPERCHARGED animation behaviors for dramatic audio reactivity
 function getAnimationBehavior(style: AnimationStyle, bass: number, mids: number, highs: number, time: number) {
   switch (style) {
     case 'pulsing':
       return {
-        scaleMultiplier: 1 + Math.sin(time * 4) * 0.1 * (1 + bass),
-        rotationBoost: 0.02,
+        scaleMultiplier: 1 + Math.sin(time * 6) * 0.25 * (1 + bass * 1.5),
+        rotationBoost: 0.04 + bass * 0.06,
         positionJitter: 0,
         explosionFactor: 0,
+        yBounce: bass * 0.3,
       };
     case 'breathing':
       return {
-        scaleMultiplier: 1 + Math.sin(time * 1.5) * 0.15 * (1 + bass * 0.5),
-        rotationBoost: 0.01,
+        scaleMultiplier: 1 + Math.sin(time * 2) * 0.2 * (1 + bass),
+        rotationBoost: 0.02 + mids * 0.03,
         positionJitter: 0,
         explosionFactor: 0,
+        yBounce: Math.sin(time * 2) * 0.15 * bass,
       };
     case 'chaotic':
       return {
-        scaleMultiplier: 1 + (Math.random() - 0.5) * 0.3 * bass,
-        rotationBoost: 0.15 * (1 + mids),
-        positionJitter: 0.1 * highs,
-        explosionFactor: 0,
+        scaleMultiplier: 1 + (Math.random() - 0.5) * 0.6 * bass,
+        rotationBoost: 0.25 * (1 + mids * 1.5),
+        positionJitter: 0.25 * highs,
+        explosionFactor: bass > 0.5 ? (bass - 0.5) * 1.5 : 0,
+        yBounce: (Math.random() - 0.5) * bass * 0.4,
       };
     case 'explosive':
       return {
-        scaleMultiplier: 1 + bass * 0.4,
-        rotationBoost: 0.05,
-        positionJitter: 0,
-        explosionFactor: bass > 0.4 ? (bass - 0.4) * 2 : 0,
+        scaleMultiplier: 1 + bass * 0.8,
+        rotationBoost: 0.12 + bass * 0.1,
+        positionJitter: bass * 0.15,
+        explosionFactor: bass > 0.3 ? (bass - 0.3) * 4 : 0,
+        yBounce: bass * 0.5,
       };
     case 'smooth':
       return {
-        scaleMultiplier: 1,
-        rotationBoost: 0.005,
+        scaleMultiplier: 1 + bass * 0.15,
+        rotationBoost: 0.01 + mids * 0.02,
         positionJitter: 0,
         explosionFactor: 0,
+        yBounce: bass * 0.1,
       };
     case 'flowing':
       return {
-        scaleMultiplier: 1 + Math.sin(time * 2) * 0.08,
-        rotationBoost: 0.03,
-        positionJitter: Math.sin(time * 3) * 0.05,
+        scaleMultiplier: 1 + Math.sin(time * 3) * 0.15 * (1 + bass),
+        rotationBoost: 0.06 + mids * 0.04,
+        positionJitter: Math.sin(time * 4) * 0.1 * mids,
         explosionFactor: 0,
+        yBounce: Math.sin(time * 2.5) * 0.2 * bass,
       };
     case 'rotating':
     default:
       return {
-        scaleMultiplier: 1,
-        rotationBoost: 0.1,
+        scaleMultiplier: 1 + bass * 0.25,
+        rotationBoost: 0.15 + bass * 0.1,
         positionJitter: 0,
         explosionFactor: 0,
+        yBounce: bass * 0.2,
       };
   }
 }
@@ -72,25 +80,24 @@ interface RandomVisualizerTemplateProps {
   isPlaying?: boolean;
 }
 
-// Audio analysis helper - DRAMATICALLY improved for punchy reactivity
+// Audio analysis helper - SUPERCHARGED for maximum reactivity
 function analyzeAudioData(frequency: number[]) {
   const freq = frequency || [];
-  // Wider frequency ranges for full bass punch detection
-  // At 44100Hz with 1024 bins, each bin is ~21.5Hz
-  const bassRange = freq.slice(0, 12);     // 0-260Hz: kick, sub-bass, bass guitar
-  const midRange = freq.slice(12, 90);     // 260-1935Hz: snare, vocals, guitars  
-  const highRange = freq.slice(90);        // 1935Hz+: hi-hats, cymbals, air
+  // Extended frequency ranges for full punch detection
+  const bassRange = freq.slice(0, 15);     // 0-320Hz: kick, sub-bass
+  const midRange = freq.slice(15, 100);    // 320-2150Hz: snare, vocals  
+  const highRange = freq.slice(100);       // 2150Hz+: hi-hats, cymbals
   
-  // Use PEAK detection for bass (more punchy), average for mids/highs
+  // PEAK detection for bass and mids (maximum punch)
   const bass = bassRange.length > 0 ? Math.max(...bassRange) / 255 : 0;
-  const mids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
+  const mids = midRange.length > 0 ? Math.max(...midRange.slice(0, 20)) / 255 : 0;
   const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
   
-  // STRONG amplification for dramatic reactivity
+  // AGGRESSIVE amplification for DRAMATIC reactivity
   return {
-    bass: Math.min(bass * 2.5, 1.8),   // Strong bass punch
-    mids: Math.min(mids * 2.0, 1.5),   // Good mid presence
-    highs: Math.min(highs * 1.8, 1.4), // Crisp highs
+    bass: Math.min(bass * 3.5, 2.5),   // Massive bass punch
+    mids: Math.min(mids * 2.8, 2.0),   // Strong mid presence
+    highs: Math.min(highs * 2.5, 1.8), // Crisp highs
   };
 }
 
@@ -295,8 +302,8 @@ function StandaloneShape({
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // STRONG beat pop effect
-    const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 1.0 : 1;
+    // DRAMATIC beat pop effect
+    const beatPop = beat > 0.15 ? 1 + (beat - 0.15) * 1.2 : 1;
     
     if (groupRef.current) {
       const g = groupRef.current;
@@ -305,22 +312,22 @@ function StandaloneShape({
       // Scale: BASE + DRAMATIC reactivity
       const baseScale = 1.8;
       // LARGER boosts for visible effect
-      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.25, 0.45);
-      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.12, 0.2);
+      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.4, 0.7);
+      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.2, 0.35);
       // Final scale with beat pop
-      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 2.5);
+      const finalGroupScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 3.0);
       g.scale.setScalar(finalGroupScale * beatPop);
+      
+      // Y-BOUNCE on bass hits
+      g.position.y = bassEffect * 0.35;
       
       // STRONGER rotation when audio is playing
       if (spinSpeed > 0.1 && hasAudio) {
-        g.rotation.y += spinSpeed * 0.05;
-        g.rotation.y += bassEffect * 0.2 * (spinSpeed / 2);  // Doubled
-        g.rotation.x += midsEffect * 0.08 * (spinSpeed / 2); // Doubled
-        g.rotation.z += highsEffect * 0.05 * (spinSpeed / 2); // Doubled
+        g.rotation.y += spinSpeed * 0.06;
+        g.rotation.y += bassEffect * 0.3 * (spinSpeed / 2);
+        g.rotation.x += midsEffect * 0.15 * (spinSpeed / 2);
+        g.rotation.z += highsEffect * 0.1 * (spinSpeed / 2);
       }
-      
-      // Position stays centered
-      g.position.set(0, 0, 0);
     }
     
     // Animate inner group for twist effect - STRONGER when audio present
