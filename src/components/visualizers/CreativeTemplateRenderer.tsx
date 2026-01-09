@@ -14,17 +14,24 @@ interface CreativeTemplateRendererProps {
   };
 }
 
-// Audio analysis helper
+// Audio analysis helper - expanded frequency ranges for better reactivity
 function analyzeAudio(frequency: number[]) {
   const freq = frequency || [];
-  const bassRange = freq.slice(0, 3);
-  const midRange = freq.slice(3, 47);
-  const highRange = freq.slice(47);
+  // Wider frequency ranges for better audio detection
+  const bassRange = freq.slice(0, 12);      // Sub-bass and bass (0-12)
+  const midRange = freq.slice(12, 80);      // Mids (12-80)
+  const highRange = freq.slice(80);         // Highs (80+)
   
+  // Calculate with stronger normalization for more visible reactivity
+  const bass = bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0;
+  const mids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
+  const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
+  
+  // Amplify the values for more dramatic reactivity
   return {
-    bass: bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0,
-    mids: midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0,
-    highs: highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0,
+    bass: Math.min(bass * 1.5, 1),
+    mids: Math.min(mids * 1.3, 1),
+    highs: Math.min(highs * 1.4, 1),
   };
 }
 
