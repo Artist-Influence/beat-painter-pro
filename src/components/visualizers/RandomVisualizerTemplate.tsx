@@ -189,6 +189,10 @@ function StandaloneShape({
   // Get applied texture and colors from style system
   const textureData = useVisualizerTexture();
   
+  // Ref pattern for audioData to avoid stale closures in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   // Audio sensitivity stored for use in useFrame
   const audioSensitivityRef = useRef(audioSensitivity);
   audioSensitivityRef.current = audioSensitivity;
@@ -284,8 +288,9 @@ function StandaloneShape({
   
   // Animation frame - AUDIO-FIRST: dramatic reactivity
   useFrame(() => {
-    // Calculate audio EVERY FRAME inside useFrame (NOT in useMemo)
-    const raw = analyzeAudioData(audioData.frequency);
+    // Calculate audio EVERY FRAME inside useFrame using REF (NOT stale closure)
+    const currentAudioData = audioDataRef.current;
+    const raw = analyzeAudioData(currentAudioData.frequency);
     const sens = audioSensitivityRef.current;
     
     // Step 1: Detect raw audio (0-1.8 after amplification)
@@ -309,7 +314,7 @@ function StandaloneShape({
     smoothedBassRef.current = lerpAudio(smoothedBassRef.current, targetBass);
     smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, targetMids);
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
-    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
+    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, currentAudioData.beatStrength);
     
     // Transient blend: 70% raw audio for MAXIMUM punch
     const bassEffect = smoothedBassRef.current * 0.3 + targetBass * 0.7;
@@ -1109,6 +1114,9 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
   // Get applied visual style texture and colors
   const textureData = useVisualizerTexture();
   
+  // Get background effect from store (overrides params if set)
+  const storeBackgroundEffect = useStudioStore((state) => state.backgroundEffect);
+  
   // Get glow intensity from params (fallback to 1.0)
   const glowIntensity = params.glowIntensity ?? 1.0;
   
@@ -1732,13 +1740,16 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     }
   };
 
+  // Determine effective background effect (store overrides if not 'none')
+  const effectiveBackgroundEffect = storeBackgroundEffect !== 'none' ? storeBackgroundEffect : params.backgroundEffect;
+
   // Use standalone procedural shape if we have a standalone variant
   if (params.standaloneVariant) {
     return (
       <>
         {/* Background effects layer */}
         <BackgroundEffects 
-          effect={params.backgroundEffect} 
+          effect={effectiveBackgroundEffect} 
           colors={colors} 
           bass={bass}
           mids={mids}
@@ -1761,7 +1772,7 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     <>
       {/* Background effects layer */}
       <BackgroundEffects 
-        effect={params.backgroundEffect} 
+        effect={effectiveBackgroundEffect} 
         colors={colors} 
         bass={bass}
         mids={mids}

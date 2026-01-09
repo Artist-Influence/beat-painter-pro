@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { VisualizerKey } from "@/components/visualizers";
+import type { BackgroundEffect } from "@/lib/randomVisualizerGenerator";
 
 interface Filters {
   brightness: number;
@@ -56,6 +57,7 @@ interface StudioState {
   logo: LogoState;
   exportMode: ExportMode;
   customStyleTexture: CustomStyleTexture;
+  backgroundEffect: BackgroundEffect;
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackgroundColor: (c: BackgroundState["color"]) => void;
   setBackgroundMedia: (url: string, type: BackgroundMediaType) => void;
@@ -76,6 +78,7 @@ interface StudioState {
   setExportMode: (mode: ExportMode) => void;
   setCustomStyleTexture: (url: string | null, name?: string | null) => void;
   clearCustomStyleTexture: () => void;
+  setBackgroundEffect: (effect: BackgroundEffect) => void;
 }
 
 const AUDIO_PRESETS: Record<'calm' | 'flow' | 'energy', Omit<AudioSensitivity, 'preset'>> = {
@@ -124,6 +127,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   logo: DEFAULT_LOGO,
   exportMode: 'video',
   customStyleTexture: DEFAULT_CUSTOM_STYLE,
+  backgroundEffect: 'none',
   setSelected: (v) => set({ selected: v }),
   setBackgroundColor: (c) => set((state) => ({ 
     background: { ...state.background, type: 'color', color: c }
@@ -167,4 +171,5 @@ export const useStudioStore = create<StudioState>((set) => ({
     (window as any).appliedTexture = null;
     window.dispatchEvent(new CustomEvent('texture:cleared'));
   },
+  setBackgroundEffect: (effect) => set({ backgroundEffect: effect }),
 }));
