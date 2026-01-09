@@ -92,10 +92,10 @@ export async function generateStyleTexture(styles: string[], seed: number = 0): 
   const colors = getStyleColors(styles);
 
   try {
-    const descriptorText = styles.map((s) => STYLE_DESCRIPTORS[s] ?? s).join(", ");
+    const descriptorText = styles.map((s) => STYLE_DESCRIPTORS[s] ?? s).join(" blending into ");
     const colorHints = getStyleColors(styles).join(", ");
-    const prompt = `Seamless ${descriptorText} texture tile, high-frequency detail, rich microstructure, PBR-friendly, depth and relief, color palette: ${colorHints}, no text, no logos, no central object, seed ${seed}`;
-    const negativePrompt = "flat gradient, banding, low detail, blurry, photographic scene, person, face, landscape, typography, logo, watermark";
+    const prompt = `Abstract artistic background, ${descriptorText}, smooth gradients merging together, atmospheric depth, cinematic lighting, ultra high quality, 8K resolution, color palette: ${colorHints}, full frame composition, no borders, no text, no logos, no objects, no people`;
+    const negativePrompt = "tiles, tiled pattern, grid, seams, collage, patchwork, separate sections, split image, mosaic, repeated pattern, text, logo, watermark, person, face, object, photograph, realistic";
     const { data, error } = await supabase.functions.invoke("generate-image", {
       body: { prompt, negativePrompt, seed },
     });
