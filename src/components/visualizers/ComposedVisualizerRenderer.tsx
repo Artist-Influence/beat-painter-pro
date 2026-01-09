@@ -98,6 +98,12 @@ function OrbitingShard({
   const orbitAngleRef = useRef((index / totalCount) * Math.PI * 2);
   const phaseOffset = (index / totalCount) * Math.PI * 2;
   
+  // Ref pattern to fix stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  const audioSensitivityRef = useRef(audioSensitivity);
+  audioSensitivityRef.current = audioSensitivity;
+  
   // Each shard responds to its own frequency bin
   const freqBin = useMemo(() => Math.floor((index / totalCount) * 64), [index, totalCount]);
   
@@ -115,11 +121,12 @@ function OrbitingShard({
     if (!meshRef.current) return;
     
     const time = clock.getElapsedTime();
-    const freq = audioData.frequency || [];
+    const freq = audioDataRef.current.frequency || [];
+    const sensitivity = audioSensitivityRef.current;
     
     // Get this shard's specific frequency
     const myFreq = Math.min((freq[freqBin] || 0) / 255, 1.0);
-    const bass = Math.min((freq[2] || 0) / 255 * audioSensitivity.bassMultiplier, 1.5);
+    const bass = Math.min((freq[2] || 0) / 255 * sensitivity.bassMultiplier, 1.5);
     
     // Check for audio
     const hasAudio = myFreq > 0.02 || bass > 0.02;
@@ -190,12 +197,16 @@ function SacredGeometryPattern({
   const groupRef = useRef<THREE.Group>(null);
   const ringRefs = useRef<THREE.Mesh[]>([]);
   
+  // Ref pattern to fix stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const ringCount = fold;
   
   useFrame(() => {
     if (!groupRef.current) return;
     
-    const freq = audioData.frequency || [];
+    const freq = audioDataRef.current.frequency || [];
     const bass = Math.min((freq[2] || 0) / 255, 1.0);
     const mids = Math.min((freq[30] || 0) / 255, 1.0);
     const hasAudio = bass > 0.02 || mids > 0.02;
@@ -281,6 +292,12 @@ export function ComposedVisualizerRenderer({
   const coreRef = useRef<THREE.Mesh>(null);
   const innerCoreRef = useRef<THREE.Mesh>(null);
   
+  // Ref pattern to fix stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  const audioSensitivityRef = useRef(audioSensitivity);
+  audioSensitivityRef.current = audioSensitivity;
+  
   // Audio smoothing refs
   const smoothedBassRef = useRef(0);
   const smoothedMidsRef = useRef(0);
@@ -324,7 +341,9 @@ export function ComposedVisualizerRenderer({
   
   // Animation
   useFrame(() => {
-    const audio = analyzeAudioEQ(audioData.frequency);
+    const sensitivity = audioSensitivityRef.current;
+    const currentAudioData = audioDataRef.current;
+    const audio = analyzeAudioEQ(currentAudioData.frequency);
     
     // Asymmetric smoothing
     const attackLerp = 0.85;
@@ -334,16 +353,16 @@ export function ComposedVisualizerRenderer({
       return current + (target - current) * factor;
     };
     
-    smoothedBassRef.current = lerpAudio(smoothedBassRef.current, audio.bass * audioSensitivity.bassMultiplier);
-    smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, audio.mids * audioSensitivity.midsMultiplier);
-    smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, audio.highs * audioSensitivity.highsMultiplier);
+    smoothedBassRef.current = lerpAudio(smoothedBassRef.current, audio.bass * sensitivity.bassMultiplier);
+    smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, audio.mids * sensitivity.midsMultiplier);
+    smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, audio.highs * sensitivity.highsMultiplier);
     
     const bass = smoothedBassRef.current;
     const mids = smoothedMidsRef.current;
     const highs = smoothedHighsRef.current;
     const hasAudio = bass > 0.02 || mids > 0.02;
     
-    const beatPop = audioData.beatStrength > 0.15 ? 1 + (audioData.beatStrength - 0.15) * 0.8 : 1;
+    const beatPop = currentAudioData.beatStrength > 0.15 ? 1 + (currentAudioData.beatStrength - 0.15) * 0.8 : 1;
     
     // Animate main group
     if (groupRef.current) {
@@ -353,8 +372,8 @@ export function ComposedVisualizerRenderer({
       
       groupRef.current.position.y = bass * 0.25;
       
-      if (audioSensitivity.spinSpeed > 0.1 && hasAudio) {
-        groupRef.current.rotation.y += audioSensitivity.spinSpeed * 0.04;
+      if (sensitivity.spinSpeed > 0.1 && hasAudio) {
+        groupRef.current.rotation.y += sensitivity.spinSpeed * 0.04;
         groupRef.current.rotation.y += bass * 0.15;
         groupRef.current.rotation.x += mids * 0.05;
       }
@@ -377,7 +396,7 @@ export function ComposedVisualizerRenderer({
       // Update emissive based on audio
       const mat = coreRef.current.material as THREE.MeshStandardMaterial;
       if (mat.emissiveIntensity !== undefined) {
-        mat.emissiveIntensity = variant.emissiveIntensity + bass * 2.0 + audioData.beatStrength * 1.5;
+        mat.emissiveIntensity = variant.emissiveIntensity + bass * 2.0 + currentAudioData.beatStrength * 1.5;
         mat.roughness = Math.max(0.1, 0.3 - mids * 0.2);
       }
     }
