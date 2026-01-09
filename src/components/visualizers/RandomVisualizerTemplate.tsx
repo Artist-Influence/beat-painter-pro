@@ -6,6 +6,7 @@ import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisual
 import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
 import { useStudioStore } from '@/stores/studioStore';
 import { CreativeTemplateRenderer } from './CreativeTemplateRenderer';
+import { ComposedVisualizerRenderer } from './ComposedVisualizerRenderer';
 
 // Animation style behavior modifiers
 // SUPERCHARGED animation behaviors for dramatic audio reactivity
@@ -157,6 +158,18 @@ function StandaloneShape({
         <pointLight position={[4, 4, 4]} intensity={1.2} />
         <pointLight position={[-3, -2, 2]} intensity={0.6} />
       </group>
+    );
+  }
+  
+  // For complex compositions (not 'simple'), use the new ComposedVisualizerRenderer
+  if (variant.compositionStyle && variant.compositionStyle !== 'simple') {
+    return (
+      <ComposedVisualizerRenderer
+        variant={variant}
+        audioData={audioData}
+        seed={seed}
+        audioSensitivity={audioSensitivity}
+      />
     );
   }
   

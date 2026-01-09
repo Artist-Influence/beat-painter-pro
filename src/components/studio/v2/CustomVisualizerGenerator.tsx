@@ -14,8 +14,11 @@ import {
   BASE_SHAPES,
   BACKGROUND_EFFECTS,
   ANIMATION_STYLES,
+  COMPOSITION_STYLES,
+  COMPOSITION_LABELS,
   type BaseShape,
   type AnimationStyle,
+  type CompositionStyle,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
@@ -114,6 +117,8 @@ export function CustomVisualizerGenerator({
   const [elementCount, setElementCount] = useState<number>(20);
   const [threadingEnabled, setThreadingEnabled] = useState(false);
   const [animationStyle, setAnimationStyle] = useState<AnimationStyle>('pulsing');
+  const [compositionStyle, setCompositionStyle] = useState<CompositionStyle>('orbital');
+  const [complexity, setComplexity] = useState<number>(5);
   
   // Track previous layout mode to detect switches
   const prevLayoutModeRef = useRef(layoutMode);
@@ -124,13 +129,15 @@ export function CustomVisualizerGenerator({
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed, {
       ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-      backgroundEffect: getRandomBackgroundEffect(), // Always random
+      backgroundEffect: getRandomBackgroundEffect(),
       elementCount: layoutMode === 'standalone' ? 1 : elementCount,
       connectionLines: threadingEnabled,
       animationStyle,
+      compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
+      complexity: layoutMode === 'standalone' ? complexity : undefined,
     });
     setCurrentParams(newParams);
-  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle]);
+  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle, compositionStyle, complexity]);
 
   // Surprise Me - fully random everything
   const handleSurpriseMe = useCallback(() => {
@@ -143,6 +150,8 @@ export function CustomVisualizerGenerator({
     const randomShape = BASE_SHAPES[Math.floor(Math.random() * BASE_SHAPES.length)];
     const randomAnim = ANIMATION_STYLES[Math.floor(Math.random() * ANIMATION_STYLES.length)];
     const randomThreading = Math.random() > 0.6;
+    const randomComposition = COMPOSITION_STYLES[Math.floor(Math.random() * COMPOSITION_STYLES.length)];
+    const randomComplexity = Math.floor(1 + Math.random() * 10);
     
     // Update UI state
     setLayoutMode(randomLayout);
@@ -150,6 +159,8 @@ export function CustomVisualizerGenerator({
     setShapeFilter(randomShape);
     setAnimationStyle(randomAnim);
     setThreadingEnabled(randomThreading);
+    setCompositionStyle(randomComposition);
+    setComplexity(randomComplexity);
     
     // Generate params with random background
     const newParams = generateRandomParams(newSeed, {
@@ -158,6 +169,8 @@ export function CustomVisualizerGenerator({
       elementCount: randomElementCount,
       connectionLines: randomThreading,
       animationStyle: randomAnim,
+      compositionStyle: randomLayout === 'standalone' ? randomComposition : undefined,
+      complexity: randomLayout === 'standalone' ? randomComplexity : undefined,
     });
     setCurrentParams(newParams);
   }, []);
@@ -176,6 +189,8 @@ export function CustomVisualizerGenerator({
         elementCount: layoutMode === 'standalone' ? 1 : elementCount,
         connectionLines: threadingEnabled,
         animationStyle,
+        compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
+        complexity: layoutMode === 'standalone' ? complexity : undefined,
       });
       setCurrentParams(newParams);
     } else {
@@ -183,15 +198,17 @@ export function CustomVisualizerGenerator({
       setCurrentParams(prev => {
         const updated = generateRandomParams(prev.seed, {
           ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-          backgroundEffect: prev.backgroundEffect, // Keep current background
+          backgroundEffect: prev.backgroundEffect,
           elementCount: layoutMode === 'standalone' ? 1 : elementCount,
           connectionLines: threadingEnabled,
           animationStyle,
+          compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
+          complexity: layoutMode === 'standalone' ? complexity : undefined,
         });
         return updated;
       });
     }
-  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle]);
+  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle, compositionStyle, complexity]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -313,7 +330,41 @@ export function CustomVisualizerGenerator({
               </div>
             )}
 
-            {/* Element Count Slider - only for multiple mode */}
+            {/* Composition Style - only for standalone mode */}
+            {layoutMode === 'standalone' && (
+              <div className="space-y-1">
+                <label className="text-xs text-white/70">Composition</label>
+                <select 
+                  value={compositionStyle}
+                  onChange={(e) => setCompositionStyle(e.target.value as CompositionStyle)}
+                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
+                >
+                  {COMPOSITION_STYLES.map(style => (
+                    <option key={style} value={style}>
+                      {COMPOSITION_LABELS[style]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Complexity Slider - only for standalone mode */}
+            {layoutMode === 'standalone' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-white/70">Complexity</label>
+                  <span className="text-xs text-white/90 font-medium">{complexity}/10</span>
+                </div>
+                <Slider
+                  value={[complexity]}
+                  onValueChange={(value) => setComplexity(value[0])}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+            )}
             {layoutMode === 'multiple' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
