@@ -18,6 +18,12 @@ export type GeometryType = 'sphere' | 'icosahedron' | 'octahedron' | 'dodecahedr
 
 export type PulseMode = 'none' | 'breathe' | 'heartbeat' | 'erratic' | 'stutter' | 'swell';
 
+// NEW: Composition presets for complex multi-component visualizers
+export type CompositionStyle = 'simple' | 'layered' | 'orbital' | 'sacred' | 'crystalline' | 'nebular';
+
+// NEW: Outer halo/effect types
+export type OuterHaloType = 'none' | 'sparkles' | 'rings' | 'particles' | 'rays' | 'aura';
+
 // Creative template types for standalone visualizers - these trigger full pre-built visualizers
 export type CreativeTemplateType = 
   | 'geometric'   // Default procedural geometry (sphere, torus, etc.)
@@ -36,6 +42,19 @@ export const CREATIVE_TEMPLATES: CreativeTemplateType[] = [
   'eye', 'hand', 'sword', 'anchor', 'rocket',
   'fish', 'bird', 'snake', 'octopus', 'jellyfish', 'phoenix'
 ];
+
+// NEW: Composition style options for UI
+export const COMPOSITION_STYLES: CompositionStyle[] = ['simple', 'layered', 'orbital', 'sacred', 'crystalline', 'nebular'];
+
+// NEW: Composition style display names
+export const COMPOSITION_LABELS: Record<CompositionStyle, string> = {
+  simple: 'Simple Shape',
+  layered: 'Layered Core',
+  orbital: 'Orbital System',
+  sacred: 'Sacred Geometry',
+  crystalline: 'Crystalline',
+  nebular: 'Nebula Core',
+};
 
 // Standalone variant for procedural generation - 100,000+ unique combinations
 export interface StandaloneVariant {
@@ -85,6 +104,16 @@ export interface StandaloneVariant {
   fracturedCount: number;     // 3-8 pieces
   hollowed: boolean;          // Ring/hollow version
   twisted: number;            // 0-1 twist amount
+  
+  // NEW: Composition enhancements
+  compositionStyle: CompositionStyle;     // Overall composition approach
+  complexity: number;                      // 1-10 complexity level
+  orbitalShardCount: number;              // 8-24 orbiting fragments
+  innerCoreType: GeometryType;            // Different geometry for inner core
+  outerHaloType: OuterHaloType;           // Type of outer effect
+  symmetryFold: number;                   // 3, 4, 5, 6, 8, 12 for sacred geometry
+  spiralArms: number;                     // 0-8 spiral arms for nebular
+  sacredPattern: 'flower' | 'metatron' | 'seed' | 'torus' | 'merkaba' | 'none';  // Sacred geometry pattern
 }
 
 export interface RandomVisualizerParams {
@@ -107,6 +136,10 @@ export interface RandomVisualizerParams {
   colorScheme: ColorScheme;
   // NEW: Glow intensity (0.0 - 2.0)
   glowIntensity: number;
+  // NEW: Composition style (for UI control)
+  compositionStyle?: CompositionStyle;
+  // NEW: Complexity level (1-10)
+  complexity?: number;
   // Standalone variant for single-element procedural generation
   standaloneVariant?: StandaloneVariant;
 }
@@ -122,9 +155,22 @@ export function generateRandomSeed(): number {
   return Math.floor(Math.random() * 1000000);
 }
 
+// Sacred pattern options
+const SACRED_PATTERNS: StandaloneVariant['sacredPattern'][] = ['flower', 'metatron', 'seed', 'torus', 'merkaba', 'none'];
+
 // Generate a procedural standalone variant with massive variety
-export function generateStandaloneVariant(seed: number): StandaloneVariant {
+export function generateStandaloneVariant(
+  seed: number, 
+  preferences?: { compositionStyle?: CompositionStyle; complexity?: number }
+): StandaloneVariant {
   const r = seededRandom(seed);
+  
+  // Composition style from preferences or random
+  const compositionStyle = preferences?.compositionStyle || 
+    COMPOSITION_STYLES[Math.floor(r() * COMPOSITION_STYLES.length)];
+  
+  // Complexity level (1-10) from preferences or random
+  const complexity = preferences?.complexity ?? Math.floor(1 + r() * 10);
   
   // Select a random creative template - this determines if we use a pre-built visualizer
   const creativeTemplate = CREATIVE_TEMPLATES[Math.floor(r() * CREATIVE_TEMPLATES.length)];
@@ -149,6 +195,9 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
   const filteredGeometries = GEOMETRY_TYPES.filter(g => g !== primaryGeometry);
   const secondaryGeometry = filteredGeometries[Math.floor(r() * filteredGeometries.length)];
   
+  // Inner core geometry (always different from primary)
+  const innerCoreType = filteredGeometries[Math.floor(r() * filteredGeometries.length)];
+  
   // Axis stretching - sometimes extreme, sometimes subtle
   const stretchMode = r();
   let stretchX: number, stretchY: number, stretchZ: number;
@@ -172,12 +221,15 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
     stretchZ = 0.4 + r() * 1.8;
   }
   
-  // Decorative elements
-  const hasOrbitRings = r() > 0.5;
-  const hasParticleHalo = r() > 0.6;
-  const hasInnerCore = r() > 0.45;
-  const hasMirrorCopy = r() > 0.75;
-  const hasOuterShell = r() > 0.65;
+  // Complexity-based adjustments: higher complexity = more features
+  const complexityFactor = complexity / 10;
+  
+  // Decorative elements - more likely at higher complexity
+  const hasOrbitRings = r() > (0.7 - complexityFactor * 0.4);
+  const hasParticleHalo = r() > (0.75 - complexityFactor * 0.35);
+  const hasInnerCore = r() > (0.6 - complexityFactor * 0.35);
+  const hasMirrorCopy = r() > (0.85 - complexityFactor * 0.25);
+  const hasOuterShell = r() > (0.75 - complexityFactor * 0.3);
   
   // Animation style
   const pulseMode = PULSE_MODES[Math.floor(r() * PULSE_MODES.length)];
@@ -189,6 +241,26 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
     spinAxes[Math.floor(r() * 3)] = true;
   }
   
+  // Orbital shard count - based on complexity
+  const orbitalShardCount = Math.floor(8 + complexityFactor * 16);
+  
+  // Outer halo type based on composition
+  const outerHaloTypes: OuterHaloType[] = ['none', 'sparkles', 'rings', 'particles', 'rays', 'aura'];
+  const outerHaloType = compositionStyle === 'simple' ? 'none' : 
+    outerHaloTypes[Math.floor(r() * outerHaloTypes.length)];
+  
+  // Symmetry fold for sacred geometry (3, 4, 5, 6, 8, 12)
+  const symmetryFolds = [3, 4, 5, 6, 8, 12];
+  const symmetryFold = symmetryFolds[Math.floor(r() * symmetryFolds.length)];
+  
+  // Spiral arms for nebular style (0-8)
+  const spiralArms = compositionStyle === 'nebular' ? Math.floor(2 + r() * 6) : 0;
+  
+  // Sacred pattern for sacred composition
+  const sacredPattern = compositionStyle === 'sacred' 
+    ? SACRED_PATTERNS[Math.floor(r() * (SACRED_PATTERNS.length - 1))] // Exclude 'none' for sacred
+    : 'none';
+  
   return {
     creativeTemplate,
     primaryGeometry,
@@ -197,10 +269,10 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
     stretchY,
     stretchZ,
     hasOrbitRings,
-    orbitRingCount: hasOrbitRings ? Math.floor(1 + r() * 3) : 0,
+    orbitRingCount: hasOrbitRings ? Math.floor(1 + r() * 3 + complexityFactor * 2) : 0,
     orbitRingTilt: r() * Math.PI,
     hasParticleHalo,
-    particleHaloCount: hasParticleHalo ? Math.floor(50 + r() * 150) : 0,
+    particleHaloCount: hasParticleHalo ? Math.floor(50 + r() * 150 + complexityFactor * 100) : 0,
     hasInnerCore,
     innerCoreScale: 0.15 + r() * 0.35,
     hasMirrorCopy,
@@ -217,24 +289,40 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
     wireframeMix: r() > 0.7 ? (r() > 0.5 ? 1 : 0.5) : 0,
     detailLevel: Math.floor(1 + r() * 3),
     emissiveIntensity: 0.3 + r() * 1.0,
-    layerCount: Math.floor(1 + r() * 3),
+    layerCount: Math.floor(1 + r() * 3 + complexityFactor * 2),
     layerSpacing: 0.25 + r() * 0.5,
-    fractured: r() > 0.85,
-    fracturedCount: Math.floor(3 + r() * 5),
+    fractured: r() > (0.9 - complexityFactor * 0.2),
+    fracturedCount: Math.floor(3 + r() * 5 + complexityFactor * 4),
     hollowed: r() > 0.8,
     twisted: r() > 0.7 ? r() * 0.8 : 0,
+    // NEW: Composition enhancements
+    compositionStyle,
+    complexity,
+    orbitalShardCount,
+    innerCoreType,
+    outerHaloType,
+    symmetryFold,
+    spiralArms,
+    sacredPattern,
   };
 }
 
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'compositionStyle' | 'complexity'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
+  
+  // Composition style from preferences or random
+  const compositionStyle = preferences?.compositionStyle || 
+    COMPOSITION_STYLES[Math.floor(random() * COMPOSITION_STYLES.length)];
+  
+  // Complexity from preferences or random (1-10)
+  const complexity = preferences?.complexity ?? Math.floor(1 + random() * 10);
   
   // Element count: use preference, or 30% multi-element (8-32), 70% standalone (1)
   let elementCount: number;
@@ -256,8 +344,10 @@ export function generateRandomParams(
   const shapeWasExplicitlyChosen = preferences?.baseShape !== undefined;
   const mixedGeometry = shapeWasExplicitlyChosen ? false : random() > 0.5;
   
-  // Generate standalone variant only when in standalone mode
-  const standaloneVariant = isStandalone ? generateStandaloneVariant(seed) : undefined;
+  // Generate standalone variant only when in standalone mode - pass composition preferences
+  const standaloneVariant = isStandalone 
+    ? generateStandaloneVariant(seed, { compositionStyle, complexity }) 
+    : undefined;
   
   // Glow intensity: 0.3 - 2.0 (default random or from preferences)
   const glowIntensity = preferences?.glowIntensity ?? (0.3 + random() * 1.7);
@@ -279,6 +369,8 @@ export function generateRandomParams(
     rotationOffset: random() * Math.PI * 2,
     colorScheme,
     glowIntensity,
+    compositionStyle,
+    complexity,
     standaloneVariant,
   };
 }
