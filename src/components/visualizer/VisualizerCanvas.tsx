@@ -12,10 +12,29 @@ import * as THREE from "three";
 
 // Post-processing effects component - only affects 3D content, not background
 function VisualizerEffects({ filters }: { filters: { brightness: number; saturation: number; contrast: number } }) {
+  const { gl, scene, camera } = useThree();
+  const [isReady, setIsReady] = useState(false);
+  
+  // Wait for scene to be ready before rendering effects
+  useEffect(() => {
+    if (gl && scene && camera) {
+      // Small delay to ensure scene is fully initialized
+      const timer = setTimeout(() => setIsReady(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [gl, scene, camera]);
+  
   // Convert 0-200 percentage to effect ranges (-1 to 1)
   const brightness = ((filters.brightness ?? 100) - 100) / 100;
   const contrast = ((filters.contrast ?? 100) - 100) / 100;
   const saturation = ((filters.saturation ?? 100) - 100) / 100;
+  
+  // Don't render effects if all are at default values or not ready
+  const hasEffects = brightness !== 0 || contrast !== 0 || saturation !== 0;
+  
+  if (!isReady || !hasEffects) {
+    return null;
+  }
   
   return (
     <EffectComposer>
