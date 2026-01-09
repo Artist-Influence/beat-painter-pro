@@ -1100,6 +1100,10 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
   const smoothedHighsRef = useRef(0);
   const smoothedBeatRef = useRef(0);
   
+  // REF PATTERN: Fix stale closure in useFrame - these refs always hold current values
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const random = useMemo(() => seededRandom(params.seed), [params.seed]);
   
   // Get applied visual style texture and colors
@@ -1153,6 +1157,10 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
 
   // Get audio sensitivity settings from store
   const audioSensitivity = useStudioStore((state) => state.audioSensitivity);
+  
+  // REF PATTERN: Fix stale closure for audioSensitivity in useFrame
+  const audioSensitivityRef = useRef(audioSensitivity);
+  audioSensitivityRef.current = audioSensitivity;
 
   // Analyze audio WITH sensitivity multipliers (raw target values for smoothing)
   const { targetBass, targetMids, targetHighs } = useMemo(() => {
@@ -1533,15 +1541,35 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
   const animTimeRef = useRef(0);
 
   // Animation frame - AUDIO-FIRST: no motion when audio is silent
+  // Uses REF PATTERN to avoid stale closures - all audio data read from refs each frame
   useFrame((_, delta) => {
     // Update animation time
     animTimeRef.current += delta;
     const time = animTimeRef.current;
     
-    // Step 1: Detect raw audio (0-1) WITHOUT multipliers - for hasAudio check
-    const detectedBass = targetBass / Math.max(audioSensitivity.bassMultiplier, 0.01);
-    const detectedMids = targetMids / Math.max(audioSensitivity.midsMultiplier, 0.01);
-    const detectedHighs = targetHighs / Math.max(audioSensitivity.highsMultiplier, 0.01);
+    // READ FRESH DATA FROM REFS (not stale closure values)
+    const currentAudioData = audioDataRef.current;
+    const sens = audioSensitivityRef.current;
+    const freq = currentAudioData.frequency || [];
+    
+    // COMPUTE AUDIO VALUES FRESH EACH FRAME
+    const bassRange = freq.slice(0, Math.floor(freq.length * 0.2));
+    const midRange = freq.slice(Math.floor(freq.length * 0.2), Math.floor(freq.length * 0.6));
+    const highRange = freq.slice(Math.floor(freq.length * 0.6));
+    
+    const rawBass = bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0;
+    const rawMids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
+    const rawHighs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
+    
+    // Apply multipliers for target values
+    const targetBass = Math.min(rawBass * sens.bassMultiplier, 1.5);
+    const targetMids = Math.min(rawMids * sens.midsMultiplier, 1.5);
+    const targetHighs = Math.min(rawHighs * sens.highsMultiplier, 1.5);
+    
+    // Detected values (without multipliers) for hasAudio check
+    const detectedBass = rawBass;
+    const detectedMids = rawMids;
+    const detectedHighs = rawHighs;
     
     // Per-frame smoothing with asymmetric lerp (fast attack, fast decay for 170+ BPM)
     const attackLerp = 0.85;  // Near-instant attack
@@ -1554,7 +1582,7 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     smoothedBassRef.current = lerpAudio(smoothedBassRef.current, targetBass);
     smoothedMidsRef.current = lerpAudio(smoothedMidsRef.current, targetMids);
     smoothedHighsRef.current = lerpAudio(smoothedHighsRef.current, targetHighs);
-    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, audioData.beatStrength);
+    smoothedBeatRef.current = lerpAudio(smoothedBeatRef.current, currentAudioData.beatStrength);
     
     // Transient blend: 60% raw audio for immediate punch
     const bassEffect = smoothedBassRef.current * 0.4 + targetBass * 0.6;
@@ -1573,13 +1601,13 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     const beatPop = beat > 0.2 ? 1 + (beat - 0.2) * 0.8 : 1;
     
     if (groupRef.current) {
-      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      const spinSpeed = sens.spinSpeed ?? 0;
       
       // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
       const baseScale = 1.0;
       // Each boost is clamped independently so high multipliers can't overflow
-      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.12, 0.22);
-      const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.06, 0.1);
+      const bassScaleBoost = Math.min(detectedBass * sens.bassMultiplier * 0.12, 0.22);
+      const midsScaleBoost = Math.min(detectedMids * sens.midsMultiplier * 0.06, 0.1);
       // Apply animation style scale multiplier
       const styleScale = animBehavior.scaleMultiplier;
       // Final scale has a hard cap to prevent going off-screen
@@ -1610,13 +1638,13 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
       const config = meshConfigs[i];
       if (!config) return;
       
-      const freqIndex = Math.floor((i / meshRefs.current.length) * (audioData.frequency?.length || 1));
-      const freqValue = (audioData.frequency?.[freqIndex] || 0) / 255;
+      const freqIndex = Math.floor((i / meshRefs.current.length) * (freq.length || 1));
+      const freqValue = (freq[freqIndex] || 0) / 255;
       
       // Base scale from config
       const baseScale = config.scale || 0.3;
       
-      const spinSpeed = audioSensitivity.spinSpeed ?? 0;
+      const spinSpeed = sens.spinSpeed ?? 0;
       
       // Single-element shapes get audio-reactive animations
       if (isSingleElementShape) {
