@@ -18,9 +18,31 @@ export type GeometryType = 'sphere' | 'icosahedron' | 'octahedron' | 'dodecahedr
 
 export type PulseMode = 'none' | 'breathe' | 'heartbeat' | 'erratic' | 'stutter' | 'swell';
 
+// Creative template types for standalone visualizers - these trigger full pre-built visualizers
+export type CreativeTemplateType = 
+  | 'geometric'   // Default procedural geometry (sphere, torus, etc.)
+  | 'smiley' | 'car' | 'heart' | 'star' | 'robot' | 'flower'
+  | 'wings' | 'butterfly' | 'dragon' | 'spaceship' | 'crown'
+  | 'skull' | 'diamond' | 'moon' | 'sun' | 'planet' | 'lightning' | 'tornado'
+  // Extended creative templates
+  | 'eye' | 'hand' | 'sword' | 'anchor' | 'rocket'
+  | 'fish' | 'bird' | 'snake' | 'octopus' | 'jellyfish' | 'phoenix';
+
+export const CREATIVE_TEMPLATES: CreativeTemplateType[] = [
+  'geometric', 'geometric', // Weight geometric slightly
+  'smiley', 'car', 'heart', 'star', 'robot', 'flower',
+  'wings', 'butterfly', 'dragon', 'spaceship', 'crown',
+  'skull', 'diamond', 'moon', 'sun', 'planet', 'lightning', 'tornado',
+  'eye', 'hand', 'sword', 'anchor', 'rocket',
+  'fish', 'bird', 'snake', 'octopus', 'jellyfish', 'phoenix'
+];
+
 // Standalone variant for procedural generation - 100,000+ unique combinations
 export interface StandaloneVariant {
-  // Core geometry (12 types)
+  // NEW: Which creative template to use ('geometric' = use procedural geometry)
+  creativeTemplate: CreativeTemplateType;
+  
+  // Core geometry (12 types) - used when creativeTemplate === 'geometric'
   primaryGeometry: GeometryType;
   secondaryGeometry: GeometryType;
   
@@ -104,6 +126,9 @@ export function generateRandomSeed(): number {
 export function generateStandaloneVariant(seed: number): StandaloneVariant {
   const r = seededRandom(seed);
   
+  // Select a random creative template - this determines if we use a pre-built visualizer
+  const creativeTemplate = CREATIVE_TEMPLATES[Math.floor(r() * CREATIVE_TEMPLATES.length)];
+  
   // Helper for weighted random choices
   const weightedChoice = <T>(options: T[], weights: number[]): T => {
     const total = weights.reduce((a, b) => a + b, 0);
@@ -165,6 +190,7 @@ export function generateStandaloneVariant(seed: number): StandaloneVariant {
   }
   
   return {
+    creativeTemplate,
     primaryGeometry,
     secondaryGeometry,
     stretchX,
