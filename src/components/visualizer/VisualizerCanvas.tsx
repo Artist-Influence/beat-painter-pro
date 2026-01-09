@@ -1,7 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { EffectComposer, BrightnessContrast, HueSaturation } from "@react-three/postprocessing";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES, isCustomVisualizer } from "@/components/visualizers";
 import type { AudioData } from "@/hooks/useAudioAnalysis";
@@ -9,40 +8,6 @@ import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
 import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
 import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualizerLoader";
 import * as THREE from "three";
-
-// Post-processing effects component - only affects 3D content, not background
-function VisualizerEffects({ filters }: { filters: { brightness: number; saturation: number; contrast: number } }) {
-  const { gl, scene, camera } = useThree();
-  const [isReady, setIsReady] = useState(false);
-  
-  // Wait for scene to be ready before rendering effects
-  useEffect(() => {
-    if (gl && scene && camera) {
-      // Small delay to ensure scene is fully initialized
-      const timer = setTimeout(() => setIsReady(true), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [gl, scene, camera]);
-  
-  // Convert 0-200 percentage to effect ranges (-1 to 1)
-  const brightness = ((filters.brightness ?? 100) - 100) / 100;
-  const contrast = ((filters.contrast ?? 100) - 100) / 100;
-  const saturation = ((filters.saturation ?? 100) - 100) / 100;
-  
-  // Don't render effects if all are at default values or not ready
-  const hasEffects = brightness !== 0 || contrast !== 0 || saturation !== 0;
-  
-  if (!isReady || !hasEffects) {
-    return null;
-  }
-  
-  return (
-    <EffectComposer>
-      <BrightnessContrast brightness={brightness} contrast={contrast} />
-      <HueSaturation saturation={saturation} />
-    </EffectComposer>
-  );
-}
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -305,7 +270,6 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
             </Suspense>
           </group>
           <OrbitControls enablePan={false} enableZoom={false} />
-          <VisualizerEffects filters={filters} />
         </Canvas>
       </div>
     </div>
