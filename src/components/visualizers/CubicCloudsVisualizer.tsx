@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { VisualizerProps } from ".";
 import { useStudioStore } from "@/stores/studioStore";
 
-function OrbitingCube({ angle, radius, audioData, index }: any) {
+function OrbitingCube({ angle, radius, audioData, index, totalCount }: any) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { audioSensitivity } = useStudioStore();
   
@@ -31,10 +31,23 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
+  const smoothedMyFreq = useRef(0);
   // Store current orbit angle
   const orbitAngle = useRef(angle);
+  
+  // Pre-calculate per-cube properties
+  const indexRatio = index / totalCount;
+  const speedMultiplier = 0.7 + indexRatio * 0.6; // 0.7x to 1.3x speed variation
+  const orbitDirection = index % 2 === 0 ? 1 : -1; // Alternate directions
+  const freqBin = Math.floor(indexRatio * 64); // Map to bins 0-63
+  const phaseOffset = indexRatio * Math.PI * 2; // Phase offset for wave motion
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
+    const time = clock.getElapsedTime();
+    
+    // Get individual frequency bin for this cube
+    const myFrequency = Math.min((frequency[freqBin] || 0) / 255, 1.0);
+    
     // Calculate audio per-frame - DETECT first, then apply multipliers for EFFECT
     let bassSum = 0, midsSum = 0, highsSum = 0;
     for (let i = 0; i <= 2; i++) bassSum += frequency[i] || 0; // 0-250 Hz (kick/sub-bass)
@@ -50,6 +63,7 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
     const bassEffect = detectedBass * audioSensitivity.bassMultiplier;
     const midsEffect = detectedMids * audioSensitivity.midsMultiplier;
     const highsEffect = detectedHighs * audioSensitivity.highsMultiplier;
+    const myFreqEffect = myFrequency * audioSensitivity.bassMultiplier;
     
     // Faster asymmetric smoothing for 170+ BPM support
     const lerpVal = (current: number, target: number) => {
@@ -60,46 +74,48 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
     smoothedBass.current = lerpVal(smoothedBass.current, bassEffect);
     smoothedMids.current = lerpVal(smoothedMids.current, midsEffect);
     smoothedHighs.current = lerpVal(smoothedHighs.current, highsEffect);
+    smoothedMyFreq.current = lerpVal(smoothedMyFreq.current, myFreqEffect);
     
     const bass = smoothedBass.current;
     const mids = smoothedMids.current;
     const highs = smoothedHighs.current;
+    const myFreq = smoothedMyFreq.current;
     
     // Audio threshold check - use DETECTED values so hasAudio works correctly
     const audioThreshold = 0.02;
     const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold || detectedHighs > audioThreshold;
     
-    // Beat pop effect for dramatic kick response
-    const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * 1.2 : 1;
+    // Beat pop effect for dramatic kick response - individual variation
+    const beatPop = bass > 0.2 ? 1 + (bass - 0.2) * (1.0 + indexRatio * 0.4) : 1;
     
     if (meshRef.current) {
-      // Orbit movement ONLY when audio is present - faster orbit speed
+      // Orbit movement ONLY when audio is present - individual speeds and directions
       if (hasAudio) {
-        const orbitSpeed = bass * 0.12 + mids * 0.04; // Increased from 0.08/0.03
+        const orbitSpeed = (bass * 0.12 + mids * 0.04 + myFreq * 0.08) * speedMultiplier * orbitDirection;
         orbitAngle.current += orbitSpeed * audioSensitivity.animationSpeed;
       }
       
-      // Position based on current orbit angle and audio spread - explosion effect on beat
-      const spread = 1 + bass * 1.2; // Reduced from 2.5 to fit in view
+      // Position based on current orbit angle and audio spread - individual frequency response
+      const spread = 1 + bass * 0.8 + myFreq * 0.6; // Individual + global spread
       const x = Math.cos(orbitAngle.current) * radius * spread;
       const z = Math.sin(orbitAngle.current) * radius * spread;
-      const y = bass * 1.5 + highs * 0.3; // Reduced bounce to fit in view
+      // Phase-shifted Y-bounce for wave motion
+      const yBounce = Math.sin(time * 3 + phaseOffset) * bass * 0.3;
+      const y = bass * 1.2 + myFreq * 0.8 + yBounce;
       meshRef.current.position.set(x, y, z);
       
-      // Rotation ONLY when audio is present - faster rotation
+      // Rotation ONLY when audio is present - alternate directions
       if (hasAudio) {
-        meshRef.current.rotation.x += bass * 0.2; // Increased from 0.15
-        meshRef.current.rotation.y += bass * 0.15 + mids * 0.08;
-        meshRef.current.rotation.z += bass * 0.15 + highs * 0.06;
+        meshRef.current.rotation.x += (bass * 0.2 + myFreq * 0.1) * orbitDirection;
+        meshRef.current.rotation.y += (bass * 0.15 + mids * 0.08) * orbitDirection;
+        meshRef.current.rotation.z += (bass * 0.1 + highs * 0.06) * orbitDirection;
       }
       
-      // Scale: BASE + TIGHTLY CLAMPED reactivity (multipliers control effect intensity, not base size)
+      // Scale: BASE + individual frequency response
       const baseScale = 1.0;
-      // Each boost is clamped independently so high multipliers can't overflow
-      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.2, 0.35);
-      const midsScaleBoost = Math.min(detectedMids * audioSensitivity.midsMultiplier * 0.1, 0.15);
-      // Final scale has a hard cap
-      const finalCubeScale = Math.min(baseScale + bassScaleBoost + midsScaleBoost, 1.5);
+      const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
+      const myFreqScaleBoost = Math.min(myFrequency * audioSensitivity.bassMultiplier * 0.2, 0.3);
+      const finalCubeScale = Math.min(baseScale + bassScaleBoost + myFreqScaleBoost, 1.6);
       meshRef.current.scale.setScalar(finalCubeScale * beatPop);
     }
   });
@@ -190,18 +206,16 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         groupRef.current.rotation.y += spinSpeed * 0.05;
       }
       if (hasAudio) {
-        groupRef.current.rotation.y += bass * 0.15; // Increased from 0.1
-        groupRef.current.rotation.x += bass * 0.1; // Increased from 0.06
+        groupRef.current.rotation.y += bass * 0.15;
+        groupRef.current.rotation.x += bass * 0.1;
       }
       
       // Position proportional to audio (returns to 0 when silent)
-      groupRef.current.position.y = bass * 1.5; // Increased from 1.0
+      groupRef.current.position.y = bass * 1.5;
       
       // SCALE: BASE + TIGHTLY CLAMPED reactivity
       const baseScale = 1.0;
-      // Clamp independently so high multipliers can't overflow
       const bassScaleBoost = Math.min(detectedBass * audioSensitivity.bassMultiplier * 0.15, 0.25);
-      // Hard cap on final scale
       const finalGroupScale = Math.min(baseScale + bassScaleBoost, 1.3);
       groupRef.current.scale.setScalar(finalGroupScale * beatPop);
     }
@@ -216,7 +230,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
       
       // Rotation ONLY when audio is present - faster
       if (hasAudio) {
-        centerSphereRef.current.rotation.x += bass * 0.2; // Increased from 0.15
+        centerSphereRef.current.rotation.x += bass * 0.2;
         centerSphereRef.current.rotation.y += bass * 0.18 + highs * 0.08;
       }
     }
@@ -231,6 +245,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
           radius={0.6}
           audioData={audioData}
           index={i}
+          totalCount={cubeCount}
         />
       ))}
       <mesh ref={centerSphereRef}>
