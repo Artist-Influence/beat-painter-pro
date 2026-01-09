@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
@@ -144,6 +144,9 @@ export default function PsychedelicMandalaVisualizer({
   const smoothedMids = useRef(0);
   const smoothedBeat = useRef(0);
   
+  // State for render-safe audio values (for Sparkles)
+  const [hasAudioState, setHasAudioState] = useState(false);
+  
   // Base rotation for position-based rotation
   const mainBaseRotation = useRef(0);
 
@@ -184,6 +187,11 @@ export default function PsychedelicMandalaVisualizer({
       // Audio threshold check - use DETECTED values
       const audioThreshold = 0.02;
       const hasAudio = detectedBass > audioThreshold || detectedMids > audioThreshold;
+      
+      // Update state for Sparkles (only if changed to avoid re-renders)
+      if (hasAudio !== hasAudioState) {
+        setHasAudioState(hasAudio);
+      }
       
       // Beat pop - moderate
       const beatPop = beat > 0.3 ? 1 + (beat - 0.3) * 0.6 : 1;
@@ -243,10 +251,10 @@ export default function PsychedelicMandalaVisualizer({
         </mesh>
         
         <Sparkles
-          count={smoothedBass.current > 0.02 ? 150 : 0}
+          count={hasAudioState ? 150 : 0}
           scale={[5, 5, 5]}
           size={3}
-          speed={smoothedBass.current > 0.02 ? 3 : 0}
+          speed={hasAudioState ? 3 : 0}
           opacity={0.8}
           color={textureData.colors.accent}
         />

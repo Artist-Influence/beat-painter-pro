@@ -83,14 +83,20 @@ interface RandomVisualizerTemplateProps {
 // Audio analysis helper - SUPERCHARGED for maximum reactivity
 function analyzeAudioData(frequency: number[]) {
   const freq = frequency || [];
+  if (freq.length === 0) {
+    return { bass: 0, mids: 0, highs: 0 };
+  }
+  
   // Extended frequency ranges for full punch detection
   const bassRange = freq.slice(0, 15);     // 0-320Hz: kick, sub-bass
   const midRange = freq.slice(15, 100);    // 320-2150Hz: snare, vocals  
   const highRange = freq.slice(100);       // 2150Hz+: hi-hats, cymbals
   
   // PEAK detection for bass and mids (maximum punch)
-  const bass = bassRange.length > 0 ? Math.max(...bassRange) / 255 : 0;
-  const mids = midRange.length > 0 ? Math.max(...midRange.slice(0, 20)) / 255 : 0;
+  // Safely handle empty arrays with 0 fallback
+  const bass = bassRange.length > 0 ? Math.max(0, ...bassRange) / 255 : 0;
+  const lowMids = midRange.slice(0, 20);
+  const mids = lowMids.length > 0 ? Math.max(0, ...lowMids) / 255 : 0;
   const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
   
   // AGGRESSIVE amplification for DRAMATIC reactivity
