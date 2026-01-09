@@ -234,18 +234,23 @@ export function generateRandomParams(
   
   const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
-  const backgroundEffect = preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
   const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
   
   // Element count: use preference or random between 8-40
   const elementCount = preferences?.elementCount ?? Math.floor(8 + random() * 32);
   
+  // For standalone mode (elementCount === 1): NO background effects by default
+  // Users can add particles/aurora/stars manually via Visual Effects section if desired
+  const isStandalone = elementCount === 1;
+  const backgroundEffect = isStandalone 
+    ? 'none' as BackgroundEffect
+    : (preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)]);
+  
   // If user explicitly selected a shape, don't mix geometries
   const shapeWasExplicitlyChosen = preferences?.baseShape !== undefined;
   const mixedGeometry = shapeWasExplicitlyChosen ? false : random() > 0.5;
   
-  // Generate standalone variant only when in standalone mode (elementCount === 1)
-  const isStandalone = elementCount === 1;
+  // Generate standalone variant only when in standalone mode
   const standaloneVariant = isStandalone ? generateStandaloneVariant(seed) : undefined;
   
   // Glow intensity: 0.3 - 2.0 (default random or from preferences)
