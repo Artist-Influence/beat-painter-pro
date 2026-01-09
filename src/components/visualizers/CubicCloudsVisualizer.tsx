@@ -80,10 +80,10 @@ function OrbitingCube({ angle, radius, audioData, index }: any) {
       }
       
       // Position based on current orbit angle and audio spread - explosion effect on beat
-      const spread = 1 + bass * 2.5; // Increased from 1.5
+      const spread = 1 + bass * 1.2; // Reduced from 2.5 to fit in view
       const x = Math.cos(orbitAngle.current) * radius * spread;
       const z = Math.sin(orbitAngle.current) * radius * spread;
-      const y = bass * 3.5 + highs * 0.6; // Increased bounce from 2.0
+      const y = bass * 1.5 + highs * 0.3; // Reduced bounce to fit in view
       meshRef.current.position.set(x, y, z);
       
       // Rotation ONLY when audio is present - faster rotation
@@ -228,7 +228,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         <OrbitingCube
           key={i}
           angle={angle}
-          radius={1.0}
+          radius={0.6}
           audioData={audioData}
           index={i}
         />
@@ -272,7 +272,7 @@ export default function CubicCloudsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={1.0}>
+      <group scale={0.45}>
         <OrbitingCubesVisualizer audioData={audioData} />
       </group>
     </>
