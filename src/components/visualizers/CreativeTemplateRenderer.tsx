@@ -14,24 +14,25 @@ interface CreativeTemplateRendererProps {
   };
 }
 
-// Audio analysis helper - expanded frequency ranges for better reactivity
+// Audio analysis helper - DRAMATICALLY expanded for punchy reactivity
 function analyzeAudio(frequency: number[]) {
   const freq = frequency || [];
-  // Wider frequency ranges for better audio detection
-  const bassRange = freq.slice(0, 12);      // Sub-bass and bass (0-12)
-  const midRange = freq.slice(12, 80);      // Mids (12-80)
-  const highRange = freq.slice(80);         // Highs (80+)
+  // Wider frequency ranges for full bass punch detection
+  // At 44100Hz with 1024 bins, each bin is ~21.5Hz
+  const bassRange = freq.slice(0, 12);      // 0-260Hz: kick, sub-bass, bass guitar
+  const midRange = freq.slice(12, 90);      // 260-1935Hz: snare, vocals, guitars
+  const highRange = freq.slice(90);         // 1935Hz+: hi-hats, cymbals, air
   
-  // Calculate with stronger normalization for more visible reactivity
-  const bass = bassRange.length > 0 ? bassRange.reduce((a, b) => a + b, 0) / bassRange.length / 255 : 0;
+  // Calculate with peak detection for more visible reactivity
+  const bass = bassRange.length > 0 ? Math.max(...bassRange) / 255 : 0;
   const mids = midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length / 255 : 0;
   const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
   
-  // Amplify the values for more dramatic reactivity
+  // STRONG amplification - allow values above 1.0 for dramatic peaks
   return {
-    bass: Math.min(bass * 1.5, 1),
-    mids: Math.min(mids * 1.3, 1),
-    highs: Math.min(highs * 1.4, 1),
+    bass: Math.min(bass * 2.5, 1.8),   // Strong bass punch
+    mids: Math.min(mids * 2.0, 1.5),   // Good mid presence
+    highs: Math.min(highs * 1.8, 1.4), // Crisp highs
   };
 }
 
@@ -45,6 +46,7 @@ function SmileyTemplate({ audioData }: { audioData: CreativeTemplateRendererProp
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
   
   const material = useMemo(() => createVisualizerMaterial(), []);
   
@@ -59,26 +61,32 @@ function SmileyTemplate({ audioData }: { audioData: CreativeTemplateRendererProp
   
   useFrame(({ clock }) => {
     const { bass, mids, highs } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.12);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.15);
+    // FAST smoothing for punchy response
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.25);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
+    
+    // Beat pop effect
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.4 : 1;
     
     if (groupRef.current) {
-      groupRef.current.scale.setScalar(1 + smoothedBass.current * 0.15);
+      // LARGER scale range (0.4 instead of 0.15)
+      groupRef.current.scale.setScalar((1 + smoothedBass.current * 0.4) * beatPop);
       groupRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 0.3) * 0.1;
     }
     
     if (leftEyeRef.current && rightEyeRef.current) {
-      const eyeSquint = 1 - smoothedBass.current * 0.5;
-      leftEyeRef.current.scale.y = Math.max(0.3, eyeSquint);
-      rightEyeRef.current.scale.y = Math.max(0.3, eyeSquint);
+      const eyeSquint = 1 - smoothedBass.current * 0.6;
+      leftEyeRef.current.scale.y = Math.max(0.2, eyeSquint);
+      rightEyeRef.current.scale.y = Math.max(0.2, eyeSquint);
     }
     
     if (mouthRef.current) {
-      const smileFactor = (smoothedBass.current - highs) * 2;
+      const smileFactor = (smoothedBass.current - highs) * 3;
       mouthRef.current.children.forEach((child, i) => {
         const seg = mouthSegments[i];
         if (seg && child) {
-          const smileY = smileFactor * Math.sin((i / 14) * Math.PI) * 0.5;
+          const smileY = smileFactor * Math.sin((i / 14) * Math.PI) * 0.7;
           child.position.y = seg.baseY + smileY;
         }
       });
@@ -111,6 +119,7 @@ function WingsTemplate({ audioData }: { audioData: CreativeTemplateRendererProps
   const rightWingRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   const feathers = useMemo(() => {
@@ -127,13 +136,18 @@ function WingsTemplate({ audioData }: { audioData: CreativeTemplateRendererProps
   
   useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.15);
+    // FAST smoothing
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
-    const flapAngle = Math.sin(t * 2 + smoothedBass.current * 4) * 0.4 * (1 + smoothedBass.current);
+    
+    // STRONGER flap - driven by bass with beat amplification
+    const beatBoost = smoothedBeat.current > 0.3 ? 1 + (smoothedBeat.current - 0.3) * 0.6 : 1;
+    const flapAngle = Math.sin(t * 3 + smoothedBass.current * 6) * 0.6 * (1 + smoothedBass.current * 1.5) * beatBoost;
     
     if (leftWingRef.current) leftWingRef.current.rotation.z = 0.3 + flapAngle;
     if (rightWingRef.current) rightWingRef.current.rotation.z = -0.3 - flapAngle;
-    if (groupRef.current) groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.2);
+    if (groupRef.current) groupRef.current.scale.setScalar((1.5 + smoothedBass.current * 0.5) * beatBoost);
   });
   
   return (
@@ -161,19 +175,25 @@ function DragonTemplate({ audioData }: { audioData: CreativeTemplateRendererProp
   const jawRef = useRef<THREE.Mesh>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass, mids } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.12);
+    // FAST smoothing for punchy jaw
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.35);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
     
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.5 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.2;
-      groupRef.current.scale.setScalar(1.2 + smoothedBass.current * 0.3);
+      groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.2 + smoothedBass.current * 0.1;
+      groupRef.current.scale.setScalar((1.2 + smoothedBass.current * 0.5) * beatPop);
     }
     if (jawRef.current) {
-      jawRef.current.rotation.x = smoothedBass.current * 0.6;
+      // DRAMATIC jaw movement
+      jawRef.current.rotation.x = smoothedBass.current * 1.0;
     }
   });
   
@@ -206,19 +226,25 @@ function SpaceshipTemplate({ audioData }: { audioData: CreativeTemplateRendererP
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
   const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass, mids } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.1);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.12);
+    // FAST smoothing
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.25);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
     
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.4 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(t * 1.5) * 0.2 + smoothedBass.current * 0.3;
-      groupRef.current.rotation.z = Math.sin(t * 0.8) * 0.1;
+      // DRAMATIC hover and scale
+      groupRef.current.position.y = Math.sin(t * 2) * 0.3 + smoothedBass.current * 0.5;
+      groupRef.current.rotation.z = Math.sin(t * 0.8) * 0.15 + smoothedBass.current * 0.1;
       groupRef.current.rotation.y = t * 0.5 * audioSensitivity.spinSpeed;
-      groupRef.current.scale.setScalar(1.3 + smoothedMids.current * 0.2);
+      groupRef.current.scale.setScalar((1.3 + smoothedMids.current * 0.4) * beatPop);
     }
   });
   
@@ -248,19 +274,25 @@ function SkullTemplate({ audioData }: { audioData: CreativeTemplateRendererProps
   const jawRef = useRef<THREE.Mesh>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.15);
+    // FAST smoothing for punchy jaw
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.35);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
+    
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.4 : 1;
     
     if (groupRef.current) {
       groupRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 0.3) * 0.15;
-      groupRef.current.scale.setScalar(1.4 + smoothedBass.current * 0.2);
+      groupRef.current.scale.setScalar((1.4 + smoothedBass.current * 0.4) * beatPop);
     }
     if (jawRef.current) {
-      jawRef.current.rotation.x = smoothedBass.current * 0.5;
-      jawRef.current.position.y = -0.5 - smoothedBass.current * 0.15;
+      // DRAMATIC jaw drop
+      jawRef.current.rotation.x = smoothedBass.current * 0.8;
+      jawRef.current.position.y = -0.5 - smoothedBass.current * 0.25;
     }
   });
   
@@ -289,6 +321,7 @@ function LightningTemplate({ audioData }: { audioData: CreativeTemplateRendererP
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   const boltPoints = useMemo(() => {
@@ -305,14 +338,19 @@ function LightningTemplate({ audioData }: { audioData: CreativeTemplateRendererP
   
   useFrame(() => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.2);
+    // VERY FAST for lightning flash
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.5);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.6);
+    
+    const beatFlash = smoothedBeat.current > 0.3 ? 1 + (smoothedBeat.current - 0.3) * 0.8 : 1;
     
     if (groupRef.current) {
-      groupRef.current.scale.setScalar(1.2 + smoothedBass.current * 0.5);
-      // Flash effect on beats
+      // DRAMATIC scale on bass
+      groupRef.current.scale.setScalar((1.2 + smoothedBass.current * 0.8) * beatFlash);
+      // INTENSE flash effect on beats
       groupRef.current.children.forEach(child => {
         if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
-          child.material.emissiveIntensity = 0.5 + smoothedBass.current * 2;
+          child.material.emissiveIntensity = 0.5 + smoothedBass.current * 3 + smoothedBeat.current * 2;
         }
       });
     }
@@ -343,15 +381,21 @@ function EyeTemplate({ audioData }: { audioData: CreativeTemplateRendererProps['
   const pupilRef = useRef<THREE.Mesh>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass, mids } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.12);
+    // FAST smoothing for reactive pupil
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.35);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     
-    if (pupilRef.current) pupilRef.current.scale.setScalar(0.3 + smoothedBass.current * 0.4);
-    if (irisRef.current) irisRef.current.rotation.z = clock.getElapsedTime() * 0.5 + mids * 2;
-    if (groupRef.current) groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.15);
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.3 : 1;
+    
+    // DRAMATIC pupil dilation
+    if (pupilRef.current) pupilRef.current.scale.setScalar(0.3 + smoothedBass.current * 0.7);
+    if (irisRef.current) irisRef.current.rotation.z = clock.getElapsedTime() * 0.5 + mids * 4;
+    if (groupRef.current) groupRef.current.scale.setScalar((1.5 + smoothedBass.current * 0.35) * beatPop);
   });
   
   return (
@@ -375,19 +419,25 @@ function PhoenixTemplate({ audioData }: { audioData: CreativeTemplateRendererPro
   const wingsRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.12);
+    // FAST smoothing for fiery movement
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
     
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.5 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(t * 1.5) * 0.2;
-      groupRef.current.scale.setScalar(1.3 + smoothedBass.current * 0.3);
+      groupRef.current.position.y = Math.sin(t * 2) * 0.3 + smoothedBass.current * 0.2;
+      groupRef.current.scale.setScalar((1.3 + smoothedBass.current * 0.5) * beatPop);
     }
     if (wingsRef.current) {
-      wingsRef.current.rotation.x = Math.sin(t * 3) * 0.3 * (1 + smoothedBass.current);
+      // DRAMATIC wing flap
+      wingsRef.current.rotation.x = Math.sin(t * 4) * 0.5 * (1 + smoothedBass.current * 1.5);
     }
   });
   
@@ -419,23 +469,29 @@ function OctopusTemplate({ audioData }: { audioData: CreativeTemplateRendererPro
   const tentacleRefs = useRef<THREE.Mesh[]>([]);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass, mids } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.1);
+    // FAST smoothing
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
     
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.4 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.scale.setScalar(1.2 + smoothedBass.current * 0.2);
+      groupRef.current.scale.setScalar((1.2 + smoothedBass.current * 0.45) * beatPop);
       groupRef.current.rotation.y = t * 0.3 * audioSensitivity.spinSpeed;
     }
     
+    // DRAMATIC tentacle wave
     tentacleRefs.current.forEach((tent, i) => {
       if (tent) {
-        const wave = Math.sin(t * 2 + i * 0.5) * 0.3 * (1 + smoothedBass.current);
+        const wave = Math.sin(t * 3 + i * 0.5) * 0.5 * (1 + smoothedBass.current * 1.5);
         tent.rotation.x = wave;
-        tent.rotation.z = Math.sin(t * 1.5 + i) * 0.2;
+        tent.rotation.z = Math.sin(t * 2 + i) * 0.3 * (1 + smoothedBass.current);
       }
     });
   });
@@ -470,20 +526,28 @@ function RocketTemplate({ audioData }: { audioData: CreativeTemplateRendererProp
   const flameRef = useRef<THREE.Mesh>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.15);
+    // FAST smoothing for rocket thrust
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.35);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.5);
     const t = clock.getElapsedTime();
     
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.5 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(t * 2) * 0.1 + smoothedBass.current * 0.3;
-      groupRef.current.rotation.z = Math.sin(t * 1.5) * 0.05;
-      groupRef.current.scale.setScalar(1.3 + smoothedBass.current * 0.2);
+      // DRAMATIC thrust
+      groupRef.current.position.y = Math.sin(t * 2) * 0.15 + smoothedBass.current * 0.5;
+      groupRef.current.rotation.z = Math.sin(t * 1.5) * 0.08 + smoothedBass.current * 0.05;
+      groupRef.current.scale.setScalar((1.3 + smoothedBass.current * 0.4) * beatPop);
     }
     if (flameRef.current) {
-      flameRef.current.scale.y = 1 + smoothedBass.current * 2;
+      // INTENSE flame on bass
+      flameRef.current.scale.y = 1 + smoothedBass.current * 3.5;
+      flameRef.current.scale.x = flameRef.current.scale.z = 1 + smoothedBass.current * 1.5;
     }
   });
   
@@ -515,20 +579,26 @@ function FishTemplate({ audioData }: { audioData: CreativeTemplateRendererProps[
   const tailRef = useRef<THREE.Mesh>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedMids = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass, mids } = analyzeAudio(audioData.frequency);
-    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.12);
+    // FAST smoothing
+    smoothedMids.current = THREE.MathUtils.lerp(smoothedMids.current, mids * audioSensitivity.midsMultiplier, 0.3);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
     const t = clock.getElapsedTime();
+    
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.3 : 1;
     
     if (groupRef.current) {
       groupRef.current.position.x = Math.sin(t * 0.5) * 0.5;
-      groupRef.current.rotation.y = Math.sin(t * 2) * 0.1;
-      groupRef.current.scale.setScalar(1.4 + smoothedMids.current * 0.2);
+      groupRef.current.rotation.y = Math.sin(t * 2) * 0.15 + smoothedMids.current * 0.1;
+      groupRef.current.scale.setScalar((1.4 + smoothedMids.current * 0.4) * beatPop);
     }
     if (tailRef.current) {
-      tailRef.current.rotation.y = Math.sin(t * 5 + smoothedMids.current * 3) * 0.4;
+      // FASTER tail wag
+      tailRef.current.rotation.y = Math.sin(t * 7 + smoothedMids.current * 5) * 0.6;
     }
   });
   
@@ -555,12 +625,21 @@ function HeartTemplate({ audioData }: { audioData: CreativeTemplateRendererProps
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.15);
-    if (groupRef.current) groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.4);
+    // VERY FAST for heartbeat
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.4);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.5);
+    
+    // POUNDING heartbeat effect
+    const heartbeat = smoothedBeat.current > 0.3 ? 1 + (smoothedBeat.current - 0.3) * 0.6 : 1;
+    const t = clock.getElapsedTime();
+    const pulse = 1 + Math.sin(t * 8) * 0.1 * smoothedBass.current;
+    
+    if (groupRef.current) groupRef.current.scale.setScalar((1.5 + smoothedBass.current * 0.6) * heartbeat * pulse);
   });
   
   return (
@@ -576,14 +655,20 @@ function StarTemplate({ audioData }: { audioData: CreativeTemplateRendererProps[
   const groupRef = useRef<THREE.Group>(null);
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const smoothedBass = useRef(0);
+  const smoothedBeat = useRef(0);
   const material = useMemo(() => createVisualizerMaterial(), []);
   
   useFrame(({ clock }) => {
     const { bass } = analyzeAudio(audioData.frequency);
-    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.12);
+    // FAST smoothing
+    smoothedBass.current = THREE.MathUtils.lerp(smoothedBass.current, bass * audioSensitivity.bassMultiplier, 0.3);
+    smoothedBeat.current = THREE.MathUtils.lerp(smoothedBeat.current, audioData.beatStrength, 0.4);
+    
+    const beatPop = smoothedBeat.current > 0.25 ? 1 + (smoothedBeat.current - 0.25) * 0.4 : 1;
+    
     if (groupRef.current) {
-      groupRef.current.rotation.z = clock.getElapsedTime() * audioSensitivity.spinSpeed;
-      groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.3);
+      groupRef.current.rotation.z = clock.getElapsedTime() * audioSensitivity.spinSpeed * (1 + smoothedBass.current);
+      groupRef.current.scale.setScalar((1.5 + smoothedBass.current * 0.5) * beatPop);
     }
   });
   
