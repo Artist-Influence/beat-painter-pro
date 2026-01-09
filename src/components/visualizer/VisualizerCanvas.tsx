@@ -18,6 +18,7 @@ interface VisualizerCanvasProps {
 function RecordingController() {
   const { gl, size, camera, scene } = useThree();
   const originalPixelRatioRef = useRef<number>(window.devicePixelRatio);
+  const originalCameraAspectRef = useRef<number | null>(null);
   
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
@@ -26,17 +27,23 @@ function RecordingController() {
       // Store original pixel ratio
       originalPixelRatioRef.current = gl.getPixelRatio();
       
+      // Calculate export aspect ratio and update camera
+      const exportAspect = width / height;
+      const perspCamera = camera as THREE.PerspectiveCamera;
+      if (perspCamera.aspect !== undefined) {
+        originalCameraAspectRef.current = perspCamera.aspect;
+        perspCamera.aspect = exportAspect;
+        perspCamera.updateProjectionMatrix();
+      }
+      
       // Calculate required pixel ratio to reach target resolution
       const requiredDpr = width / size.width;
       
       console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr}`);
-      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}`);
+      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}, Export aspect: ${exportAspect}`);
       
       // Directly set the pixel ratio on the WebGL renderer
       gl.setPixelRatio(requiredDpr);
-      
-      // NOTE: Do NOT change camera aspect ratio - it distorts the 3D geometry
-      // The 2D compositing in useWebMRecorder handles letterboxing for the export aspect ratio
       
       // Force a resize of the drawing buffer
       gl.setSize(size.width, size.height, true);
@@ -53,6 +60,14 @@ function RecordingController() {
     const handleRecordingStop = () => {
       // Restore original pixel ratio
       gl.setPixelRatio(originalPixelRatioRef.current);
+      
+      // Restore original camera aspect ratio
+      const perspCamera = camera as THREE.PerspectiveCamera;
+      if (perspCamera.aspect !== undefined && originalCameraAspectRef.current !== null) {
+        perspCamera.aspect = originalCameraAspectRef.current;
+        perspCamera.updateProjectionMatrix();
+      }
+      
       gl.setSize(size.width, size.height, true);
     };
     
