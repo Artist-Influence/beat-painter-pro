@@ -57,9 +57,9 @@ function GlassShard({ index, audioData, textureData }: any) {
     if (meshRef.current) {
       // POSITION: Audio-reactive orbit with explosion effect
       if (hasAudio) {
-        const x = Math.cos(angle) * radius * (1 + bass * 4.0); // Increased from 2.5
-        const z = Math.sin(angle) * radius * (1 + bass * 4.0);
-        const y = bass * 3.5 + highs * 1.5; // Increased from 2.0
+        const x = Math.cos(angle) * radius * (1 + bass * 1.8); // Reduced from 4.0 to fit in view
+        const z = Math.sin(angle) * radius * (1 + bass * 1.8);
+        const y = bass * 1.5 + highs * 0.6; // Reduced from 3.5 to fit in view
         meshRef.current.position.set(x, y, z);
         
         // ROTATION: Faster when audio is present
@@ -146,9 +146,9 @@ function CircumferenceCap({ index, audioData, textureData }: any) {
     if (meshRef.current) {
       // POSITION: Audio-reactive with explosion effect
       if (hasAudio) {
-        const x = Math.cos(angle) * radius * (1 + bass * 3.5); // Increased from 2.0
-        const z = Math.sin(angle) * radius * (1 + bass * 3.5);
-        const y = bass * 2.5 + mids * 1.2; // Increased from 1.5
+        const x = Math.cos(angle) * radius * (1 + bass * 1.5); // Reduced from 3.5 to fit in view
+        const z = Math.sin(angle) * radius * (1 + bass * 1.5);
+        const y = bass * 1.2 + mids * 0.5; // Reduced from 2.5 to fit in view
         meshRef.current.position.set(x, y, z);
         
         // Face towards center for cap effect
@@ -328,7 +328,7 @@ export default function DancingGnomeCapsVisualizer({
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 7, 6]} intensity={1.0} />
       <Environment preset="city" />
-      <group scale={0.65}>
+      <group scale={0.4}>
         <GlassSphereVisualizer audioData={audioData} />
       </group>
     </>
