@@ -5,6 +5,7 @@ import type { RandomVisualizerParams, StandaloneVariant, GeometryType, Animation
 import { seededRandom, COLOR_PALETTES, GEOMETRY_TYPES } from '@/lib/randomVisualizerGenerator';
 import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
 import { useStudioStore } from '@/stores/studioStore';
+import { CreativeTemplateRenderer } from './CreativeTemplateRenderer';
 
 // Animation style behavior modifiers
 function getAnimationBehavior(style: AnimationStyle, bass: number, mids: number, highs: number, time: number) {
@@ -124,6 +125,22 @@ function StandaloneShape({
     spinSpeed: number;
   };
 }) {
+  // If creative template is NOT 'geometric', render the pre-built creative template
+  if (variant.creativeTemplate && variant.creativeTemplate !== 'geometric') {
+    return (
+      <group>
+        <CreativeTemplateRenderer 
+          templateType={variant.creativeTemplate}
+          audioData={audioData}
+        />
+        <ambientLight intensity={0.4} />
+        <pointLight position={[4, 4, 4]} intensity={1.2} />
+        <pointLight position={[-3, -2, 2]} intensity={0.6} />
+      </group>
+    );
+  }
+  
+  // Otherwise, render the existing procedural geometry
   const groupRef = useRef<THREE.Group>(null);
   const innerGroupRef = useRef<THREE.Group>(null);
   const meshRefs = useRef<THREE.Mesh[]>([]);
