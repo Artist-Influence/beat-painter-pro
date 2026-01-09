@@ -1740,8 +1740,8 @@ export function RandomVisualizerTemplate({ params, audioData, isPlaying = false 
     }
   };
 
-  // Determine effective background effect (store overrides if not 'none')
-  const effectiveBackgroundEffect = storeBackgroundEffect !== 'none' ? storeBackgroundEffect : params.backgroundEffect;
+  // Store background effect always takes precedence - allows user control from Visual Effects panel
+  const effectiveBackgroundEffect = storeBackgroundEffect;
 
   // Use standalone procedural shape if we have a standalone variant
   if (params.standaloneVariant) {

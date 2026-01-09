@@ -17,6 +17,7 @@ import {
   COMPOSITION_STYLES,
   COMPOSITION_LABELS,
   type BaseShape,
+  type BackgroundEffect,
   type AnimationStyle,
   type CompositionStyle,
   type RandomVisualizerParams
@@ -88,8 +89,10 @@ function useSimulatedAudio() {
   return audioData;
 }
 
-// Helper to get random background effect
-function getRandomBackgroundEffect() {
+// Helper to get random background effect (only for multiple layout mode)
+function getRandomBackgroundEffect(layoutMode: 'standalone' | 'multiple') {
+  // Standalone visualizers should have no background by default
+  if (layoutMode === 'standalone') return 'none' as BackgroundEffect;
   return BACKGROUND_EFFECTS[Math.floor(Math.random() * BACKGROUND_EFFECTS.length)];
 }
 
@@ -103,9 +106,9 @@ export function CustomVisualizerGenerator({
   // Simulated audio for preview
   const previewAudio = useSimulatedAudio();
   
-  // Current random params
+  // Current random params - default to no background for initial standalone-like generation
   const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => 
-    generateRandomParams(generateRandomSeed(), { backgroundEffect: getRandomBackgroundEffect() })
+    generateRandomParams(generateRandomSeed(), { backgroundEffect: 'none' })
   );
   
   // Custom name for the visualizer
@@ -129,7 +132,7 @@ export function CustomVisualizerGenerator({
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed, {
       ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-      backgroundEffect: getRandomBackgroundEffect(),
+      backgroundEffect: getRandomBackgroundEffect(layoutMode),
       elementCount: layoutMode === 'standalone' ? 1 : elementCount,
       connectionLines: threadingEnabled,
       animationStyle,
@@ -162,10 +165,10 @@ export function CustomVisualizerGenerator({
     setCompositionStyle(randomComposition);
     setComplexity(randomComplexity);
     
-    // Generate params with random background
+    // Generate params with random background (none for standalone)
     const newParams = generateRandomParams(newSeed, {
       ...(randomLayout === 'multiple' ? { baseShape: randomShape } : {}),
-      backgroundEffect: getRandomBackgroundEffect(),
+      backgroundEffect: getRandomBackgroundEffect(randomLayout),
       elementCount: randomElementCount,
       connectionLines: randomThreading,
       animationStyle: randomAnim,
@@ -185,7 +188,7 @@ export function CustomVisualizerGenerator({
       const newSeed = generateRandomSeed();
       const newParams = generateRandomParams(newSeed, {
         ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-        backgroundEffect: getRandomBackgroundEffect(),
+        backgroundEffect: getRandomBackgroundEffect(layoutMode),
         elementCount: layoutMode === 'standalone' ? 1 : elementCount,
         connectionLines: threadingEnabled,
         animationStyle,
