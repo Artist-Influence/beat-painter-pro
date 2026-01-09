@@ -496,16 +496,24 @@ function drawLogoWithSettings(
   const y = (logo.position.y / 100) * exportCanvas.height - logoHeight / 2;
   
   if (logo.colorMode === 'invert') {
-    // Draw logo to temp canvas, invert, then composite
+    // Draw logo to temp canvas and invert RGB while preserving alpha
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = logoWidth;
     tempCanvas.height = logoHeight;
     const tempCtx = tempCanvas.getContext('2d');
     if (tempCtx) {
       tempCtx.drawImage(logoImage, 0, 0, logoWidth, logoHeight);
-      tempCtx.globalCompositeOperation = 'difference';
-      tempCtx.fillStyle = 'white';
-      tempCtx.fillRect(0, 0, logoWidth, logoHeight);
+      // Get image data and invert RGB while preserving alpha
+      const imageData = tempCtx.getImageData(0, 0, logoWidth, logoHeight);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Invert RGB, keep alpha unchanged
+        data[i] = 255 - data[i];       // R
+        data[i + 1] = 255 - data[i + 1]; // G
+        data[i + 2] = 255 - data[i + 2]; // B
+        // data[i + 3] is alpha - leave it alone
+      }
+      tempCtx.putImageData(imageData, 0, 0);
       ctx.drawImage(tempCanvas, x, y);
     }
   } else {
