@@ -333,27 +333,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
           }
           
-          // Draw visualizer with correct aspect ratio (no stretching)
-          const srcAspect = srcCanvas.width / srcCanvas.height;
-          const exportAspect = exportCanvas.width / exportCanvas.height;
-          
-          let drawWidth: number, drawHeight: number, drawX: number, drawY: number;
-          
-          if (srcAspect > exportAspect) {
-            // Source is wider - fit to width, letterbox top/bottom
-            drawWidth = exportCanvas.width;
-            drawHeight = exportCanvas.width / srcAspect;
-            drawX = 0;
-            drawY = (exportCanvas.height - drawHeight) / 2;
-          } else {
-            // Source is taller - fit to height, pillarbox sides
-            drawHeight = exportCanvas.height;
-            drawWidth = exportCanvas.height * srcAspect;
-            drawX = (exportCanvas.width - drawWidth) / 2;
-            drawY = 0;
-          }
-          
-          ctx.drawImage(srcCanvas, drawX, drawY, drawWidth, drawHeight);
+          // Draw visualizer at full size - camera aspect now matches export aspect
+          ctx.drawImage(srcCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
           
           // Draw logo IN FRONT of visualizer if layer is 'front'
           if (logo?.url && logoImageRef.current && logo.layer === 'front') {
