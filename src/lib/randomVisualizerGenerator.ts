@@ -11,7 +11,6 @@ import { AbstractFormParams, generateAbstractFormParams, ABSTRACT_FORM_FAMILIES,
 
 export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix' | 'membrane' | 'pulsar' | 'vortexCore' | 'cosmicEye';
 export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 'smooth' | 'breathing' | 'explosive';
-export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'energyField' | 'particles' | 'lightRays' | 'aurora';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
 
 export interface RandomVisualizerParams {
@@ -23,7 +22,6 @@ export interface RandomVisualizerParams {
   symmetry: boolean;
   rotationSpeed: number;
   colorShift: number;
-  backgroundEffect: BackgroundEffect;
   mixedGeometry: boolean;
   connectionLines: boolean;
   // Variance parameters for unique generations
@@ -50,7 +48,6 @@ export interface RandomVisualizerParams {
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
 export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
-export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'energyField', 'particles', 'lightRays', 'aurora'];
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
 
 export function generateRandomSeed(): number {
@@ -59,7 +56,7 @@ export function generateRandomSeed(): number {
 
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'abstractForm'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'abstractForm'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
@@ -69,10 +66,6 @@ export function generateRandomParams(
   
   // Element count from preference or default to 1 (abstract forms are single elements)
   const elementCount = preferences?.elementCount ?? 1;
-  
-  // Background effect
-  const backgroundEffect = preferences?.backgroundEffect ?? 
-    BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
   
   // Abstract form - use provided or generate new one
   const abstractForm = preferences?.abstractForm ?? generateAbstractFormParams(seed);
@@ -84,7 +77,6 @@ export function generateRandomParams(
     seed,
     baseShape,
     animationStyle,
-    backgroundEffect,
     elementCount,
     particleCount: Math.floor(100 + random() * 300),
     symmetry: random() > 0.5,

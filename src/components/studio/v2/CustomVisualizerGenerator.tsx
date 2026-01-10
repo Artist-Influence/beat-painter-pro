@@ -123,7 +123,6 @@ export function CustomVisualizerGenerator({
     const seed = generateRandomSeed();
     const abstractForm = generateAbstractFormParams(seed);
     return generateRandomParams(seed, { 
-      backgroundEffect: 'none',
       elementCount: 1,
       abstractForm,
     });
@@ -147,7 +146,6 @@ export function CustomVisualizerGenerator({
     });
     
     const newParams = generateRandomParams(newSeed, {
-      backgroundEffect: 'none',
       elementCount: 1,
       abstractForm,
     });
@@ -167,7 +165,6 @@ export function CustomVisualizerGenerator({
     const abstractForm = generateAbstractFormParams(newSeed);
     
     const newParams = generateRandomParams(newSeed, {
-      backgroundEffect: 'none',
       elementCount: 1,
       abstractForm,
     });
@@ -183,7 +180,6 @@ export function CustomVisualizerGenerator({
       });
       
       return generateRandomParams(prev.seed, {
-        backgroundEffect: 'none',
         elementCount: 1,
         abstractForm,
       });
