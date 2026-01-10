@@ -1,27 +1,21 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Save, RefreshCw, Sparkles, Link2, Shuffle, Minimize2, Maximize2 } from 'lucide-react';
+import { Save, RefreshCw, Sparkles } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { 
   generateRandomSeed, 
   generateRandomParams, 
-  paramsToName,
-  paramsToEmoji,
-  BASE_SHAPES,
-  BACKGROUND_EFFECTS,
-  ANIMATION_STYLES,
-  COMPOSITION_STYLES,
-  COMPOSITION_LABELS,
-  type BaseShape,
-  type BackgroundEffect,
-  type AnimationStyle,
-  type CompositionStyle,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
+import { 
+  generateAbstractFormParams,
+  abstractFormToName,
+  abstractFormToEmoji,
+} from '@/lib/abstractFormGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 
@@ -30,17 +24,6 @@ interface CustomVisualizerGeneratorProps {
   onClose: () => void;
   onSuccess?: (visualizer: any) => void;
 }
-
-// Animation style labels
-const ANIMATION_LABELS: Record<AnimationStyle, string> = {
-  pulsing: 'Pulsing',
-  rotating: 'Rotating',
-  flowing: 'Flowing',
-  chaotic: 'Chaotic',
-  smooth: 'Smooth',
-  breathing: 'Breathing',
-  explosive: 'Explosive',
-};
 
 // Hook for simulated 128 BPM audio preview
 function useSimulatedAudio() {
@@ -89,13 +72,6 @@ function useSimulatedAudio() {
   return audioData;
 }
 
-// Helper to get random background effect (only for multiple layout mode)
-function getRandomBackgroundEffect(layoutMode: 'standalone' | 'multiple') {
-  // Standalone visualizers should have no background by default
-  if (layoutMode === 'standalone') return 'none' as BackgroundEffect;
-  return BACKGROUND_EFFECTS[Math.floor(Math.random() * BACKGROUND_EFFECTS.length)];
-}
-
 export function CustomVisualizerGenerator({ 
   isOpen, 
   onClose, 
@@ -106,112 +82,77 @@ export function CustomVisualizerGenerator({
   // Simulated audio for preview
   const previewAudio = useSimulatedAudio();
   
-  // Current random params - default to no background for initial standalone-like generation
-  const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => 
-    generateRandomParams(generateRandomSeed(), { backgroundEffect: 'none' })
-  );
+  // Current random params
+  const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => {
+    const seed = generateRandomSeed();
+    const abstractForm = generateAbstractFormParams(seed);
+    return generateRandomParams(seed, { 
+      backgroundEffect: 'none',
+      elementCount: 1,
+      abstractForm,
+    });
+  });
   
   // Custom name for the visualizer
   const [customName, setCustomName] = useState<string>('');
   
-  // User preferences
-  const [shapeFilter, setShapeFilter] = useState<BaseShape>('orb');
-  const [layoutMode, setLayoutMode] = useState<'standalone' | 'multiple'>('multiple');
-  const [elementCount, setElementCount] = useState<number>(20);
-  const [threadingEnabled, setThreadingEnabled] = useState(false);
-  const [animationStyle, setAnimationStyle] = useState<AnimationStyle>('pulsing');
-  const [compositionStyle, setCompositionStyle] = useState<CompositionStyle>('orbital');
+  // Simplified controls - just complexity
   const [complexity, setComplexity] = useState<number>(5);
-  
-  // Track previous layout mode to detect switches
-  const prevLayoutModeRef = useRef(layoutMode);
 
   // Generate new random visualizer
   const handleGenerate = useCallback(() => {
     setCustomName('');
     const newSeed = generateRandomSeed();
+    
+    // Generate abstract form with complexity preference
+    const abstractForm = generateAbstractFormParams(newSeed, {
+      chaosLevel: complexity / 10,
+      nodeCount: Math.floor(30 + complexity * 15),
+    });
+    
     const newParams = generateRandomParams(newSeed, {
-      ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-      backgroundEffect: getRandomBackgroundEffect(layoutMode),
-      elementCount: layoutMode === 'standalone' ? 1 : elementCount,
-      connectionLines: threadingEnabled,
-      animationStyle,
-      compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
-      complexity: layoutMode === 'standalone' ? complexity : undefined,
+      backgroundEffect: 'none',
+      elementCount: 1,
+      abstractForm,
     });
     setCurrentParams(newParams);
-  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle, compositionStyle, complexity]);
+  }, [complexity]);
 
-  // Surprise Me - fully random everything
+  // Surprise Me - fully random everything including complexity
   const handleSurpriseMe = useCallback(() => {
     setCustomName('');
     const newSeed = generateRandomSeed();
     
-    // Randomize all UI controls
-    const randomLayout = Math.random() > 0.5 ? 'standalone' : 'multiple';
-    const randomElementCount = randomLayout === 'standalone' ? 1 : Math.floor(8 + Math.random() * 72);
-    const randomShape = BASE_SHAPES[Math.floor(Math.random() * BASE_SHAPES.length)];
-    const randomAnim = ANIMATION_STYLES[Math.floor(Math.random() * ANIMATION_STYLES.length)];
-    const randomThreading = Math.random() > 0.6;
-    const randomComposition = COMPOSITION_STYLES[Math.floor(Math.random() * COMPOSITION_STYLES.length)];
+    // Randomize complexity
     const randomComplexity = Math.floor(1 + Math.random() * 10);
-    
-    // Update UI state
-    setLayoutMode(randomLayout);
-    setElementCount(randomElementCount);
-    setShapeFilter(randomShape);
-    setAnimationStyle(randomAnim);
-    setThreadingEnabled(randomThreading);
-    setCompositionStyle(randomComposition);
     setComplexity(randomComplexity);
     
-    // Generate params with random background (none for standalone)
+    // Generate completely random abstract form
+    const abstractForm = generateAbstractFormParams(newSeed);
+    
     const newParams = generateRandomParams(newSeed, {
-      ...(randomLayout === 'multiple' ? { baseShape: randomShape } : {}),
-      backgroundEffect: getRandomBackgroundEffect(randomLayout),
-      elementCount: randomElementCount,
-      connectionLines: randomThreading,
-      animationStyle: randomAnim,
-      compositionStyle: randomLayout === 'standalone' ? randomComposition : undefined,
-      complexity: randomLayout === 'standalone' ? randomComplexity : undefined,
+      backgroundEffect: 'none',
+      elementCount: 1,
+      abstractForm,
     });
     setCurrentParams(newParams);
   }, []);
 
-  // Update preview in real-time when filters change
+  // Update preview when complexity changes
   useEffect(() => {
-    const layoutChanged = prevLayoutModeRef.current !== layoutMode;
-    prevLayoutModeRef.current = layoutMode;
-    
-    // When switching layout modes, generate fresh seed to properly reset
-    if (layoutChanged) {
-      const newSeed = generateRandomSeed();
-      const newParams = generateRandomParams(newSeed, {
-        ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-        backgroundEffect: getRandomBackgroundEffect(layoutMode),
-        elementCount: layoutMode === 'standalone' ? 1 : elementCount,
-        connectionLines: threadingEnabled,
-        animationStyle,
-        compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
-        complexity: layoutMode === 'standalone' ? complexity : undefined,
+    setCurrentParams(prev => {
+      const abstractForm = generateAbstractFormParams(prev.seed, {
+        chaosLevel: complexity / 10,
+        nodeCount: Math.floor(30 + complexity * 15),
       });
-      setCurrentParams(newParams);
-    } else {
-      // Normal update - keep same seed and background
-      setCurrentParams(prev => {
-        const updated = generateRandomParams(prev.seed, {
-          ...(layoutMode === 'multiple' ? { baseShape: shapeFilter } : {}),
-          backgroundEffect: prev.backgroundEffect,
-          elementCount: layoutMode === 'standalone' ? 1 : elementCount,
-          connectionLines: threadingEnabled,
-          animationStyle,
-          compositionStyle: layoutMode === 'standalone' ? compositionStyle : undefined,
-          complexity: layoutMode === 'standalone' ? complexity : undefined,
-        });
-        return updated;
+      
+      return generateRandomParams(prev.seed, {
+        backgroundEffect: 'none',
+        elementCount: 1,
+        abstractForm,
       });
-    }
-  }, [shapeFilter, elementCount, threadingEnabled, layoutMode, animationStyle, compositionStyle, complexity]);
+    });
+  }, [complexity]);
 
   // Save current visualizer
   const handleSave = async () => {
@@ -222,8 +163,13 @@ export function CustomVisualizerGenerator({
     }
   };
 
-  const currentName = paramsToName(currentParams);
-  const currentEmoji = paramsToEmoji(currentParams);
+  // Get name and emoji from abstract form
+  const currentName = currentParams.abstractForm 
+    ? abstractFormToName(currentParams.abstractForm)
+    : `Visualizer #${currentParams.seed % 10000}`;
+  const currentEmoji = currentParams.abstractForm
+    ? abstractFormToEmoji(currentParams.abstractForm)
+    : '✨';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -232,7 +178,7 @@ export function CustomVisualizerGenerator({
           <DialogTitle className="text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-purple-400" />
-              Generate Random Visualizer
+              Generate Visualizer
             </div>
             {userRole !== 'admin' && (
               <Badge variant="secondary" className="bg-purple-600/30 text-purple-200">
@@ -263,10 +209,10 @@ export function CustomVisualizerGenerator({
               </span>
             </div>
             
-            {/* Animation style badge */}
+            {/* Form family badge */}
             <div className="absolute top-3 right-3">
               <Badge variant="secondary" className="bg-black/60 text-white/80 text-xs">
-                {ANIMATION_LABELS[currentParams.animationStyle]} • 128 BPM
+                {currentParams.abstractForm?.formFamily || 'Abstract'} • 128 BPM
               </Badge>
             </div>
           </div>
@@ -284,137 +230,24 @@ export function CustomVisualizerGenerator({
             />
           </div>
 
-          {/* Controls */}
+          {/* Simplified Controls - Just Complexity */}
           <div className="space-y-3">
-            {/* Layout Mode Toggle */}
-            <div className="space-y-1">
-              <label className="text-xs text-white/70">Layout</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setLayoutMode('standalone')}
-                  className={`flex-1 px-3 py-1.5 text-xs rounded border transition-colors flex items-center justify-center gap-1 ${
-                    layoutMode === 'standalone' 
-                      ? 'bg-purple-600 border-purple-500 text-white' 
-                      : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/15'
-                  }`}
-                >
-                  <Minimize2 className="w-3 h-3" />
-                  Standalone
-                </button>
-                <button
-                  onClick={() => setLayoutMode('multiple')}
-                  className={`flex-1 px-3 py-1.5 text-xs rounded border transition-colors flex items-center justify-center gap-1 ${
-                    layoutMode === 'multiple' 
-                      ? 'bg-purple-600 border-purple-500 text-white' 
-                      : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/15'
-                  }`}
-                >
-                  <Maximize2 className="w-3 h-3" />
-                  Multiple
-                </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-white/70">Complexity</label>
+                <span className="text-xs text-white/90 font-medium">{complexity}/10</span>
               </div>
-            </div>
-
-            {/* Shape selector - only for multiple mode */}
-            {layoutMode === 'multiple' && (
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Shape</label>
-                <select 
-                  value={shapeFilter}
-                  onChange={(e) => setShapeFilter(e.target.value as BaseShape)}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  {BASE_SHAPES.map(shape => (
-                    <option key={shape} value={shape}>
-                      {shape.charAt(0).toUpperCase() + shape.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Composition Style - only for standalone mode */}
-            {layoutMode === 'standalone' && (
-              <div className="space-y-1">
-                <label className="text-xs text-white/70">Composition</label>
-                <select 
-                  value={compositionStyle}
-                  onChange={(e) => setCompositionStyle(e.target.value as CompositionStyle)}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-                >
-                  {COMPOSITION_STYLES.map(style => (
-                    <option key={style} value={style}>
-                      {COMPOSITION_LABELS[style]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Complexity Slider - only for standalone mode */}
-            {layoutMode === 'standalone' && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-white/70">Complexity</label>
-                  <span className="text-xs text-white/90 font-medium">{complexity}/10</span>
-                </div>
-                <Slider
-                  value={[complexity]}
-                  onValueChange={(value) => setComplexity(value[0])}
-                  min={1}
-                  max={10}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            )}
-            {layoutMode === 'multiple' && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-white/70">Elements</label>
-                  <span className="text-xs text-white/90 font-medium">{elementCount}</span>
-                </div>
-                <Slider
-                  value={[elementCount]}
-                  onValueChange={(value) => setElementCount(value[0])}
-                  min={2}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            )}
-
-            {/* Animation Style */}
-            <div className="space-y-1">
-              <label className="text-xs text-white/70">Animation Style</label>
-              <select 
-                value={animationStyle}
-                onChange={(e) => setAnimationStyle(e.target.value as AnimationStyle)}
-                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-sm"
-              >
-                {ANIMATION_STYLES.map(style => (
-                  <option key={style} value={style}>
-                    {ANIMATION_LABELS[style]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Connection Lines toggle */}
-            <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={threadingEnabled}
-                  onChange={(e) => setThreadingEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded bg-white/10 border-white/20 text-purple-500 focus:ring-purple-500"
-                />
-                <span className="text-xs text-white/70 flex items-center gap-1">
-                  <Link2 className="w-3 h-3" />
-                  Connection Lines
-                </span>
-              </label>
+              <Slider
+                value={[complexity]}
+                onValueChange={(value) => setComplexity(value[0])}
+                min={1}
+                max={10}
+                step={1}
+                className="w-full"
+              />
+              <p className="text-xs text-white/50">
+                Higher complexity = more nodes, connections, and chaos
+              </p>
             </div>
           </div>
         </div>
@@ -435,12 +268,11 @@ export function CustomVisualizerGenerator({
               variant="ghost"
               onClick={handleSurpriseMe}
               disabled={isSaving}
-              className="bg-purple-600/20 border border-purple-500/50 text-purple-300 hover:bg-purple-600/40"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
             >
-              <Shuffle className="w-4 h-4 mr-2" />
+              <Sparkles className="w-4 h-4 mr-2" />
               Surprise Me!
             </Button>
-            
             <Button
               variant="ghost"
               onClick={handleGenerate}
@@ -450,23 +282,13 @@ export function CustomVisualizerGenerator({
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Another
             </Button>
-            
             <Button
               onClick={handleSave}
               disabled={isSaving}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save This One
-                </>
-              )}
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? 'Saving...' : 'Save This One'}
             </Button>
           </div>
         </div>
