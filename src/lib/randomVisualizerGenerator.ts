@@ -36,6 +36,16 @@ export interface RandomVisualizerParams {
   glowIntensity: number;
   // NEW: Abstract form params (replaces old standalone/creative templates)
   abstractForm?: AbstractFormParams;
+  // Style snapshot at save time (for persisting visual styles with saved visualizers)
+  savedStyle?: {
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      isNeon: boolean;
+      isMetallic: boolean;
+    };
+  };
 }
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
