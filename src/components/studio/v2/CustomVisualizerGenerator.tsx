@@ -44,22 +44,28 @@ function useSimulatedAudio() {
     return () => clearInterval(interval);
   }, []);
   
-  // Generate audio-like data based on beat phase
+  // Generate audio-like data based on beat phase - 256 elements to match analyzeAudio expectations
   const audioData = useMemo(() => {
-    const arr = new Array(128).fill(0);
-    // Bass hits on the beat (phase 0-0.2)
-    const bassIntensity = Math.max(0, 1 - beatPhase * 5) * 200;
-    arr[0] = bassIntensity;
-    arr[1] = bassIntensity * 0.8;
-    arr[2] = bassIntensity * 0.6;
-    arr[3] = bassIntensity * 0.4;
-    // Mids fill in with some variation
-    for (let i = 10; i < 50; i++) {
-      arr[i] = 60 + Math.sin(beatPhase * Math.PI * 2 + i * 0.1) * 40;
+    const arr = new Array(256).fill(0);
+    
+    // Bass hits on the beat (phase 0-0.2) - indices 0-15
+    const bassIntensity = Math.max(0, 1 - beatPhase * 5) * 220;
+    for (let i = 0; i < 15; i++) {
+      arr[i] = bassIntensity * (1 - i * 0.05);
     }
-    // Highs sparkle
-    for (let i = 60; i < 128; i++) {
-      arr[i] = 30 + Math.random() * 50;
+    
+    // Mids fill in with variation - indices 15-100
+    const snareHit = beatPhase > 0.45 && beatPhase < 0.55 ? 180 : 0;
+    for (let i = 15; i < 100; i++) {
+      const wave = Math.sin(beatPhase * Math.PI * 2 + i * 0.1) * 60;
+      arr[i] = 80 + wave + (i < 35 ? snareHit * (1 - (i - 15) / 20) : 0);
+    }
+    
+    // Highs sparkle - indices 100-256
+    const hihatIntensity = (beatPhase < 0.1 || (beatPhase > 0.25 && beatPhase < 0.35) || 
+                           (beatPhase > 0.5 && beatPhase < 0.6) || (beatPhase > 0.75 && beatPhase < 0.85)) ? 120 : 40;
+    for (let i = 100; i < 256; i++) {
+      arr[i] = hihatIntensity + Math.random() * 60;
     }
     
     return {

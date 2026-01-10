@@ -31,11 +31,20 @@ function analyzeAudio(frequency: number[]) {
   const mids = lowMids.length > 0 ? Math.max(0, ...lowMids) / 255 : 0;
   const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
   
+  // Increased multipliers for more dramatic audio response
   return {
-    bass: Math.min(bass * 3.5, 2.5),
-    mids: Math.min(mids * 2.8, 2.0),
-    highs: Math.min(highs * 2.5, 1.8),
+    bass: Math.min(bass * 4.5, 3.0),
+    mids: Math.min(mids * 3.5, 2.5),
+    highs: Math.min(highs * 3.0, 2.0),
   };
+}
+
+// Asymmetric smoothing - fast attack, slower decay for punchy response
+function smoothValue(current: number, target: number): number {
+  const attackSpeed = 0.85;
+  const decaySpeed = 0.35;
+  const isRising = target > current;
+  return current + (target - current) * (isRising ? attackSpeed : decaySpeed);
 }
 
 // ==================== NOISE FUNCTIONS ====================
@@ -122,7 +131,7 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
   
   const material = useMemo(() => {
     const color = new THREE.Color(textureData.colors.primary);
-    return new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
       emissiveIntensity: params.emissiveMin,
@@ -130,7 +139,16 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
       roughness: 0.2,
       wireframe: params.wireframeProbability > 0.5,
     });
-  }, [textureData.colors.primary, params.emissiveMin, params.wireframeProbability]);
+    
+    // Apply texture if available
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     const { bass, mids, highs } = analyzeAudio(audioData.frequency);
@@ -142,10 +160,10 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    // Smooth audio values
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.5;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.4;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.3;
+    // Smooth audio values with asymmetric attack/decay
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (groupRef.current) {
       // BASS: Large-scale topology changes based on mode
@@ -198,10 +216,12 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
           break;
       }
       
-      // Rotation based on motion params
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01;
+      // Rotation driven by audio intensity (minimal when quiet, faster when loud)
+      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+      const rotationMult = 0.1 + audioIntensity * 0.9;
+      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
+      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
     }
     
     // HIGHS: Fine detail - update emissive intensity
@@ -305,7 +325,7 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
   
   const material = useMemo(() => {
     const color = new THREE.Color(textureData.colors.primary);
-    return new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
       emissiveIntensity: params.emissiveMin,
@@ -313,7 +333,16 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
       roughness: 0.6,
       wireframe: params.wireframeProbability > 0.7,
     });
-  }, [textureData.colors.primary, params.emissiveMin, params.wireframeProbability]);
+    
+    // Apply texture if available
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     const { bass, mids, highs } = analyzeAudio(audioData.frequency);
@@ -324,9 +353,9 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.6;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.5;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.4;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (meshRef.current && meshRef.current.geometry) {
       const geometry = meshRef.current.geometry;
@@ -380,9 +409,11 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
       // Global transforms
       groupRef.current.scale.setScalar(1.8 + smoothedBass.current * 0.4);
       
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01;
+      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+      const rotationMult = 0.1 + audioIntensity * 0.9;
+      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
+      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
     }
     
     if (material) {
@@ -467,9 +498,9 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.7;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.5;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.4;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (particlesRef.current) {
       const posAttr = particlesRef.current.geometry.attributes.position;
@@ -522,9 +553,11 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
       
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.02;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01;
+      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+      const rotationMult = 0.1 + audioIntensity * 0.9;
+      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.02 * rotationMult;
+      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
     }
   });
   
@@ -604,9 +637,9 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.6;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.5;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.4;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (groupRef.current) {
       // BASS: Vortex expansion
@@ -698,9 +731,9 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.5;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.4;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.3;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.4);
@@ -804,9 +837,9 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.6;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.4;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.3;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
@@ -901,9 +934,9 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.5;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.4;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.3;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
@@ -988,7 +1021,7 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
   
   const material = useMemo(() => {
     const color = new THREE.Color(textureData.colors.primary);
-    return new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
       emissiveIntensity: params.emissiveMin,
@@ -997,7 +1030,16 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
       wireframe: params.wireframeProbability > 0.5,
       side: THREE.DoubleSide,
     });
-  }, [textureData.colors.primary, params.emissiveMin, params.wireframeProbability]);
+    
+    // Apply texture if available
+    if (textureData.texture) {
+      mat.map = textureData.texture;
+      mat.emissiveMap = textureData.texture;
+      mat.needsUpdate = true;
+    }
+    
+    return mat;
+  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     const { bass, mids, highs } = analyzeAudio(audioData.frequency);
@@ -1008,9 +1050,9 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
     
-    smoothedBass.current += (bassEffect - smoothedBass.current) * 0.7;
-    smoothedMids.current += (midsEffect - smoothedMids.current) * 0.5;
-    smoothedHighs.current += (highsEffect - smoothedHighs.current) * 0.4;
+    smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
+    smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
+    smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
     // EXTREME topology deformation
     if (meshRef.current && meshRef.current.geometry) {
