@@ -5,8 +5,6 @@ import { Slider } from "@/components/ui/slider";
 import { useStudioStore } from "@/stores/studioStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { BackgroundEffect } from "@/lib/randomVisualizerGenerator";
 
 // Custom slider component with double-click reset
 const ResettableSlider = ({ 
@@ -58,8 +56,6 @@ export const AudioResponseControls: React.FC = () => {
     setZoom,
     exportMode,
     setExportMode,
-    backgroundEffect,
-    setBackgroundEffect
   } = useStudioStore();
   
   const bgInputRef = React.useRef<HTMLInputElement>(null);
@@ -383,27 +379,6 @@ export const AudioResponseControls: React.FC = () => {
               defaultValue={1.0}
               onValueChange={([v]) => setZoom(v)}
             />
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-white/80 text-sm">Background Particles</span>
-            <Select 
-              value={backgroundEffect} 
-              onValueChange={(v) => setBackgroundEffect(v as BackgroundEffect)}
-            >
-              <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                <SelectValue placeholder="Select effect" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-white/20">
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="stars">Stars</SelectItem>
-                <SelectItem value="particles">Particles</SelectItem>
-                <SelectItem value="aurora">Aurora</SelectItem>
-                <SelectItem value="energyField">Energy Field</SelectItem>
-                <SelectItem value="lightRays">Light Rays</SelectItem>
-                <SelectItem value="movingLines">Moving Lines</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
     </div>

@@ -95,6 +95,10 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
@@ -160,7 +164,8 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
   }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -331,6 +336,10 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
@@ -356,7 +365,8 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
   }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -474,13 +484,17 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Generate particle positions
+  // Generate particle field
   const { positions, velocities, count } = useMemo(() => {
     const r = seededRandom(params.geometrySeed);
-    const c = Math.min(params.energyParticleCount, 500);
+    const c = params.energyParticleCount;
     const pos = new Float32Array(c * 3);
     const vel = new Float32Array(c * 3);
     
@@ -504,7 +518,8 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
   }, [params.geometrySeed, params.energyParticleCount]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -619,6 +634,10 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
@@ -639,7 +658,8 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
   }, [params.geometrySeed, params.spiralArmCount]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -729,11 +749,16 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -810,6 +835,10 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
@@ -842,7 +871,8 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
   }, [params.geometrySeed, params.crystalShardCount]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -938,11 +968,16 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -957,23 +992,27 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
       
-      // Asymmetry breaking based on chaos level (only when spinSpeed > 0)
-      if (sens.spinSpeed > 0 && params.asymmetryFactor > 0.3) {
-        groupRef.current.rotation.x = Math.sin(t * 0.7) * params.asymmetryFactor * 0.2 * sens.spinSpeed;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        groupRef.current.rotation.y += sens.spinSpeed * (0.005 + smoothedMids.current * 0.02);
       }
     }
     
     if (elementsRef.current) {
-      // Rotation ONLY when spinSpeed > 0
-      if (sens.spinSpeed > 0) {
-        elementsRef.current.rotation.z += sens.spinSpeed * (0.005 + smoothedMids.current * 0.02);
-      }
-      
-      // Pulse elements
       elementsRef.current.children.forEach((element, i) => {
-        const phase = (i / params.symmetryFold) * Math.PI * 2;
-        const pulse = 1 + Math.sin(t * 3 + phase) * smoothedBass.current * 0.15;
-        element.scale.setScalar(pulse);
+        // Radial pulse with audio
+        const pulsePhase = t * 2 + (i / params.symmetryFold) * Math.PI * 2;
+        const pulseMag = 1 + Math.sin(pulsePhase) * smoothedMids.current * 0.2;
+        element.scale.setScalar(pulseMag);
+        
+        // BASS: Elements move outward
+        const baseRadius = 1 + smoothedBass.current * 0.5;
+        const angle = (i / params.symmetryFold) * Math.PI * 2;
+        element.position.x = Math.cos(angle) * baseRadius;
+        element.position.z = Math.sin(angle) * baseRadius;
+        
+        // Individual rotation
+        element.rotation.y = t * 0.5 + i * 0.2;
       });
     }
   });
@@ -986,9 +1025,13 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
           const radius = 1;
           
           return (
-            <group key={i} rotation={[0, 0, angle]}>
-              <mesh position={[radius, 0, 0]}>
-                <tetrahedronGeometry args={[0.25, 0]} />
+            <group 
+              key={i} 
+              position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]}
+              rotation={[0, angle, 0]}
+            >
+              <mesh>
+                <dodecahedronGeometry args={[0.2, 0]} />
                 <meshStandardMaterial
                   color={textureData.colors.primary}
                   emissive={textureData.colors.primary}
@@ -1035,6 +1078,10 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
   const smoothedMids = useRef(0);
   const smoothedHighs = useRef(0);
   
+  // FIX: Store audioData in ref to avoid stale closure in useFrame
+  const audioDataRef = useRef(audioData);
+  audioDataRef.current = audioData;
+  
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
@@ -1061,7 +1108,8 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
   }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
-    const { bass, mids, highs } = analyzeAudio(audioData.frequency);
+    // Use ref to always get latest audioData
+    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -1204,14 +1252,13 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
 // ==================== MAIN RENDERER ====================
 
 export function AbstractFormRenderer({ params, audioData, savedStyle }: AbstractFormRendererProps) {
-  // Apply saved style colors as global fallback if no texture is currently applied
+  // Apply saved style colors IMMEDIATELY and ALWAYS when loading a saved visualizer
   React.useEffect(() => {
-    if (savedStyle?.colors && !(window as any).appliedTexture) {
-      // Only set if not already applied from UI
-      const currentColors = (window as any).extractedColors;
-      if (!currentColors || currentColors.primary === "#ff00ff") {
-        (window as any).extractedColors = savedStyle.colors;
-      }
+    if (savedStyle?.colors) {
+      // Always apply saved colors - this ensures they persist with the visualizer
+      (window as any).extractedColors = savedStyle.colors;
+      // Dispatch event to trigger texture data rebuild in all forms
+      window.dispatchEvent(new CustomEvent('style:applied'));
     }
   }, [savedStyle]);
   
