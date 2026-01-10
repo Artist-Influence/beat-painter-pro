@@ -7,114 +7,12 @@ export function seededRandom(seed: number) {
   };
 }
 
+import { AbstractFormParams, generateAbstractFormParams, ABSTRACT_FORM_FAMILIES, FORM_FAMILY_NAMES, FORM_FAMILY_EMOJIS, abstractFormToName, abstractFormToEmoji } from './abstractFormGenerator';
+
 export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix' | 'membrane' | 'pulsar' | 'vortexCore' | 'cosmicEye';
 export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 'smooth' | 'breathing' | 'explosive';
 export type BackgroundEffect = 'none' | 'stars' | 'movingLines' | 'energyField' | 'particles' | 'lightRays' | 'aurora';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
-
-// Geometry types for standalone procedural generation
-export type GeometryType = 'sphere' | 'icosahedron' | 'octahedron' | 'dodecahedron' | 'tetrahedron' | 
-  'torusKnot' | 'torus' | 'box' | 'cone' | 'cylinder' | 'capsule' | 'ring';
-
-export type PulseMode = 'none' | 'breathe' | 'heartbeat' | 'erratic' | 'stutter' | 'swell';
-
-// NEW: Composition presets for complex multi-component visualizers
-export type CompositionStyle = 'simple' | 'layered' | 'orbital' | 'sacred' | 'crystalline' | 'nebular';
-
-// NEW: Outer halo/effect types
-export type OuterHaloType = 'none' | 'sparkles' | 'rings' | 'particles' | 'rays' | 'aura';
-
-// Creative template types for standalone visualizers - these trigger full pre-built visualizers
-export type CreativeTemplateType = 
-  | 'geometric'   // Default procedural geometry (sphere, torus, etc.)
-  | 'smiley' | 'car' | 'heart' | 'star' | 'robot' | 'flower'
-  | 'wings' | 'butterfly' | 'dragon' | 'spaceship' | 'crown'
-  | 'skull' | 'diamond' | 'moon' | 'sun' | 'planet' | 'lightning' | 'tornado'
-  // Extended creative templates
-  | 'eye' | 'hand' | 'sword' | 'anchor' | 'rocket'
-  | 'fish' | 'bird' | 'snake' | 'octopus' | 'jellyfish' | 'phoenix';
-
-export const CREATIVE_TEMPLATES: CreativeTemplateType[] = [
-  'geometric', 'geometric', // Weight geometric slightly
-  'smiley', 'car', 'heart', 'star', 'robot', 'flower',
-  'wings', 'butterfly', 'dragon', 'spaceship', 'crown',
-  'skull', 'diamond', 'moon', 'sun', 'planet', 'lightning', 'tornado',
-  'eye', 'hand', 'sword', 'anchor', 'rocket',
-  'fish', 'bird', 'snake', 'octopus', 'jellyfish', 'phoenix'
-];
-
-// NEW: Composition style options for UI
-export const COMPOSITION_STYLES: CompositionStyle[] = ['simple', 'layered', 'orbital', 'sacred', 'crystalline', 'nebular'];
-
-// NEW: Composition style display names
-export const COMPOSITION_LABELS: Record<CompositionStyle, string> = {
-  simple: 'Simple Shape',
-  layered: 'Layered Core',
-  orbital: 'Orbital System',
-  sacred: 'Sacred Geometry',
-  crystalline: 'Crystalline',
-  nebular: 'Nebula Core',
-};
-
-// Standalone variant for procedural generation - 100,000+ unique combinations
-export interface StandaloneVariant {
-  // NEW: Which creative template to use ('geometric' = use procedural geometry)
-  creativeTemplate: CreativeTemplateType;
-  
-  // Core geometry (12 types) - used when creativeTemplate === 'geometric'
-  primaryGeometry: GeometryType;
-  secondaryGeometry: GeometryType;
-  
-  // Geometry modifiers (axis stretching)
-  stretchX: number;  // 0.3 - 2.5
-  stretchY: number;
-  stretchZ: number;
-  
-  // Secondary decorative elements
-  hasOrbitRings: boolean;
-  orbitRingCount: number;     // 1-4
-  orbitRingTilt: number;      // rotation angle
-  hasParticleHalo: boolean;
-  particleHaloCount: number;  // 50-200
-  hasInnerCore: boolean;
-  innerCoreScale: number;     // 0.2-0.5
-  hasMirrorCopy: boolean;
-  mirrorDistance: number;
-  hasOuterShell: boolean;
-  outerShellOpacity: number;
-  
-  // Animation modifiers
-  wobbleIntensity: number;    // 0 - 1
-  wobbleSpeed: number;        // 0.5 - 3
-  spinAxes: [boolean, boolean, boolean];
-  spinSpeeds: [number, number, number];
-  pulseMode: PulseMode;
-  pulseIntensity: number;     // 0.1 - 0.5
-  morphSpeed: number;
-  
-  // Visual style modifiers
-  wireframeMix: number;       // 0 = solid, 1 = wireframe, 0.5 = layered
-  detailLevel: number;        // 1-4
-  emissiveIntensity: number;  // 0.3 - 1.5
-  
-  // Structural complexity
-  layerCount: number;         // 1-4 concentric layers
-  layerSpacing: number;       // 0.2 - 0.8
-  fractured: boolean;         // Split into shards
-  fracturedCount: number;     // 3-8 pieces
-  hollowed: boolean;          // Ring/hollow version
-  twisted: number;            // 0-1 twist amount
-  
-  // NEW: Composition enhancements
-  compositionStyle: CompositionStyle;     // Overall composition approach
-  complexity: number;                      // 1-10 complexity level
-  orbitalShardCount: number;              // 8-24 orbiting fragments
-  innerCoreType: GeometryType;            // Different geometry for inner core
-  outerHaloType: OuterHaloType;           // Type of outer effect
-  symmetryFold: number;                   // 3, 4, 5, 6, 8, 12 for sacred geometry
-  spiralArms: number;                     // 0-8 spiral arms for nebular
-  sacredPattern: 'flower' | 'metatron' | 'seed' | 'torus' | 'merkaba' | 'none';  // Sacred geometry pattern
-}
 
 export interface RandomVisualizerParams {
   seed: number;
@@ -132,184 +30,26 @@ export interface RandomVisualizerParams {
   scaleVariation: number;
   positionSpread: number;
   rotationOffset: number;
-  // NEW: Color scheme for the visualizer
+  // Color scheme for the visualizer
   colorScheme: ColorScheme;
-  // NEW: Glow intensity (0.0 - 2.0)
+  // Glow intensity (0.0 - 2.0)
   glowIntensity: number;
-  // NEW: Composition style (for UI control)
-  compositionStyle?: CompositionStyle;
-  // NEW: Complexity level (1-10)
-  complexity?: number;
-  // Standalone variant for single-element procedural generation
-  standaloneVariant?: StandaloneVariant;
+  // NEW: Abstract form params (replaces old standalone/creative templates)
+  abstractForm?: AbstractFormParams;
 }
 
 export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
 export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
 export const BACKGROUND_EFFECTS: BackgroundEffect[] = ['none', 'stars', 'movingLines', 'energyField', 'particles', 'lightRays', 'aurora'];
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
-export const GEOMETRY_TYPES: GeometryType[] = ['sphere', 'icosahedron', 'octahedron', 'dodecahedron', 'tetrahedron', 'torusKnot', 'torus', 'box', 'cone', 'cylinder', 'capsule', 'ring'];
-export const PULSE_MODES: PulseMode[] = ['none', 'breathe', 'heartbeat', 'erratic', 'stutter', 'swell'];
 
 export function generateRandomSeed(): number {
   return Math.floor(Math.random() * 1000000);
 }
 
-// Sacred pattern options
-const SACRED_PATTERNS: StandaloneVariant['sacredPattern'][] = ['flower', 'metatron', 'seed', 'torus', 'merkaba', 'none'];
-
-// Generate a procedural standalone variant with massive variety
-export function generateStandaloneVariant(
-  seed: number, 
-  preferences?: { compositionStyle?: CompositionStyle; complexity?: number }
-): StandaloneVariant {
-  const r = seededRandom(seed);
-  
-  // Composition style from preferences or random
-  const compositionStyle = preferences?.compositionStyle || 
-    COMPOSITION_STYLES[Math.floor(r() * COMPOSITION_STYLES.length)];
-  
-  // Complexity level (1-10) from preferences or random
-  const complexity = preferences?.complexity ?? Math.floor(1 + r() * 10);
-  
-  // Select a random creative template - this determines if we use a pre-built visualizer
-  const creativeTemplate = CREATIVE_TEMPLATES[Math.floor(r() * CREATIVE_TEMPLATES.length)];
-  
-  // Helper for weighted random choices
-  const weightedChoice = <T>(options: T[], weights: number[]): T => {
-    const total = weights.reduce((a, b) => a + b, 0);
-    let random = r() * total;
-    for (let i = 0; i < options.length; i++) {
-      random -= weights[i];
-      if (random <= 0) return options[i];
-    }
-    return options[options.length - 1];
-  };
-  
-  // Primary geometry with weighted distribution (favor interesting shapes)
-  const primaryGeometry = weightedChoice(GEOMETRY_TYPES, [
-    0.8, 1.2, 1.0, 1.0, 0.8, 1.5, 1.3, 0.6, 0.9, 0.7, 0.8, 1.0
-  ]);
-  
-  // Secondary geometry (different from primary for contrast)
-  const filteredGeometries = GEOMETRY_TYPES.filter(g => g !== primaryGeometry);
-  const secondaryGeometry = filteredGeometries[Math.floor(r() * filteredGeometries.length)];
-  
-  // Inner core geometry (always different from primary)
-  const innerCoreType = filteredGeometries[Math.floor(r() * filteredGeometries.length)];
-  
-  // Axis stretching - sometimes extreme, sometimes subtle
-  const stretchMode = r();
-  let stretchX: number, stretchY: number, stretchZ: number;
-  if (stretchMode < 0.3) {
-    // Uniform scale
-    const s = 0.6 + r() * 1.0;
-    stretchX = stretchY = stretchZ = s;
-  } else if (stretchMode < 0.6) {
-    // One axis stretched
-    stretchX = 0.5 + r() * 0.5;
-    stretchY = 0.5 + r() * 0.5;
-    stretchZ = 0.5 + r() * 0.5;
-    const axis = Math.floor(r() * 3);
-    if (axis === 0) stretchX = 1.5 + r() * 1.0;
-    else if (axis === 1) stretchY = 1.5 + r() * 1.0;
-    else stretchZ = 1.5 + r() * 1.0;
-  } else {
-    // Random per-axis
-    stretchX = 0.4 + r() * 1.8;
-    stretchY = 0.4 + r() * 1.8;
-    stretchZ = 0.4 + r() * 1.8;
-  }
-  
-  // Complexity-based adjustments: higher complexity = more features
-  const complexityFactor = complexity / 10;
-  
-  // Decorative elements - more likely at higher complexity
-  const hasOrbitRings = r() > (0.7 - complexityFactor * 0.4);
-  const hasParticleHalo = r() > (0.75 - complexityFactor * 0.35);
-  const hasInnerCore = r() > (0.6 - complexityFactor * 0.35);
-  const hasMirrorCopy = r() > (0.85 - complexityFactor * 0.25);
-  const hasOuterShell = r() > (0.75 - complexityFactor * 0.3);
-  
-  // Animation style
-  const pulseMode = PULSE_MODES[Math.floor(r() * PULSE_MODES.length)];
-  
-  // Spin configuration
-  const spinAxes: [boolean, boolean, boolean] = [r() > 0.3, r() > 0.4, r() > 0.5];
-  // Ensure at least one axis spins
-  if (!spinAxes[0] && !spinAxes[1] && !spinAxes[2]) {
-    spinAxes[Math.floor(r() * 3)] = true;
-  }
-  
-  // Orbital shard count - based on complexity
-  const orbitalShardCount = Math.floor(8 + complexityFactor * 16);
-  
-  // Outer halo type based on composition
-  const outerHaloTypes: OuterHaloType[] = ['none', 'sparkles', 'rings', 'particles', 'rays', 'aura'];
-  const outerHaloType = compositionStyle === 'simple' ? 'none' : 
-    outerHaloTypes[Math.floor(r() * outerHaloTypes.length)];
-  
-  // Symmetry fold for sacred geometry (3, 4, 5, 6, 8, 12)
-  const symmetryFolds = [3, 4, 5, 6, 8, 12];
-  const symmetryFold = symmetryFolds[Math.floor(r() * symmetryFolds.length)];
-  
-  // Spiral arms for nebular style (0-8)
-  const spiralArms = compositionStyle === 'nebular' ? Math.floor(2 + r() * 6) : 0;
-  
-  // Sacred pattern for sacred composition
-  const sacredPattern = compositionStyle === 'sacred' 
-    ? SACRED_PATTERNS[Math.floor(r() * (SACRED_PATTERNS.length - 1))] // Exclude 'none' for sacred
-    : 'none';
-  
-  return {
-    creativeTemplate,
-    primaryGeometry,
-    secondaryGeometry,
-    stretchX,
-    stretchY,
-    stretchZ,
-    hasOrbitRings,
-    orbitRingCount: hasOrbitRings ? Math.floor(1 + r() * 3 + complexityFactor * 2) : 0,
-    orbitRingTilt: r() * Math.PI,
-    hasParticleHalo,
-    particleHaloCount: hasParticleHalo ? Math.floor(50 + r() * 150 + complexityFactor * 100) : 0,
-    hasInnerCore,
-    innerCoreScale: 0.15 + r() * 0.35,
-    hasMirrorCopy,
-    mirrorDistance: 2.5 + r() * 2,
-    hasOuterShell,
-    outerShellOpacity: 0.1 + r() * 0.25,
-    wobbleIntensity: r() * 0.8,
-    wobbleSpeed: 0.5 + r() * 2.5,
-    spinAxes,
-    spinSpeeds: [0.2 + r() * 1.5, 0.2 + r() * 1.5, 0.2 + r() * 1.5],
-    pulseMode,
-    pulseIntensity: 0.1 + r() * 0.4,
-    morphSpeed: 0.5 + r() * 2.5,
-    wireframeMix: r() > 0.7 ? (r() > 0.5 ? 1 : 0.5) : 0,
-    detailLevel: Math.floor(1 + r() * 3),
-    emissiveIntensity: 0.3 + r() * 1.0,
-    layerCount: Math.floor(1 + r() * 3 + complexityFactor * 2),
-    layerSpacing: 0.25 + r() * 0.5,
-    fractured: r() > (0.9 - complexityFactor * 0.2),
-    fracturedCount: Math.floor(3 + r() * 5 + complexityFactor * 4),
-    hollowed: r() > 0.8,
-    twisted: r() > 0.7 ? r() * 0.8 : 0,
-    // NEW: Composition enhancements
-    compositionStyle,
-    complexity,
-    orbitalShardCount,
-    innerCoreType,
-    outerHaloType,
-    symmetryFold,
-    spiralArms,
-    sacredPattern,
-  };
-}
-
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'compositionStyle' | 'complexity'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'backgroundEffect' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'abstractForm'>>
 ): RandomVisualizerParams {
   const random = seededRandom(seed);
   
@@ -317,37 +57,15 @@ export function generateRandomParams(
   const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
   const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
   
-  // Composition style from preferences or random
-  const compositionStyle = preferences?.compositionStyle || 
-    COMPOSITION_STYLES[Math.floor(random() * COMPOSITION_STYLES.length)];
+  // Element count from preference or default to 1 (abstract forms are single elements)
+  const elementCount = preferences?.elementCount ?? 1;
   
-  // Complexity from preferences or random (1-10)
-  const complexity = preferences?.complexity ?? Math.floor(1 + random() * 10);
+  // Background effect
+  const backgroundEffect = preferences?.backgroundEffect ?? 
+    BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)];
   
-  // Element count: use preference, or 30% multi-element (8-32), 70% standalone (1)
-  let elementCount: number;
-  if (preferences?.elementCount !== undefined) {
-    elementCount = preferences.elementCount;
-  } else {
-    // 30% chance of multi-element swarms/lattices for variety
-    elementCount = random() < 0.3 ? Math.floor(8 + random() * 24) : 1;
-  }
-  
-  // For standalone mode (elementCount === 1): NO background effects by default
-  // Users can add particles/aurora/stars manually via Visual Effects section if desired
-  const isStandalone = elementCount === 1;
-  const backgroundEffect = isStandalone 
-    ? 'none' as BackgroundEffect
-    : (preferences?.backgroundEffect || BACKGROUND_EFFECTS[Math.floor(random() * BACKGROUND_EFFECTS.length)]);
-  
-  // If user explicitly selected a shape, don't mix geometries
-  const shapeWasExplicitlyChosen = preferences?.baseShape !== undefined;
-  const mixedGeometry = shapeWasExplicitlyChosen ? false : random() > 0.5;
-  
-  // Generate standalone variant only when in standalone mode - pass composition preferences
-  const standaloneVariant = isStandalone 
-    ? generateStandaloneVariant(seed, { compositionStyle, complexity }) 
-    : undefined;
+  // Abstract form - use provided or generate new one
+  const abstractForm = preferences?.abstractForm ?? generateAbstractFormParams(seed);
   
   // Glow intensity: 0.3 - 2.0 (default random or from preferences)
   const glowIntensity = preferences?.glowIntensity ?? (0.3 + random() * 1.7);
@@ -362,94 +80,47 @@ export function generateRandomParams(
     symmetry: random() > 0.5,
     rotationSpeed: 0.1 + random() * 1.2,
     colorShift: random() * Math.PI * 2,
-    mixedGeometry,
+    mixedGeometry: false,
     connectionLines: preferences?.connectionLines ?? false,
     scaleVariation: 0.5 + random() * 1.0,
     positionSpread: 2 + random() * 4,
     rotationOffset: random() * Math.PI * 2,
     colorScheme,
     glowIntensity,
-    compositionStyle,
-    complexity,
-    standaloneVariant,
+    abstractForm,
   };
 }
 
-const SHAPE_NAMES: Record<BaseShape, string[]> = {
-  orb: ['Sphere', 'Orb', 'Globe', 'Bubble'],
-  geometric: ['Prism', 'Polyhedron', 'Fractal', 'Matrix'],
-  ribbons: ['Flow', 'Stream', 'Wave', 'Ribbon'],
-  particles: ['Swarm', 'Storm', 'Cloud', 'Burst'],
-  tunnel: ['Vortex', 'Portal', 'Warp', 'Void'],
-  crystal: ['Crystal', 'Gem', 'Shard', 'Facet'],
-  spiral: ['Spiral', 'Coil', 'Twist', 'Helix'],
-  lattice: ['Lattice', 'Grid', 'Web', 'Network'],
-  helix: ['DNA', 'Double-Helix', 'Strand', 'Chain'],
-  nebula: ['Nebula', 'Cosmos', 'Galaxy', 'Stardust'],
-  matrix: ['Matrix', 'Rain', 'Cascade', 'Digital'],
-  membrane: ['Membrane', 'Blob', 'Organism', 'Cell'],
-  pulsar: ['Pulsar', 'Star', 'Nova', 'Core'],
-  vortexCore: ['Vortex', 'Warp', 'Twist', 'Knot'],
-  cosmicEye: ['Eye', 'Oracle', 'Iris', 'Watcher'],
-};
-
-const ANIMATION_ADJECTIVES: Record<AnimationStyle, string[]> = {
-  pulsing: ['Pulsing', 'Breathing', 'Throbbing', 'Living'],
-  rotating: ['Spinning', 'Rotating', 'Orbiting', 'Twirling'],
-  flowing: ['Flowing', 'Drifting', 'Gliding', 'Streaming'],
-  chaotic: ['Chaotic', 'Wild', 'Frenetic', 'Electric'],
-  smooth: ['Smooth', 'Serene', 'Gentle', 'Calm'],
-  breathing: ['Breathing', 'Organic', 'Alive', 'Pulsating'],
-  explosive: ['Explosive', 'Bursting', 'Dynamic', 'Fierce'],
-};
-
+// Generate name from abstract form
 export function paramsToName(params: RandomVisualizerParams): string {
+  if (params.abstractForm) {
+    return abstractFormToName(params.abstractForm);
+  }
+  
+  // Fallback for legacy params
   const random = seededRandom(params.seed + 999);
-  
-  const shapeNames = SHAPE_NAMES[params.baseShape];
-  const shapeName = shapeNames[Math.floor(random() * shapeNames.length)];
-  
-  const adjectives = ANIMATION_ADJECTIVES[params.animationStyle];
-  const adjective = adjectives[Math.floor(random() * adjectives.length)];
-  
-  // Add a unique number from seed
   const uniqueNum = params.seed % 10000;
-  
-  return `${adjective} ${shapeName} #${uniqueNum}`;
+  return `Visualizer #${uniqueNum}`;
 }
 
+// Generate emoji from abstract form
 export function paramsToEmoji(params: RandomVisualizerParams): string {
-  const emojiMap: Record<BaseShape, string[]> = {
-    orb: ['🔮', '🌕', '⚪', '💫'],
-    geometric: ['💎', '🔷', '🔶', '⬡'],
-    ribbons: ['🌊', '〰️', '🎗️', '🌀'],
-    particles: ['✨', '🌟', '⭐', '💥'],
-    tunnel: ['🕳️', '🌀', '🌌', '⚡'],
-    crystal: ['💎', '🔮', '❄️', '🪩'],
-    spiral: ['🌀', '🐚', '🌪️', '♾️'],
-    lattice: ['🕸️', '📊', '🔲', '⬜'],
-    helix: ['🧬', '🔗', '⛓️', '🧪'],
-    nebula: ['🌌', '☁️', '💜', '🌠'],
-    matrix: ['🔢', '💚', '📟', '🖥️'],
-    membrane: ['🫧', '🧫', '🦠', '💧'],
-    pulsar: ['💫', '⭐', '🌟', '☀️'],
-    vortexCore: ['🌀', '🌪️', '♾️', '🔄'],
-    cosmicEye: ['👁️', '🔮', '👀', '🌌'],
-  };
+  if (params.abstractForm) {
+    return abstractFormToEmoji(params.abstractForm);
+  }
   
-  const random = seededRandom(params.seed + 777);
-  const options = emojiMap[params.baseShape];
-  return options[Math.floor(random() * options.length)];
+  // Fallback
+  return '✨';
 }
 
 // Color palettes for visualizers
 export const COLOR_PALETTES: Record<ColorScheme, string[]> = {
-  mono: ['#ffffff', '#cccccc', '#999999', '#666666'],
-  neon: ['#ff00ff', '#00ffff', '#ffff00', '#ff0080', '#00ff80'],
-  pastel: ['#ffb5e8', '#b5fffc', '#ffffd1', '#d4b5ff', '#ffccb5'],
-  fire: ['#ff0000', '#ff6600', '#ffcc00', '#ffffff', '#ff3300'],
-  ice: ['#00ffff', '#0088ff', '#ffffff', '#aaddff', '#66ccff'],
-  rainbow: ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff'],
-  sunset: ['#ff6b6b', '#ffa500', '#ffd93d', '#6bcb77', '#4d96ff'],
-  ocean: ['#006994', '#40e0d0', '#00ced1', '#20b2aa', '#48d1cc'],
+  mono: ['#ffffff', '#cccccc', '#888888', '#444444'],
+  neon: ['#ff00ff', '#00ffff', '#ffff00', '#ff0088'],
+  pastel: ['#ffb3ba', '#bae1ff', '#baffc9', '#ffffba'],
+  fire: ['#ff4500', '#ff6600', '#ff9900', '#ffcc00'],
+  ice: ['#00bfff', '#87ceeb', '#e0ffff', '#ffffff'],
+  rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#8b00ff'],
+  sunset: ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3'],
+  ocean: ['#0077be', '#00a8cc', '#00d4aa', '#71c9ce'],
 };
