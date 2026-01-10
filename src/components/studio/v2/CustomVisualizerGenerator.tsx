@@ -19,6 +19,15 @@ import {
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 
+// Default colors for global style initialization
+const DEFAULT_COLORS = {
+  primary: "#ff00ff",
+  secondary: "#cccccc",
+  accent: "#00ffff",
+  isNeon: false,
+  isMetallic: false,
+};
+
 interface CustomVisualizerGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -87,6 +96,27 @@ export function CustomVisualizerGenerator({
   
   // Simulated audio for preview
   const previewAudio = useSimulatedAudio();
+  
+  // Style version to force re-render when styles change
+  const [styleVersion, setStyleVersion] = useState(0);
+  
+  // Initialize global colors and listen for style changes
+  useEffect(() => {
+    // Ensure global style variables exist for preview
+    if (!(window as any).extractedColors) {
+      (window as any).extractedColors = DEFAULT_COLORS;
+    }
+    
+    // Listen for style changes to force re-render
+    const handleStyleChange = () => setStyleVersion(v => v + 1);
+    window.addEventListener('style:applied', handleStyleChange);
+    window.addEventListener('texture:applied', handleStyleChange);
+    
+    return () => {
+      window.removeEventListener('style:applied', handleStyleChange);
+      window.removeEventListener('texture:applied', handleStyleChange);
+    };
+  }, []);
   
   // Current random params
   const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => {
@@ -160,9 +190,19 @@ export function CustomVisualizerGenerator({
     });
   }, [complexity]);
 
-  // Save current visualizer
+  // Save current visualizer with style data
   const handleSave = async () => {
-    const result = await saveRandomVisualizer(currentParams, customName.trim() || undefined);
+    // Capture current style state to save with visualizer
+    const currentColors = (window as any).extractedColors || DEFAULT_COLORS;
+    
+    const paramsWithStyle: RandomVisualizerParams = {
+      ...currentParams,
+      savedStyle: {
+        colors: { ...currentColors },
+      },
+    };
+    
+    const result = await saveRandomVisualizer(paramsWithStyle, customName.trim() || undefined);
     if (result) {
       onSuccess?.(result);
       onClose();
@@ -200,6 +240,7 @@ export function CustomVisualizerGenerator({
             <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
               <React.Suspense fallback={null}>
                 <RandomVisualizerTemplate 
+                  key={`${currentParams.seed}-${styleVersion}`}
                   params={currentParams} 
                   audioData={previewAudio}
                 />

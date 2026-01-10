@@ -14,6 +14,15 @@ interface AbstractFormRendererProps {
     amplitude: number;
     beatStrength: number;
   };
+  savedStyle?: {
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      isNeon: boolean;
+      isMetallic: boolean;
+    };
+  };
 }
 
 // ==================== AUDIO ANALYSIS ====================
@@ -511,37 +520,30 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
       const posAttr = particlesRef.current.geometry.attributes.position;
       
       for (let i = 0; i < count; i++) {
-        let x = posAttr.getX(i);
-        let y = posAttr.getY(i);
-        let z = posAttr.getZ(i);
+        // Read from ORIGINAL positions, not current (prevents accumulation/freezing)
+        const ox = positions[i * 3];
+        const oy = positions[i * 3 + 1];
+        const oz = positions[i * 3 + 2];
         
-        // BASS: Particle expansion/contraction
-        const dist = Math.sqrt(x * x + y * y + z * z);
-        const expansionForce = (smoothedBass.current * 0.1) / Math.max(dist, 0.5);
-        x += (x / dist) * expansionForce;
-        y += (y / dist) * expansionForce;
-        z += (z / dist) * expansionForce;
+        // BASS: Particle expansion from origin
+        const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
+        const expansionFactor = 1 + smoothedBass.current * 0.3;
+        let x = ox * expansionFactor;
+        let y = oy * expansionFactor;
+        let z = oz * expansionFactor;
         
-        // MIDS: Orbital motion
-        const orbitSpeed = smoothedMids.current * 0.02;
-        const newX = x * Math.cos(orbitSpeed) - z * Math.sin(orbitSpeed);
-        const newZ = x * Math.sin(orbitSpeed) + z * Math.cos(orbitSpeed);
-        x = newX;
-        z = newZ;
+        // MIDS: Orbital motion (rotation around origin based on time)
+        const orbitAngle = t * 0.5 + smoothedMids.current * 0.3;
+        const rotX = x * Math.cos(orbitAngle) - z * Math.sin(orbitAngle);
+        const rotZ = x * Math.sin(orbitAngle) + z * Math.cos(orbitAngle);
+        x = rotX;
+        z = rotZ;
         
-        // HIGHS: Sparkle/jitter
+        // HIGHS: Sparkle/jitter (bounded, not accumulating)
         if (params.highsTopologyMode === 'sparkle' || params.highsTopologyMode === 'jitter') {
-          x += (Math.random() - 0.5) * smoothedHighs.current * 0.05;
-          y += (Math.random() - 0.5) * smoothedHighs.current * 0.05;
-          z += (Math.random() - 0.5) * smoothedHighs.current * 0.05;
-        }
-        
-        // Wrap particles
-        const maxDist = 3;
-        if (Math.abs(x) > maxDist || Math.abs(y) > maxDist || Math.abs(z) > maxDist) {
-          x = positions[i * 3];
-          y = positions[i * 3 + 1];
-          z = positions[i * 3 + 2];
+          x += (Math.sin(t * 10 + i) - 0.5) * smoothedHighs.current * 0.05;
+          y += (Math.cos(t * 10 + i * 1.3) - 0.5) * smoothedHighs.current * 0.05;
+          z += (Math.sin(t * 10 + i * 0.7) - 0.5) * smoothedHighs.current * 0.05;
         }
         
         posAttr.setXYZ(i, x, y, z);
@@ -1201,7 +1203,18 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
 
 // ==================== MAIN RENDERER ====================
 
-export function AbstractFormRenderer({ params, audioData }: AbstractFormRendererProps) {
+export function AbstractFormRenderer({ params, audioData, savedStyle }: AbstractFormRendererProps) {
+  // Apply saved style colors as global fallback if no texture is currently applied
+  React.useEffect(() => {
+    if (savedStyle?.colors && !(window as any).appliedTexture) {
+      // Only set if not already applied from UI
+      const currentColors = (window as any).extractedColors;
+      if (!currentColors || currentColors.primary === "#ff00ff") {
+        (window as any).extractedColors = savedStyle.colors;
+      }
+    }
+  }, [savedStyle]);
+  
   switch (params.formFamily) {
     case 'lattice':
       return <LatticeForm params={params} audioData={audioData} />;

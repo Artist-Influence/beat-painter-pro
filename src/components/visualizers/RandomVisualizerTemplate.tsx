@@ -305,10 +305,11 @@ export function RandomVisualizerTemplate({
         {/* Background effect from store dropdown */}
         <BackgroundRenderer effect={effectiveBackgroundEffect} audioData={audioData} />
         
-        {/* Abstract form visualizer */}
+        {/* Abstract form visualizer - pass savedStyle for color fallback */}
         <AbstractFormRenderer 
           params={params.abstractForm}
           audioData={audioData}
+          savedStyle={params.savedStyle}
         />
         
         {/* Lighting */}
