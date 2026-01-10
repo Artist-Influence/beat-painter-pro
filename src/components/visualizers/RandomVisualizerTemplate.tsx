@@ -292,15 +292,18 @@ export function RandomVisualizerTemplate({
   audioData,
   isPlaying = true 
 }: RandomVisualizerTemplateProps) {
-  // Get audio sensitivity from store
-  const { audioSensitivity } = useStudioStore();
+  // Get audio sensitivity and background effect from store
+  const { audioSensitivity, backgroundEffect: storeBackgroundEffect } = useStudioStore();
+  
+  // Use store's backgroundEffect (from dropdown) if set, otherwise fall back to saved params
+  const effectiveBackgroundEffect = storeBackgroundEffect || params.backgroundEffect;
   
   // If we have abstract form params, render the abstract visualizer
   if (params.abstractForm) {
     return (
       <group>
-        {/* Background effect */}
-        <BackgroundRenderer effect={params.backgroundEffect} audioData={audioData} />
+        {/* Background effect from store dropdown */}
+        <BackgroundRenderer effect={effectiveBackgroundEffect} audioData={audioData} />
         
         {/* Abstract form visualizer */}
         <AbstractFormRenderer 
@@ -319,7 +322,7 @@ export function RandomVisualizerTemplate({
   // Fallback - should not reach here with new system
   return (
     <group>
-      <BackgroundRenderer effect={params.backgroundEffect} audioData={audioData} />
+      <BackgroundRenderer effect={effectiveBackgroundEffect} audioData={audioData} />
       <mesh>
         <sphereGeometry args={[1, 32, 32]} />
         <meshStandardMaterial color="#8866ff" emissive="#4422aa" emissiveIntensity={0.5} />

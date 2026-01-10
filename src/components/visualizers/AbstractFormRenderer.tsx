@@ -216,12 +216,14 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
           break;
       }
       
-      // Rotation driven by audio intensity (minimal when quiet, faster when loud)
-      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
-      const rotationMult = 0.1 + audioIntensity * 0.9;
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+        const rotationMult = sens.spinSpeed * (0.1 + audioIntensity * 0.9);
+        if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+        if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
+        if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      }
     }
     
     // HIGHS: Fine detail - update emissive intensity
@@ -409,11 +411,14 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
       // Global transforms
       groupRef.current.scale.setScalar(1.8 + smoothedBass.current * 0.4);
       
-      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
-      const rotationMult = 0.1 + audioIntensity * 0.9;
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+        const rotationMult = sens.spinSpeed * (0.1 + audioIntensity * 0.9);
+        if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+        if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
+        if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      }
     }
     
     if (material) {
@@ -553,11 +558,14 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
       
-      const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
-      const rotationMult = 0.1 + audioIntensity * 0.9;
-      if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.02 * rotationMult;
-      if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+        const rotationMult = sens.spinSpeed * (0.1 + audioIntensity * 0.9);
+        if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
+        if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.02 * rotationMult;
+        if (params.rotationAxes[2]) groupRef.current.rotation.z += params.rotationSpeeds[2] * 0.01 * rotationMult;
+      }
     }
   });
   
@@ -737,7 +745,10 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.4);
-      groupRef.current.rotation.y += 0.005 + smoothedMids.current * 0.02;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        groupRef.current.rotation.y += sens.spinSpeed * (0.005 + smoothedMids.current * 0.02);
+      }
     }
     
     if (ribbonsRef.current) {
@@ -843,7 +854,10 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
-      groupRef.current.rotation.y += 0.003 + smoothedMids.current * 0.01;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        groupRef.current.rotation.y += sens.spinSpeed * (0.003 + smoothedMids.current * 0.01);
+      }
     }
     
     if (shardsRef.current) {
@@ -941,14 +955,17 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
       
-      // Asymmetry breaking based on chaos level
-      if (params.asymmetryFactor > 0.3) {
-        groupRef.current.rotation.x = Math.sin(t * 0.7) * params.asymmetryFactor * 0.2;
+      // Asymmetry breaking based on chaos level (only when spinSpeed > 0)
+      if (sens.spinSpeed > 0 && params.asymmetryFactor > 0.3) {
+        groupRef.current.rotation.x = Math.sin(t * 0.7) * params.asymmetryFactor * 0.2 * sens.spinSpeed;
       }
     }
     
     if (elementsRef.current) {
-      elementsRef.current.rotation.z += 0.005 + smoothedMids.current * 0.02;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0) {
+        elementsRef.current.rotation.z += sens.spinSpeed * (0.005 + smoothedMids.current * 0.02);
+      }
       
       // Pulse elements
       elementsRef.current.children.forEach((element, i) => {
@@ -1157,7 +1174,10 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5);
-      if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01;
+      // Rotation ONLY when spinSpeed > 0
+      if (sens.spinSpeed > 0 && params.rotationAxes[1]) {
+        groupRef.current.rotation.y += sens.spinSpeed * params.rotationSpeeds[1] * 0.01;
+      }
     }
     
     if (material) {

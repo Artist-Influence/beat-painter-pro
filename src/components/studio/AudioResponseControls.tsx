@@ -394,7 +394,7 @@ export const AudioResponseControls: React.FC = () => {
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Select effect" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-black border-white/20">
                 <SelectItem value="none">None</SelectItem>
                 <SelectItem value="stars">Stars</SelectItem>
                 <SelectItem value="particles">Particles</SelectItem>
