@@ -108,10 +108,14 @@ export function CustomVisualizerGenerator({
   
   // Initialize global colors BEFORE rendering Canvas
   useEffect(() => {
-    // Always set default colors when generator opens
-    (window as any).extractedColors = DEFAULT_COLORS;
-    // Dispatch event to notify any existing hooks
-    window.dispatchEvent(new CustomEvent('style:applied'));
+    // PRESERVE current style instead of resetting to defaults
+    // Only set defaults if no colors exist at all
+    const currentColors = (window as any).extractedColors;
+    if (!currentColors || !currentColors.primary) {
+      (window as any).extractedColors = DEFAULT_COLORS;
+      // Dispatch event to notify any existing hooks
+      window.dispatchEvent(new CustomEvent('style:applied'));
+    }
     
     // Small delay to ensure hooks pick up the change
     requestAnimationFrame(() => setIsReady(true));
