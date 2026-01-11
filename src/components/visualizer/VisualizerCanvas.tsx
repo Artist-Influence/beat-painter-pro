@@ -15,10 +15,11 @@ interface VisualizerCanvasProps {
 }
 
 // Component inside Canvas to directly control renderer for high-quality recording
+// NOTE: We do NOT change camera aspect ratio here - that would distort the live preview.
+// The aspect ratio handling for export happens in useWebMRecorder's 2D compositing step.
 function RecordingController() {
-  const { gl, size, camera, scene } = useThree();
+  const { gl, size, scene, camera } = useThree();
   const originalPixelRatioRef = useRef<number>(window.devicePixelRatio);
-  const originalCameraAspectRef = useRef<number | null>(null);
   
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
@@ -27,31 +28,14 @@ function RecordingController() {
       // Store original pixel ratio
       originalPixelRatioRef.current = gl.getPixelRatio();
       
-      // Calculate export aspect ratio and update camera
-      const exportAspect = width / height;
-      const containerAspect = size.width / size.height;
-      const perspCamera = camera as THREE.PerspectiveCamera;
-      if (perspCamera.aspect !== undefined) {
-        originalCameraAspectRef.current = perspCamera.aspect;
-        perspCamera.aspect = exportAspect;
-        perspCamera.updateProjectionMatrix();
-      }
-      
-      // Calculate required DPR based on which dimension is the limiting factor
-      // This ensures we always have enough pixels without over-rendering
-      let requiredDpr: number;
-      if (containerAspect > exportAspect) {
-        // Container is wider than export - height is limiting factor
-        requiredDpr = height / size.height;
-      } else {
-        // Container is taller/equal - width is limiting factor  
-        requiredDpr = width / size.width;
-      }
+      // Calculate required DPR to ensure we have enough pixels for the export
+      // Use the larger dimension ratio to guarantee quality
+      const requiredDpr = Math.max(width / size.width, height / size.height);
       
       console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr.toFixed(2)}`);
-      console.log(`Container: ${size.width}x${size.height} (${containerAspect.toFixed(2)}), Target: ${width}x${height} (${exportAspect.toFixed(2)})`);
+      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}`);
       
-      // Directly set the pixel ratio on the WebGL renderer
+      // Set higher pixel ratio for quality capture
       gl.setPixelRatio(requiredDpr);
       
       // Force a resize of the drawing buffer
@@ -67,16 +51,8 @@ function RecordingController() {
     };
     
     const handleRecordingStop = () => {
-      // Restore original pixel ratio
+      // Restore original pixel ratio only - camera was never modified
       gl.setPixelRatio(originalPixelRatioRef.current);
-      
-      // Restore original camera aspect ratio
-      const perspCamera = camera as THREE.PerspectiveCamera;
-      if (perspCamera.aspect !== undefined && originalCameraAspectRef.current !== null) {
-        perspCamera.aspect = originalCameraAspectRef.current;
-        perspCamera.updateProjectionMatrix();
-      }
-      
       gl.setSize(size.width, size.height, true);
     };
     
