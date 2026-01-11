@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Sparkles, X, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateStyleTexture, getStyleColors } from "@/lib/styleGenerator";
+import { generateStyleTexture, getStyleColors, extractColorsFromImage } from "@/lib/styleGenerator";
 import { useStudioStore } from "@/stores/studioStore";
 import { toast } from "sonner";
-
 const ALL_STYLES = [
   "Neon Glow", "Metallic Chrome", "Organic Flow", "Cyberpunk Grid",
   "Retro Wave", "Crystal Shards", "Holographic Film", "Lava Flow",
@@ -40,10 +39,38 @@ export function StyleSelector() {
 
   const canAddMore = selectedStyles.length < 3;
   
-  const handleCustomStyleUpload = (file: File) => {
+  const handleCustomStyleUpload = async (file: File) => {
     const url = URL.createObjectURL(file);
+    
+    // Extract colors from the uploaded image
+    const extractedColors = await extractColorsFromImage(url);
+    
+    // Set both texture and colors globally
+    (window as any).appliedTexture = url;
+    (window as any).extractedColors = extractedColors;
+    
+    // Update store
     setCustomStyleTexture(url, file.name);
+    
+    // Dispatch event to notify visualizers
+    window.dispatchEvent(new CustomEvent('style:applied', { 
+      detail: { texture: url, colors: extractedColors } 
+    }));
+    
     toast.success("Custom style applied!");
+  };
+  
+  const applyCustomStyle = async () => {
+    if (!customStyleTexture.url) return;
+    
+    // Re-extract colors and re-apply
+    const colors = await extractColorsFromImage(customStyleTexture.url);
+    (window as any).appliedTexture = customStyleTexture.url;
+    (window as any).extractedColors = colors;
+    window.dispatchEvent(new CustomEvent('style:applied', { 
+      detail: { texture: customStyleTexture.url, colors } 
+    }));
+    toast.success("Style applied!");
   };
   const selectedLabel = useMemo(() => `Styles (${selectedStyles.length}/3)`, [selectedStyles.length]);
   
@@ -202,19 +229,27 @@ export function StyleSelector() {
             <p className="text-white/60 text-xs">Upload any image as style</p>
           </button>
         ) : (
-          <div className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2">
-            <img 
-              src={customStyleTexture.url} 
-              alt="Custom style preview" 
-              className="w-10 h-10 object-cover rounded"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-white/80 text-xs truncate">{customStyleTexture.name || 'Custom style'}</p>
-              <p className="text-white/40 text-[10px]">Applied to visualizer</p>
-            </div>
+          <div className="bg-white/5 rounded-lg p-2 border border-white/10 relative">
             <button
-              onClick={clearCustomStyleTexture}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              onClick={applyCustomStyle}
+              className="flex items-center gap-2 w-full text-left hover:bg-white/10 rounded p-1 transition-colors"
+            >
+              <img 
+                src={customStyleTexture.url} 
+                alt="Custom style preview" 
+                className="w-10 h-10 object-cover rounded"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs truncate">{customStyleTexture.name || 'Custom style'}</p>
+                <p className="text-white/40 text-[10px]">Click to apply</p>
+              </div>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                clearCustomStyleTexture();
+              }}
+              className="absolute top-2 right-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
             >
               <X className="w-4 h-4 text-white/60" />
             </button>
