@@ -91,6 +91,13 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     if (isCustomVisualizer(selected)) {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
       
+      console.log('VisualizerCanvas: Looking up custom visualizer', { 
+        selected, 
+        found: !!customViz, 
+        storeCount: customVisualizers.length,
+        allIds: customVisualizers.map(v => v.id)
+      });
+      
       // Try to parse jsx_code as JSON config (new system)
       let parsedConfig = null;
       if (customViz?.jsx_code) {
@@ -106,7 +113,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       
       return {
         Visualizer: CustomVisualizerLoader,
-        scale: customViz?.scale_factor || 0.25,
+        scale: customViz?.scale_factor || 0.12, // Match save default
         initialCode: parsedConfig ? undefined : customViz?.jsx_code,
         initialConfig: parsedConfig
       };

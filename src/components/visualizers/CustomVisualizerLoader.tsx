@@ -96,27 +96,32 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
           return;
         }
 
-        // Fetch from Supabase
+        // Fetch from Supabase - select all fields needed
+        console.log('CustomVisualizerLoader: Fetching from DB', { visualizerId, hasUser: !!user });
+        
         const { data, error: fetchError } = await supabase
           .from('custom_visualizers')
-          .select('jsx_code, name')
+          .select('jsx_code, name, scale_factor, config')
           .eq('id', visualizerId)
           .maybeSingle();
 
         if (currentRequestId !== requestIdRef.current) return;
 
         if (fetchError) {
-          setError('Failed to load visualizer');
           console.error('Error loading custom visualizer:', fetchError);
+          setError('Failed to load visualizer');
           setIsLoading(false);
           return;
         }
 
         if (!data) {
+          console.warn('Visualizer not found in DB:', { visualizerId, hasUser: !!user });
           setError(!user ? 'Sign in to view this visualizer' : 'Visualizer not found or no access');
           setIsLoading(false);
           return;
         }
+        
+        console.log('CustomVisualizerLoader: Loaded from DB', { name: data.name });
 
         // Try to parse jsx_code as config JSON (new system) or use as code (legacy)
         if (data.jsx_code) {
