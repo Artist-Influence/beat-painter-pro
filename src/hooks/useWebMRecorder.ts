@@ -299,76 +299,73 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         await audioElement.play();
       }
 
-      // 60 FPS render loop
-      let lastFrameTime = 0;
-      const targetFrameTime = 1000 / 60;
-      
-      const render = async (timestamp: number) => {
+      // Continuous render loop - capture every frame for smooth output
+      // captureStream handles frame rate limiting, so we capture at display refresh rate
+      const render = () => {
         if (!keepRenderingRef.current) return;
         
-        if (timestamp - lastFrameTime >= targetFrameTime) {
-          lastFrameTime = timestamp;
-          
-          const ctx = ctxRef.current;
-          const exportCanvas = exportCanvasRef.current;
-          if (!ctx || !exportCanvas) return;
+        const ctx = ctxRef.current;
+        const exportCanvas = exportCanvasRef.current;
+        if (!ctx || !exportCanvas) {
+          requestAnimationFrame(render);
+          return;
+        }
 
-          const bg = backgroundRef.current;
-          const logo = logoRef.current;
+        const bg = backgroundRef.current;
+        const logo = logoRef.current;
 
-          // Draw background first
-          if (exportModeRef.current === 'png-sequence') {
-            ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
-          } else if (bg?.type === 'video' && backgroundVideoRef.current) {
-            drawBackgroundMedia(ctx, backgroundVideoRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
-          } else if (bg?.type === 'image' && backgroundImageRef.current) {
-            drawBackgroundMedia(ctx, backgroundImageRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
+        // Draw background first
+        if (exportModeRef.current === 'png-sequence') {
+          ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+        } else if (bg?.type === 'video' && backgroundVideoRef.current) {
+          drawBackgroundMedia(ctx, backgroundVideoRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
+        } else if (bg?.type === 'image' && backgroundImageRef.current) {
+          drawBackgroundMedia(ctx, backgroundImageRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
+        } else {
+          ctx.fillStyle = bg?.color || '#000000';
+          ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        }
+        
+        // Draw logo BEHIND visualizer if layer is 'behind'
+        if (logo?.url && logoImageRef.current && logo.layer === 'behind') {
+          drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
+        }
+        
+        // Draw visualizer with proper aspect ratio handling to prevent distortion
+        const srcAspect = srcCanvas.width / srcCanvas.height;
+        const destAspect = exportCanvas.width / exportCanvas.height;
+        
+        let sx = 0, sy = 0, sw = srcCanvas.width, sh = srcCanvas.height;
+        const dx = 0, dy = 0, dw = exportCanvas.width, dh = exportCanvas.height;
+        
+        // Crop source to match destination aspect ratio (prevents stretching)
+        if (Math.abs(srcAspect - destAspect) > 0.01) {
+          if (srcAspect > destAspect) {
+            // Source is wider - crop sides
+            sw = srcCanvas.height * destAspect;
+            sx = (srcCanvas.width - sw) / 2;
           } else {
-            ctx.fillStyle = bg?.color || '#000000';
-            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            // Source is taller - crop top/bottom
+            sh = srcCanvas.width / destAspect;
+            sy = (srcCanvas.height - sh) / 2;
           }
-          
-          // Draw logo BEHIND visualizer if layer is 'behind'
-          if (logo?.url && logoImageRef.current && logo.layer === 'behind') {
-            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
-          }
-          
-          // Draw visualizer with proper aspect ratio handling to prevent distortion
-          const srcAspect = srcCanvas.width / srcCanvas.height;
-          const destAspect = exportCanvas.width / exportCanvas.height;
-          
-          let sx = 0, sy = 0, sw = srcCanvas.width, sh = srcCanvas.height;
-          const dx = 0, dy = 0, dw = exportCanvas.width, dh = exportCanvas.height;
-          
-          // Crop source to match destination aspect ratio (prevents stretching)
-          if (Math.abs(srcAspect - destAspect) > 0.01) {
-            if (srcAspect > destAspect) {
-              // Source is wider - crop sides
-              sw = srcCanvas.height * destAspect;
-              sx = (srcCanvas.width - sw) / 2;
-            } else {
-              // Source is taller - crop top/bottom
-              sh = srcCanvas.width / destAspect;
-              sy = (srcCanvas.height - sh) / 2;
-            }
-          }
-          
-          ctx.drawImage(srcCanvas, sx, sy, sw, sh, dx, dy, dw, dh);
-          
-          // Draw logo IN FRONT of visualizer if layer is 'front'
-          if (logo?.url && logoImageRef.current && logo.layer === 'front') {
-            drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
-          }
+        }
+        
+        ctx.drawImage(srcCanvas, sx, sy, sw, sh, dx, dy, dw, dh);
+        
+        // Draw logo IN FRONT of visualizer if layer is 'front'
+        if (logo?.url && logoImageRef.current && logo.layer === 'front') {
+          drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
+        }
 
-          // Capture PNG frame for sequence mode
-          if (exportModeRef.current === 'png-sequence') {
-            exportCanvas.toBlob((blob) => {
-              if (blob) {
-                pngFramesRef.current.push(blob);
-                setFrameCount(pngFramesRef.current.length);
-              }
-            }, 'image/png');
-          }
+        // Capture PNG frame for sequence mode
+        if (exportModeRef.current === 'png-sequence') {
+          exportCanvas.toBlob((blob) => {
+            if (blob) {
+              pngFramesRef.current.push(blob);
+              setFrameCount(pngFramesRef.current.length);
+            }
+          }, 'image/png');
         }
 
         requestAnimationFrame(render);
