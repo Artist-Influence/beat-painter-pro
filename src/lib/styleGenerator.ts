@@ -1,5 +1,68 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Extract dominant colors from an uploaded image
+export async function extractColorsFromImage(imageUrl: string): Promise<{
+  primary: string;
+  secondary: string;
+  accent: string;
+  isNeon: boolean;
+  isMetallic: boolean;
+}> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve({ primary: "#ff00ff", secondary: "#cccccc", accent: "#00ffff", isNeon: false, isMetallic: false });
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, 64, 64);
+      const imageData = ctx.getImageData(0, 0, 64, 64).data;
+      
+      // Sample colors from different regions
+      const colors: [number, number, number][] = [];
+      const samplePoints = [
+        [16, 16], [48, 16], [32, 32], [16, 48], [48, 48]
+      ];
+      
+      for (const [x, y] of samplePoints) {
+        const i = (y * 64 + x) * 4;
+        colors.push([imageData[i], imageData[i + 1], imageData[i + 2]]);
+      }
+      
+      // Sort by saturation to get most vibrant colors
+      colors.sort((a, b) => {
+        const satA = Math.max(...a) - Math.min(...a);
+        const satB = Math.max(...b) - Math.min(...b);
+        return satB - satA;
+      });
+      
+      const toHex = (r: number, g: number, b: number) => 
+        `#${[r, g, b].map(c => c.toString(16).padStart(2, '0')).join('')}`;
+      
+      // Detect if colors are neon-like or metallic
+      const avgBrightness = colors[0].reduce((a, b) => a + b, 0) / 3;
+      const avgSaturation = Math.max(...colors[0]) - Math.min(...colors[0]);
+      
+      resolve({
+        primary: toHex(...colors[0]),
+        secondary: toHex(...colors[1]),
+        accent: toHex(...colors[2]),
+        isNeon: avgSaturation > 100 && avgBrightness > 150,
+        isMetallic: avgSaturation < 50 && avgBrightness > 180,
+      });
+    };
+    img.onerror = () => {
+      resolve({ primary: "#ff00ff", secondary: "#cccccc", accent: "#00ffff", isNeon: false, isMetallic: false });
+    };
+    img.src = imageUrl;
+  });
+}
 const STYLE_DESCRIPTORS: Record<string, string> = {
   "Organic Flow": "organic flowing contours, fluid sine patterns, cellular noise, smooth curvature",
   "Marble Veins": "marble stone veins, calcite streaks, high-contrast veining, natural stone texture",
