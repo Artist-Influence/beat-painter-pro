@@ -29,6 +29,7 @@ function RecordingController() {
       
       // Calculate export aspect ratio and update camera
       const exportAspect = width / height;
+      const containerAspect = size.width / size.height;
       const perspCamera = camera as THREE.PerspectiveCamera;
       if (perspCamera.aspect !== undefined) {
         originalCameraAspectRef.current = perspCamera.aspect;
@@ -36,11 +37,19 @@ function RecordingController() {
         perspCamera.updateProjectionMatrix();
       }
       
-      // Calculate required pixel ratio to reach target resolution
-      const requiredDpr = width / size.width;
+      // Calculate required DPR based on which dimension is the limiting factor
+      // This ensures we always have enough pixels without over-rendering
+      let requiredDpr: number;
+      if (containerAspect > exportAspect) {
+        // Container is wider than export - height is limiting factor
+        requiredDpr = height / size.height;
+      } else {
+        // Container is taller/equal - width is limiting factor  
+        requiredDpr = width / size.width;
+      }
       
-      console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr}`);
-      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}, Export aspect: ${exportAspect}`);
+      console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr.toFixed(2)}`);
+      console.log(`Container: ${size.width}x${size.height} (${containerAspect.toFixed(2)}), Target: ${width}x${height} (${exportAspect.toFixed(2)})`);
       
       // Directly set the pixel ratio on the WebGL renderer
       gl.setPixelRatio(requiredDpr);

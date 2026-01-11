@@ -92,7 +92,10 @@ export function CustomVisualizerGenerator({
   onClose, 
   onSuccess 
 }: CustomVisualizerGeneratorProps) {
-  const { saveRandomVisualizer, isSaving, userRole, quotaRemaining } = useCustomVisualizers();
+  const { saveRandomVisualizer, userRole, quotaRemaining } = useCustomVisualizers();
+  
+  // Local saving state to prevent double-clicks and UI freezing
+  const [localSaving, setLocalSaving] = useState(false);
   
   // Simulated audio for preview
   const previewAudio = useSimulatedAudio();
@@ -123,6 +126,13 @@ export function CustomVisualizerGenerator({
       window.removeEventListener('texture:applied', handleStyleChange);
       setIsReady(false);
     };
+  }, [isOpen]);
+  
+  // Reset local saving state when dialog closes/opens
+  useEffect(() => {
+    if (!isOpen) {
+      setLocalSaving(false);
+    }
   }, [isOpen]);
   
   // Current random params
@@ -195,20 +205,35 @@ export function CustomVisualizerGenerator({
 
   // Save current visualizer with style data
   const handleSave = async () => {
-    // Capture current style state to save with visualizer
-    const currentColors = (window as any).extractedColors || DEFAULT_COLORS;
+    // Prevent double-clicks
+    if (localSaving) {
+      console.log('Save already in progress, ignoring click');
+      return;
+    }
     
-    const paramsWithStyle: RandomVisualizerParams = {
-      ...currentParams,
-      savedStyle: {
-        colors: { ...currentColors },
-      },
-    };
+    setLocalSaving(true);
     
-    const result = await saveRandomVisualizer(paramsWithStyle, customName.trim() || undefined);
-    if (result) {
-      onSuccess?.(result);
-      onClose();
+    try {
+      // Capture current style state to save with visualizer
+      const currentColors = (window as any).extractedColors || DEFAULT_COLORS;
+      
+      const paramsWithStyle: RandomVisualizerParams = {
+        ...currentParams,
+        savedStyle: {
+          colors: { ...currentColors },
+        },
+      };
+      
+      const result = await saveRandomVisualizer(paramsWithStyle, customName.trim() || undefined);
+      if (result) {
+        onSuccess?.(result);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      // Error toast is already shown by saveRandomVisualizer
+    } finally {
+      setLocalSaving(false);
     }
   };
 
@@ -309,7 +334,7 @@ export function CustomVisualizerGenerator({
           <Button
             variant="ghost"
             onClick={onClose}
-            disabled={isSaving}
+            disabled={localSaving}
             className="bg-white/10 border border-white/20 text-white hover:bg-white/20"
           >
             Cancel
@@ -319,7 +344,7 @@ export function CustomVisualizerGenerator({
             <Button
               variant="ghost"
               onClick={handleSurpriseMe}
-              disabled={isSaving}
+              disabled={localSaving}
               className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -328,7 +353,7 @@ export function CustomVisualizerGenerator({
             <Button
               variant="ghost"
               onClick={handleGenerate}
-              disabled={isSaving}
+              disabled={localSaving}
               className="bg-white/10 border border-white/20 text-white hover:bg-white/20"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -336,11 +361,11 @@ export function CustomVisualizerGenerator({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={localSaving}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               <Save className="w-4 h-4 mr-2" />
-              {isSaving ? 'Saving...' : 'Save This One'}
+              {localSaving ? 'Saving...' : 'Save This One'}
             </Button>
           </div>
         </div>
