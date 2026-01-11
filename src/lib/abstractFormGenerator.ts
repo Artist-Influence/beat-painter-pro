@@ -105,54 +105,86 @@ function hashSeed(baseSeed: number, salt: string): number {
   return Math.abs(hash);
 }
 
+// ==================== WEIGHTED FORM FAMILY SELECTION ====================
+
+// Weight form families by visual distinctiveness (higher = more likely to be selected)
+const FORM_FAMILY_WEIGHTS: Record<AbstractFormFamily, number> = {
+  lattice: 1.0,
+  organic: 1.5,      // More distinct blob shapes
+  energy: 1.5,       // Particle effects stand out
+  topology: 0.8,     // Similar to organic
+  symmetry: 1.2,     // Mandala patterns are distinctive
+  ribbon: 1.3,       // Flowing ribbons are unique
+  crystalline: 1.4,  // Shards look different
+  vortex: 1.2,       // Spirals are distinctive
+};
+
+function selectWeightedFormFamily(random: () => number): AbstractFormFamily {
+  const families = ABSTRACT_FORM_FAMILIES;
+  const totalWeight = families.reduce((sum, f) => sum + FORM_FAMILY_WEIGHTS[f], 0);
+  let roll = random() * totalWeight;
+  
+  for (const family of families) {
+    roll -= FORM_FAMILY_WEIGHTS[family];
+    if (roll <= 0) return family;
+  }
+  return 'lattice'; // Fallback
+}
+
 // ==================== ABSTRACT FORM GENERATOR ====================
 
 export function generateAbstractFormParams(
   baseSeed: number,
   preferences?: Partial<Pick<AbstractFormParams, 'formFamily' | 'chaosLevel' | 'nodeCount'>>
 ): AbstractFormParams {
-  // Generate 5 independent seeds for true structural uniqueness
+  // Add timestamp entropy for true randomness between sessions
+  const timeEntropy = Date.now() % 100000;
+  const enhancedSeed = baseSeed ^ timeEntropy;
+  
+  // Generate INDEPENDENT seeds using different prime multipliers for true variety
   const seeds = {
-    geometry: hashSeed(baseSeed, 'geo'),
-    arrangement: hashSeed(baseSeed, 'arr'),
-    motion: hashSeed(baseSeed, 'mot'),
-    noise: hashSeed(baseSeed, 'noi'),
-    mapping: hashSeed(baseSeed, 'map'),
+    geometry: (enhancedSeed * 31337) % 2147483647,
+    arrangement: (enhancedSeed * 73856093) % 2147483647,
+    motion: (enhancedSeed * 19349663) % 2147483647,
+    noise: (enhancedSeed * 83492791) % 2147483647,
+    mapping: (enhancedSeed * 45678901) % 2147483647,
   };
   
-  const r = seededRandom(baseSeed);
+  const r = seededRandom(enhancedSeed);
   const rGeo = seededRandom(seeds.geometry);
   const rMotion = seededRandom(seeds.motion);
   const rNoise = seededRandom(seeds.noise);
   const rMapping = seededRandom(seeds.mapping);
   
-  // Form family from preferences or random
-  const formFamily = preferences?.formFamily || 
-    ABSTRACT_FORM_FAMILIES[Math.floor(r() * ABSTRACT_FORM_FAMILIES.length)];
+  // Form family from preferences or weighted random selection
+  const formFamily = preferences?.formFamily || selectWeightedFormFamily(r);
   
-  // Chaos level affects many parameters
-  const chaosLevel = preferences?.chaosLevel ?? (0.2 + r() * 0.6);
+  // Chaos level with wider range (0.1 to 0.9)
+  const chaosLevel = preferences?.chaosLevel ?? (0.1 + r() * 0.8);
   
-  // Node count based on form family
-  let baseNodeCount = preferences?.nodeCount ?? Math.floor(30 + rGeo() * 120);
-  if (formFamily === 'lattice') baseNodeCount = Math.floor(40 + rGeo() * 100);
-  if (formFamily === 'organic') baseNodeCount = Math.floor(20 + rGeo() * 40);
-  if (formFamily === 'energy') baseNodeCount = Math.floor(100 + rGeo() * 200);
-  if (formFamily === 'crystalline') baseNodeCount = Math.floor(15 + rGeo() * 35);
+  // Node count based on form family with more variation
+  let baseNodeCount = preferences?.nodeCount ?? Math.floor(25 + rGeo() * 150);
+  if (formFamily === 'lattice') baseNodeCount = Math.floor(35 + rGeo() * 120);
+  if (formFamily === 'organic') baseNodeCount = Math.floor(15 + rGeo() * 50);
+  if (formFamily === 'energy') baseNodeCount = Math.floor(80 + rGeo() * 250);
+  if (formFamily === 'crystalline') baseNodeCount = Math.floor(10 + rGeo() * 40);
+  if (formFamily === 'vortex') baseNodeCount = Math.floor(3 + Math.floor(rGeo() * 6)); // spiral arms
+  if (formFamily === 'ribbon') baseNodeCount = Math.floor(5 + Math.floor(rGeo() * 15));
+  if (formFamily === 'symmetry') baseNodeCount = [3, 4, 5, 6, 8, 12][Math.floor(rGeo() * 6)];
   
-  // Topology modes - ALWAYS set for multi-band reactivity
+  // Topology modes - ALWAYS set for multi-band reactivity with variety
   const bassTopologyMode = BASS_TOPOLOGY_MODES[Math.floor(rGeo() * BASS_TOPOLOGY_MODES.length)];
   const midsTopologyMode = MIDS_TOPOLOGY_MODES[Math.floor(rGeo() * MIDS_TOPOLOGY_MODES.length)];
   const highsTopologyMode = HIGHS_TOPOLOGY_MODES[Math.floor(rGeo() * HIGHS_TOPOLOGY_MODES.length)];
   
-  // Noise configuration
+  // Noise configuration with more variety
   const noiseType = NOISE_TYPES[Math.floor(rNoise() * NOISE_TYPES.length)];
   
   // Motion configuration - ensure at least one axis rotates
   const rotationAxes: [boolean, boolean, boolean] = [
-    rMotion() > 0.3,
-    rMotion() > 0.4,
-    rMotion() > 0.5,
+    rMotion() > 0.25,
+    rMotion() > 0.35,
+    rMotion() > 0.45,
   ];
   if (!rotationAxes[0] && !rotationAxes[1] && !rotationAxes[2]) {
     rotationAxes[Math.floor(rMotion() * 3)] = true;
@@ -168,64 +200,64 @@ export function generateAbstractFormParams(
   return {
     formFamily,
     
-    // Seeds
+    // Seeds - use independent enhanced seeds
     geometrySeed: seeds.geometry,
     arrangementSeed: seeds.arrangement,
     motionSeed: seeds.motion,
     noiseSeed: seeds.noise,
     mappingSeed: seeds.mapping,
     
-    // Geometry
+    // Geometry with wider ranges
     nodeCount: baseNodeCount,
-    connectionDensity: 0.1 + rGeo() * 0.7,
-    organicness: formFamily === 'organic' ? (0.6 + rGeo() * 0.4) : (rGeo() * 0.4),
-    fragmentationLevel: chaosLevel * (0.3 + rGeo() * 0.5),
+    connectionDensity: 0.05 + rGeo() * 0.8,
+    organicness: formFamily === 'organic' ? (0.5 + rGeo() * 0.5) : (rGeo() * 0.5),
+    fragmentationLevel: chaosLevel * (0.2 + rGeo() * 0.6),
     
     // Topology modes (all 3 required for multi-band)
     bassTopologyMode,
     midsTopologyMode,
     highsTopologyMode,
     
-    // Noise
+    // Noise with wider ranges
     noiseType,
-    noiseScale: 0.5 + rNoise() * 4.5,
-    noiseSpeed: 0.1 + rNoise() * 1.9,
-    noiseAmplitude: 0.1 + rNoise() * 1.4,
+    noiseScale: 0.3 + rNoise() * 5.0,
+    noiseSpeed: 0.05 + rNoise() * 2.5,
+    noiseAmplitude: 0.05 + rNoise() * 1.8,
     
-    // Motion
-    motionLayers: Math.floor(1 + rMotion() * 4),
-    asymmetryFactor: chaosLevel * (0.2 + rMotion() * 0.6),
+    // Motion with more variation
+    motionLayers: Math.floor(1 + rMotion() * 5),
+    asymmetryFactor: chaosLevel * (0.1 + rMotion() * 0.7),
     chaosLevel,
     rotationAxes,
     rotationSpeeds: [
-      0.2 + rMotion() * 1.3,
-      0.2 + rMotion() * 1.3,
-      0.2 + rMotion() * 1.3,
+      0.15 + rMotion() * 1.6,
+      0.15 + rMotion() * 1.6,
+      0.15 + rMotion() * 1.6,
     ],
     
-    // Visual
-    wireframeProbability: rGeo() > 0.7 ? (rGeo() > 0.5 ? 1 : 0.5) : 0,
-    emissiveMin: 0.2 + rGeo() * 0.6,
-    emissiveMax: 0.8 + rGeo() * 1.2,
-    colorVariance: 0.2 + rGeo() * 0.6,
-    layerCount: Math.floor(1 + rGeo() * 4),
+    // Visual with more variety
+    wireframeProbability: rGeo() > 0.65 ? (rGeo() > 0.5 ? 1 : 0.5) : 0,
+    emissiveMin: 0.15 + rGeo() * 0.7,
+    emissiveMax: 0.7 + rGeo() * 1.5,
+    colorVariance: 0.15 + rGeo() * 0.7,
+    layerCount: Math.floor(1 + rGeo() * 5),
     
-    // Form-specific
-    latticeSpacing: 0.3 + rGeo() * 0.7,
-    organicBlobCount: Math.floor(3 + rGeo() * 8),
-    energyParticleCount: Math.floor(200 + rGeo() * 400),
-    spiralArmCount: Math.floor(2 + rGeo() * 6),
-    ribbonCount: Math.floor(3 + rGeo() * 12),
-    crystalShardCount: Math.floor(8 + rGeo() * 24),
+    // Form-specific with wider ranges
+    latticeSpacing: 0.2 + rGeo() * 0.9,
+    organicBlobCount: Math.floor(2 + rGeo() * 10),
+    energyParticleCount: Math.floor(150 + rGeo() * 500),
+    spiralArmCount: Math.floor(2 + rGeo() * 8),
+    ribbonCount: Math.floor(3 + rGeo() * 15),
+    crystalShardCount: Math.floor(6 + rGeo() * 30),
     symmetryFold: symmetryFolds[Math.floor(rGeo() * symmetryFolds.length)],
     
-    // Audio mapping
+    // Audio mapping with varied intensities
     bassReactivityCurve: curves[Math.floor(rMapping() * curves.length)],
     midsReactivityCurve: curves[Math.floor(rMapping() * curves.length)],
     highsReactivityCurve: curves[Math.floor(rMapping() * curves.length)],
-    bassIntensity: 0.5 + rMapping() * 2.5,
-    midsIntensity: 0.5 + rMapping() * 2.5,
-    highsIntensity: 0.5 + rMapping() * 2.5,
+    bassIntensity: 0.4 + rMapping() * 2.8,
+    midsIntensity: 0.4 + rMapping() * 2.8,
+    highsIntensity: 0.4 + rMapping() * 2.8,
   };
 }
 

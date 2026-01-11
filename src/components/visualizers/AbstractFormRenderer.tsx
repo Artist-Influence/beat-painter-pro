@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AbstractFormParams } from '@/lib/abstractFormGenerator';
@@ -25,11 +25,45 @@ interface AbstractFormRendererProps {
   };
 }
 
+// ==================== GUARANTEED FALLBACK COLORS ====================
+const FALLBACK_COLORS = {
+  primary: '#8866ff',
+  secondary: '#6644cc',
+  accent: '#aa88ff',
+  isNeon: false,
+  isMetallic: false,
+};
+
+// Helper to get safe colors - NEVER returns undefined
+function getSafeColors(savedStyle?: { colors: any }, textureData?: { colors: any }) {
+  const colors = savedStyle?.colors || textureData?.colors || FALLBACK_COLORS;
+  return {
+    primary: colors.primary || FALLBACK_COLORS.primary,
+    secondary: colors.secondary || FALLBACK_COLORS.secondary,
+    accent: colors.accent || FALLBACK_COLORS.accent,
+    isNeon: colors.isNeon ?? false,
+    isMetallic: colors.isMetallic ?? false,
+  };
+}
+
 // ==================== AUDIO ANALYSIS ====================
 
 function analyzeAudio(frequency: number[]) {
   const freq = frequency || [];
-  if (freq.length === 0) return { bass: 0, mids: 0, highs: 0 };
+  
+  // Check if audio is actually playing (non-zero values)
+  const hasAudio = freq.some(v => v > 5);
+  
+  if (!hasAudio || freq.length === 0) {
+    // Return subtle idle animation values instead of zeros - keeps visualizer alive
+    const time = Date.now() * 0.001;
+    return {
+      bass: 0.1 + Math.sin(time * 0.5) * 0.1,
+      mids: 0.1 + Math.sin(time * 0.7 + 1) * 0.1,
+      highs: 0.1 + Math.sin(time * 1.1 + 2) * 0.08,
+      isIdle: true,
+    };
+  }
   
   const bassRange = freq.slice(0, 15);
   const midRange = freq.slice(15, 100);
@@ -45,6 +79,7 @@ function analyzeAudio(frequency: number[]) {
     bass: Math.min(bass * 4.5, 3.0),
     mids: Math.min(mids * 3.5, 2.5),
     highs: Math.min(highs * 3.0, 2.0),
+    isIdle: false,
   };
 }
 
@@ -84,6 +119,31 @@ function applyNoise(
   );
 }
 
+// ==================== SAFE FORM WRAPPER ====================
+
+function SafeFormWrapper({ 
+  children, 
+  fallbackColor 
+}: { 
+  children: React.ReactNode; 
+  fallbackColor: string;
+}) {
+  return (
+    <Suspense fallback={
+      <mesh>
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial 
+          color={fallbackColor} 
+          emissive={fallbackColor} 
+          emissiveIntensity={0.5} 
+        />
+      </mesh>
+    }>
+      {children}
+    </Suspense>
+  );
+}
+
 // ==================== LATTICE FORM ====================
 
 function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
@@ -101,6 +161,9 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   // Generate lattice nodes
   const { nodePositions, edgeIndices, nodeCount } = useMemo(() => {
@@ -143,8 +206,6 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   }, [params.geometrySeed, params.nodeCount, params.latticeSpacing, params.connectionDensity, params.chaosLevel]);
   
   const material = useMemo(() => {
-    // Priority: savedStyle colors > textureData (window colors)
-    const colors = savedStyle?.colors || textureData.colors;
     const color = new THREE.Color(colors.primary);
     const mat = new THREE.MeshStandardMaterial({
       color,
@@ -163,10 +224,7 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
     }
     
     return mat;
-  }, [savedStyle?.colors, textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
-  
-  // Get colors for lights
-  const colors = savedStyle?.colors || textureData.colors;
+  }, [colors.primary, textureData.texture, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -348,8 +406,8 @@ function OrganicForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   const material = useMemo(() => {
     const color = new THREE.Color(colors.primary);
@@ -499,8 +557,8 @@ function EnergyForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   // Generate particle field
   const { positions, velocities, count } = useMemo(() => {
@@ -652,8 +710,8 @@ function VortexForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   // Generate spiral arm data
   const spiralData = useMemo(() => {
@@ -770,8 +828,8 @@ function RibbonForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -859,8 +917,8 @@ function CrystallineForm({ params, audioData, savedStyle }: AbstractFormRenderer
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   // Generate shard data
   const shards = useMemo(() => {
@@ -995,8 +1053,8 @@ function SymmetryForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -1108,8 +1166,8 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get colors - priority: savedStyle > textureData
-  const colors = savedStyle?.colors || textureData.colors;
+  // Get safe colors - NEVER undefined
+  const colors = getSafeColors(savedStyle, textureData);
   
   const material = useMemo(() => {
     const color = new THREE.Color(colors.primary);
@@ -1278,6 +1336,9 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
 // ==================== MAIN RENDERER ====================
 
 export function AbstractFormRenderer({ params, audioData, savedStyle }: AbstractFormRendererProps) {
+  // Get safe colors for fallback
+  const colors = getSafeColors(savedStyle);
+  
   // Apply saved style colors IMMEDIATELY and ALWAYS when loading a saved visualizer
   React.useEffect(() => {
     if (savedStyle?.colors) {
@@ -1288,26 +1349,34 @@ export function AbstractFormRenderer({ params, audioData, savedStyle }: Abstract
     }
   }, [savedStyle]);
   
-  switch (params.formFamily) {
-    case 'lattice':
-      return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'organic':
-      return <OrganicForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'energy':
-      return <EnergyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'vortex':
-      return <VortexForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'ribbon':
-      return <RibbonForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'crystalline':
-      return <CrystallineForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'symmetry':
-      return <SymmetryForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    case 'topology':
-      return <TopologyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-    default:
-      return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
-  }
+  const renderForm = () => {
+    switch (params.formFamily) {
+      case 'lattice':
+        return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'organic':
+        return <OrganicForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'energy':
+        return <EnergyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'vortex':
+        return <VortexForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'ribbon':
+        return <RibbonForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'crystalline':
+        return <CrystallineForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'symmetry':
+        return <SymmetryForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      case 'topology':
+        return <TopologyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+      default:
+        return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
+    }
+  };
+  
+  return (
+    <SafeFormWrapper fallbackColor={colors.primary}>
+      {renderForm()}
+    </SafeFormWrapper>
+  );
 }
 
 export default AbstractFormRenderer;

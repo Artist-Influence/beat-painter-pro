@@ -36,6 +36,23 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
     return uuidRegex.test(id);
   };
 
+  // Create safe audio data - provides idle animation if no real audio
+  const safeAudioData = useMemo(() => {
+    const incoming = props.audioData;
+    
+    // Check if we have real audio data (non-zero frequencies)
+    if (incoming?.frequency && incoming.frequency.some(v => v > 5)) {
+      return incoming;
+    }
+    
+    // Return idle animation values - keeps visualizer moving
+    return {
+      frequency: new Array(256).fill(0),
+      amplitude: 0,
+      beatStrength: 0,
+    };
+  }, [props.audioData]);
+
   useEffect(() => {
     // Prioritize initialConfig (new system)
     if (initialConfig) {
@@ -178,12 +195,12 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
     );
   }
 
-  // New system: render from config params
+  // New system: render from config params with safe audio data
   if (config) {
     return (
       <RandomVisualizerTemplate 
         params={config} 
-        audioData={props.audioData}
+        audioData={safeAudioData}
         isPlaying={isPlaying}
       />
     );
@@ -202,7 +219,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
       }>
         <DynamicVisualizer 
           jsxCode={legacyCode} 
-          audioData={props.audioData}
+          audioData={safeAudioData}
           backgroundColor={props.backgroundColor}
           zoomLevel={props.zoomLevel}
           width={props.width}

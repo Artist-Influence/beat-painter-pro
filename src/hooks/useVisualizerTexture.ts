@@ -13,10 +13,11 @@ export interface VisualizerTextureData {
   textureVersion: number;
 }
 
+// GUARANTEED fallback colors - never use neon defaults
 const DEFAULT_COLORS = {
-  primary: "#ff00ff",
-  secondary: "#cccccc", 
-  accent: "#00ffff",
+  primary: "#8866ff",
+  secondary: "#6644cc", 
+  accent: "#aa88ff",
   isNeon: false,
   isMetallic: false,
 };
