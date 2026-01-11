@@ -15,45 +15,28 @@ interface VisualizerCanvasProps {
 }
 
 // Component inside Canvas to directly control renderer for high-quality recording
-// NOTE: We do NOT change camera aspect ratio here - that would distort the live preview.
-// The aspect ratio handling for export happens in useWebMRecorder's 2D compositing step.
+// NOTE: We do NOT change DPR during recording anymore - it causes massive frame drops
+// and laggy exports. Recording at native resolution is smooth and quality is acceptable.
 function RecordingController() {
-  const { gl, size, scene, camera } = useThree();
-  const originalPixelRatioRef = useRef<number>(window.devicePixelRatio);
+  const { gl, scene, camera } = useThree();
   
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
-      const { width, height, onReady } = (e as CustomEvent).detail;
+      const { onReady } = (e as CustomEvent).detail;
       
-      // Store original pixel ratio
-      originalPixelRatioRef.current = gl.getPixelRatio();
+      // DON'T change DPR - keep smooth performance during recording
+      // Changing DPR causes GPU overload and frame drops in both preview and export
+      console.log(`Recording: Keeping native DPR ${gl.getPixelRatio().toFixed(2)} for smooth capture`);
       
-      // Calculate required DPR to ensure we have enough pixels for the export
-      // Use the larger dimension ratio to guarantee quality
-      const requiredDpr = Math.max(width / size.width, height / size.height);
-      
-      console.log(`Recording: Setting DPR from ${originalPixelRatioRef.current} to ${requiredDpr.toFixed(2)}`);
-      console.log(`Container: ${size.width}x${size.height}, Target: ${width}x${height}`);
-      
-      // Set higher pixel ratio for quality capture
-      gl.setPixelRatio(requiredDpr);
-      
-      // Force a resize of the drawing buffer
-      gl.setSize(size.width, size.height, true);
-      
-      // Render a frame immediately at the new resolution
+      // Just render one frame and signal ready
       gl.render(scene, camera);
       
-      console.log(`Canvas buffer after setup: ${gl.domElement.width}x${gl.domElement.height}`);
-      
-      // Signal that recording can start
       if (onReady) onReady();
     };
     
     const handleRecordingStop = () => {
-      // Restore original pixel ratio only - camera was never modified
-      gl.setPixelRatio(originalPixelRatioRef.current);
-      gl.setSize(size.width, size.height, true);
+      // Nothing to restore since we didn't change anything
+      console.log('Recording stopped');
     };
     
     window.addEventListener('recording:start', handleRecordingStart);
@@ -62,7 +45,7 @@ function RecordingController() {
       window.removeEventListener('recording:start', handleRecordingStart);
       window.removeEventListener('recording:stop', handleRecordingStop);
     };
-  }, [gl, size, camera, scene]);
+  }, [gl, camera, scene]);
   
   return null;
 }
