@@ -10,7 +10,7 @@ import {
 } from '@/lib/randomVisualizerGenerator';
 
 export function useCustomVisualizers() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   
   const {
@@ -51,6 +51,15 @@ export function useCustomVisualizers() {
 
   // Save a random visualizer (new system)
   const saveRandomVisualizer = async (params: RandomVisualizerParams, customName?: string) => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) {
+      toast({
+        title: "Please Wait",
+        description: "Loading authentication...",
+      });
+      return null;
+    }
+    
     if (!user) {
       toast({
         title: "Sign In Required",
