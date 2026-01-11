@@ -100,12 +100,18 @@ export function CustomVisualizerGenerator({
   // Style version to force re-render when styles change
   const [styleVersion, setStyleVersion] = useState(0);
   
-  // Initialize global colors and listen for style changes
+  // Ready state - don't render Canvas until colors are set
+  const [isReady, setIsReady] = useState(false);
+  
+  // Initialize global colors BEFORE rendering Canvas
   useEffect(() => {
-    // Ensure global style variables exist for preview
-    if (!(window as any).extractedColors) {
-      (window as any).extractedColors = DEFAULT_COLORS;
-    }
+    // Always set default colors when generator opens
+    (window as any).extractedColors = DEFAULT_COLORS;
+    // Dispatch event to notify any existing hooks
+    window.dispatchEvent(new CustomEvent('style:applied'));
+    
+    // Small delay to ensure hooks pick up the change
+    requestAnimationFrame(() => setIsReady(true));
     
     // Listen for style changes to force re-render
     const handleStyleChange = () => setStyleVersion(v => v + 1);
@@ -115,8 +121,9 @@ export function CustomVisualizerGenerator({
     return () => {
       window.removeEventListener('style:applied', handleStyleChange);
       window.removeEventListener('texture:applied', handleStyleChange);
+      setIsReady(false);
     };
-  }, []);
+  }, [isOpen]);
   
   // Current random params
   const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => {
@@ -235,11 +242,13 @@ export function CustomVisualizerGenerator({
           <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10">
             <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
               <React.Suspense fallback={null}>
-                <RandomVisualizerTemplate 
-                  key={`${currentParams.seed}-${styleVersion}`}
-                  params={currentParams} 
-                  audioData={previewAudio}
-                />
+                {isReady && (
+                  <RandomVisualizerTemplate 
+                    key={`${currentParams.seed}-${styleVersion}`}
+                    params={currentParams} 
+                    audioData={previewAudio}
+                  />
+                )}
               </React.Suspense>
               <OrbitControls enablePan={false} enableZoom={true} minDistance={4} maxDistance={15} />
             </Canvas>
