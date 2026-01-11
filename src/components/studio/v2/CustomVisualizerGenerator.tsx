@@ -131,6 +131,22 @@ export function CustomVisualizerGenerator({
       setIsReady(false);
     };
   }, [isOpen]);
+
+  // Generate a NEW random visualizer each time the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      const newSeed = generateRandomSeed();
+      const abstractForm = generateAbstractFormParams(newSeed, {
+        chaosLevel: complexity / 10,
+        nodeCount: Math.floor(30 + complexity * 15),
+      });
+      setCurrentParams(generateRandomParams(newSeed, {
+        elementCount: 1,
+        abstractForm,
+      }));
+      setCustomName('');
+    }
+  }, [isOpen]); // Only regenerate when dialog opens - intentionally exclude complexity
   
   // Reset local saving state when dialog closes/opens
   useEffect(() => {
@@ -192,20 +208,26 @@ export function CustomVisualizerGenerator({
     setCurrentParams(newParams);
   }, []);
 
-  // Update preview when complexity changes
-  useEffect(() => {
-    setCurrentParams(prev => {
-      const abstractForm = generateAbstractFormParams(prev.seed, {
-        chaosLevel: complexity / 10,
-        nodeCount: Math.floor(30 + complexity * 15),
-      });
-      
-      return generateRandomParams(prev.seed, {
-        elementCount: 1,
-        abstractForm,
-      });
+  // Update abstract form params when complexity changes (keep same seed for continuity)
+  const handleComplexityChange = useCallback((newComplexity: number) => {
+    setComplexity(newComplexity);
+    // Generate new seed for fresh visualizer when adjusting complexity
+    const newSeed = generateRandomSeed();
+    const abstractForm = generateAbstractFormParams(newSeed, {
+      chaosLevel: newComplexity / 10,
+      nodeCount: Math.floor(30 + newComplexity * 15),
     });
-  }, [complexity]);
+    setCurrentParams(generateRandomParams(newSeed, {
+      elementCount: 1,
+      abstractForm,
+    }));
+  }, []);
+
+  // Capture current style colors to pass to preview
+  const currentStyleColors = useMemo(() => {
+    const colors = (window as any).extractedColors || DEFAULT_COLORS;
+    return { colors: { ...colors } };
+  }, [styleVersion]);
 
   // Save current visualizer with style data
   const handleSave = async () => {
@@ -269,12 +291,15 @@ export function CustomVisualizerGenerator({
         <div className="space-y-4">
           {/* Preview Area with animated 128 BPM */}
           <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10">
-            <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+          <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
               <React.Suspense fallback={null}>
                 {isReady && (
                   <RandomVisualizerTemplate 
                     key={`${currentParams.seed}-${styleVersion}`}
-                    params={currentParams} 
+                    params={{
+                      ...currentParams,
+                      savedStyle: currentStyleColors, // Pass current style colors to preview
+                    }} 
                     audioData={previewAudio}
                   />
                 )}
@@ -320,7 +345,7 @@ export function CustomVisualizerGenerator({
               </div>
               <Slider
                 value={[complexity]}
-                onValueChange={(value) => setComplexity(value[0])}
+                onValueChange={(value) => handleComplexityChange(value[0])}
                 min={1}
                 max={10}
                 step={1}

@@ -86,7 +86,7 @@ function applyNoise(
 
 // ==================== LATTICE FORM ====================
 
-function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
+function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const nodesRef = useRef<THREE.InstancedMesh>(null);
   const edgesRef = useRef<THREE.LineSegments>(null);
@@ -143,7 +143,9 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
   }, [params.geometrySeed, params.nodeCount, params.latticeSpacing, params.connectionDensity, params.chaosLevel]);
   
   const material = useMemo(() => {
-    const color = new THREE.Color(textureData.colors.primary);
+    // Priority: savedStyle colors > textureData (window colors)
+    const colors = savedStyle?.colors || textureData.colors;
+    const color = new THREE.Color(colors.primary);
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
@@ -161,7 +163,10 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
     }
     
     return mat;
-  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
+  }, [savedStyle?.colors, textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
+  
+  // Get colors for lights
+  const colors = savedStyle?.colors || textureData.colors;
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -310,7 +315,7 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
             />
           </bufferGeometry>
           <lineBasicMaterial 
-            color={textureData.colors.accent} 
+            color={colors.accent} 
             transparent 
             opacity={0.4}
           />
@@ -319,15 +324,15 @@ function LatticeForm({ params, audioData }: AbstractFormRendererProps) {
       
       {/* Lighting */}
       <ambientLight intensity={0.4} />
-      <pointLight position={[4, 4, 4]} intensity={1.2} color={textureData.colors.primary} />
-      <pointLight position={[-3, -2, 2]} intensity={0.6} color={textureData.colors.accent} />
+      <pointLight position={[4, 4, 4]} intensity={1.2} color={colors.primary} />
+      <pointLight position={[-3, -2, 2]} intensity={0.6} color={colors.accent} />
     </group>
   );
 }
 
 // ==================== ORGANIC FORM ====================
 
-function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
+function OrganicForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const originalPositions = useRef<Float32Array | null>(null);
@@ -343,8 +348,11 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
+  
   const material = useMemo(() => {
-    const color = new THREE.Color(textureData.colors.primary);
+    const color = new THREE.Color(colors.primary);
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
@@ -362,7 +370,7 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
     }
     
     return mat;
-  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
+  }, [colors.primary, textureData.texture, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -457,8 +465,8 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
         <mesh scale={0.7}>
           <icosahedronGeometry args={[1, 3]} />
           <meshStandardMaterial
-            color={textureData.colors.secondary}
-            emissive={textureData.colors.secondary}
+            color={colors.secondary}
+            emissive={colors.secondary}
             emissiveIntensity={params.emissiveMin * 0.5}
             transparent
             opacity={0.5}
@@ -467,15 +475,15 @@ function OrganicForm({ params, audioData }: AbstractFormRendererProps) {
       )}
       
       <ambientLight intensity={0.4} />
-      <pointLight position={[4, 4, 4]} intensity={1.2} color={textureData.colors.primary} />
-      <pointLight position={[-3, -2, 2]} intensity={0.6} color={textureData.colors.accent} />
+      <pointLight position={[4, 4, 4]} intensity={1.2} color={colors.primary} />
+      <pointLight position={[-3, -2, 2]} intensity={0.6} color={colors.accent} />
     </group>
   );
 }
 
 // ==================== ENERGY FORM ====================
 
-function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
+function EnergyForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const particlesRef = useRef<THREE.Points>(null);
   const ribbonsRef = useRef<THREE.Group>(null);
@@ -490,6 +498,9 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
   
   // Generate particle field
   const { positions, velocities, count } = useMemo(() => {
@@ -598,7 +609,7 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
           />
         </bufferGeometry>
         <pointsMaterial
-          color={textureData.colors.primary}
+          color={colors.primary}
           size={0.05}
           transparent
           opacity={0.6}
@@ -610,8 +621,8 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
       <mesh>
         <sphereGeometry args={[0.3, 16, 16]} />
         <meshStandardMaterial
-          color={textureData.colors.accent}
-          emissive={textureData.colors.accent}
+          color={colors.accent}
+          emissive={colors.accent}
           emissiveIntensity={params.emissiveMax}
           transparent
           opacity={0.8}
@@ -619,14 +630,14 @@ function EnergyForm({ params, audioData }: AbstractFormRendererProps) {
       </mesh>
       
       <ambientLight intensity={0.3} />
-      <pointLight position={[0, 0, 0]} intensity={2} color={textureData.colors.accent} distance={10} />
+      <pointLight position={[0, 0, 0]} intensity={2} color={colors.accent} distance={10} />
     </group>
   );
 }
 
 // ==================== VORTEX FORM ====================
 
-function VortexForm({ params, audioData }: AbstractFormRendererProps) {
+function VortexForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const armsRef = useRef<THREE.Group>(null);
   
@@ -640,6 +651,9 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
   
   // Generate spiral arm data
   const spiralData = useMemo(() => {
@@ -709,8 +723,8 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
                 >
                   <sphereGeometry args={[0.04 + t * 0.02, 6, 6]} />
                   <meshStandardMaterial
-                    color={textureData.colors.primary}
-                    emissive={textureData.colors.primary}
+                    color={colors.primary}
+                    emissive={colors.primary}
                     emissiveIntensity={params.emissiveMin + t * 0.5}
                     transparent
                     opacity={0.8 - t * 0.3}
@@ -726,22 +740,22 @@ function VortexForm({ params, audioData }: AbstractFormRendererProps) {
       <mesh>
         <sphereGeometry args={[0.25, 16, 16]} />
         <meshStandardMaterial
-          color={textureData.colors.accent}
-          emissive={textureData.colors.accent}
+          color={colors.accent}
+          emissive={colors.accent}
           emissiveIntensity={params.emissiveMax}
         />
       </mesh>
       
       <ambientLight intensity={0.4} />
-      <pointLight position={[0, 0, 0]} intensity={1.5} color={textureData.colors.accent} />
-      <pointLight position={[3, 3, 3]} intensity={0.8} color={textureData.colors.primary} />
+      <pointLight position={[0, 0, 0]} intensity={1.5} color={colors.accent} />
+      <pointLight position={[3, 3, 3]} intensity={0.8} color={colors.primary} />
     </group>
   );
 }
 
 // ==================== RIBBON FORM ====================
 
-function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
+function RibbonForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const ribbonsRef = useRef<THREE.Group>(null);
   
@@ -755,6 +769,9 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -806,8 +823,8 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
             >
               <boxGeometry args={[0.02, 2 + r() * 1, 0.3 + r() * 0.3]} />
               <meshStandardMaterial
-                color={textureData.colors.primary}
-                emissive={textureData.colors.primary}
+                color={colors.primary}
+                emissive={colors.primary}
                 emissiveIntensity={params.emissiveMin}
                 transparent
                 opacity={0.7}
@@ -819,15 +836,15 @@ function RibbonForm({ params, audioData }: AbstractFormRendererProps) {
       </group>
       
       <ambientLight intensity={0.4} />
-      <pointLight position={[3, 3, 3]} intensity={1.0} color={textureData.colors.primary} />
-      <pointLight position={[-2, -2, 2]} intensity={0.6} color={textureData.colors.accent} />
+      <pointLight position={[3, 3, 3]} intensity={1.0} color={colors.primary} />
+      <pointLight position={[-2, -2, 2]} intensity={0.6} color={colors.accent} />
     </group>
   );
 }
 
 // ==================== CRYSTALLINE FORM ====================
 
-function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
+function CrystallineForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const shardsRef = useRef<THREE.Group>(null);
   
@@ -841,6 +858,9 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
   
   // Generate shard data
   const shards = useMemo(() => {
@@ -926,8 +946,8 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
             <mesh scale={shard.scale}>
               <octahedronGeometry args={[1, 0]} />
               <meshStandardMaterial
-                color={textureData.colors.primary}
-                emissive={textureData.colors.primary}
+                color={colors.primary}
+                emissive={colors.primary}
                 emissiveIntensity={params.emissiveMin}
                 metalness={0.9}
                 roughness={0.1}
@@ -943,8 +963,8 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
       <mesh>
         <octahedronGeometry args={[0.3, 1]} />
         <meshStandardMaterial
-          color={textureData.colors.accent}
-          emissive={textureData.colors.accent}
+          color={colors.accent}
+          emissive={colors.accent}
           emissiveIntensity={params.emissiveMax}
           metalness={0.9}
           roughness={0.1}
@@ -952,15 +972,15 @@ function CrystallineForm({ params, audioData }: AbstractFormRendererProps) {
       </mesh>
       
       <ambientLight intensity={0.3} />
-      <pointLight position={[3, 3, 3]} intensity={1.2} color={textureData.colors.primary} />
-      <pointLight position={[-2, -2, 2]} intensity={0.8} color={textureData.colors.accent} />
+      <pointLight position={[3, 3, 3]} intensity={1.2} color={colors.primary} />
+      <pointLight position={[-2, -2, 2]} intensity={0.8} color={colors.accent} />
     </group>
   );
 }
 
 // ==================== SYMMETRY FORM ====================
 
-function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
+function SymmetryForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const elementsRef = useRef<THREE.Group>(null);
   
@@ -974,6 +994,9 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
   
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
+  
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -1033,8 +1056,8 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
               <mesh>
                 <dodecahedronGeometry args={[0.2, 0]} />
                 <meshStandardMaterial
-                  color={textureData.colors.primary}
-                  emissive={textureData.colors.primary}
+                  color={colors.primary}
+                  emissive={colors.primary}
                   emissiveIntensity={params.emissiveMin}
                   metalness={0.7}
                   roughness={0.3}
@@ -1044,7 +1067,7 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
               {/* Connecting lines */}
               <mesh position={[radius * 0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
                 <cylinderGeometry args={[0.01, 0.01, radius, 4]} />
-                <meshBasicMaterial color={textureData.colors.accent} transparent opacity={0.5} />
+                <meshBasicMaterial color={colors.accent} transparent opacity={0.5} />
               </mesh>
             </group>
           );
@@ -1055,21 +1078,21 @@ function SymmetryForm({ params, audioData }: AbstractFormRendererProps) {
       <mesh>
         <icosahedronGeometry args={[0.2, 1]} />
         <meshStandardMaterial
-          color={textureData.colors.accent}
-          emissive={textureData.colors.accent}
+          color={colors.accent}
+          emissive={colors.accent}
           emissiveIntensity={params.emissiveMax}
         />
       </mesh>
       
       <ambientLight intensity={0.4} />
-      <pointLight position={[3, 3, 3]} intensity={1.0} color={textureData.colors.primary} />
+      <pointLight position={[3, 3, 3]} intensity={1.0} color={colors.primary} />
     </group>
   );
 }
 
 // ==================== TOPOLOGY FORM ====================
 
-function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
+function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const originalPositions = useRef<Float32Array | null>(null);
@@ -1085,8 +1108,11 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
+  // Get colors - priority: savedStyle > textureData
+  const colors = savedStyle?.colors || textureData.colors;
+  
   const material = useMemo(() => {
-    const color = new THREE.Color(textureData.colors.primary);
+    const color = new THREE.Color(colors.primary);
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
@@ -1105,7 +1131,7 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
     }
     
     return mat;
-  }, [textureData.texture, textureData.colors.primary, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
+  }, [colors.primary, textureData.texture, textureData.textureVersion, params.emissiveMin, params.wireframeProbability]);
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -1243,8 +1269,8 @@ function TopologyForm({ params, audioData }: AbstractFormRendererProps) {
       </mesh>
       
       <ambientLight intensity={0.4} />
-      <pointLight position={[4, 4, 4]} intensity={1.2} color={textureData.colors.primary} />
-      <pointLight position={[-3, -2, 2]} intensity={0.6} color={textureData.colors.accent} />
+      <pointLight position={[4, 4, 4]} intensity={1.2} color={colors.primary} />
+      <pointLight position={[-3, -2, 2]} intensity={0.6} color={colors.accent} />
     </group>
   );
 }
@@ -1264,23 +1290,23 @@ export function AbstractFormRenderer({ params, audioData, savedStyle }: Abstract
   
   switch (params.formFamily) {
     case 'lattice':
-      return <LatticeForm params={params} audioData={audioData} />;
+      return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'organic':
-      return <OrganicForm params={params} audioData={audioData} />;
+      return <OrganicForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'energy':
-      return <EnergyForm params={params} audioData={audioData} />;
+      return <EnergyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'vortex':
-      return <VortexForm params={params} audioData={audioData} />;
+      return <VortexForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'ribbon':
-      return <RibbonForm params={params} audioData={audioData} />;
+      return <RibbonForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'crystalline':
-      return <CrystallineForm params={params} audioData={audioData} />;
+      return <CrystallineForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'symmetry':
-      return <SymmetryForm params={params} audioData={audioData} />;
+      return <SymmetryForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     case 'topology':
-      return <TopologyForm params={params} audioData={audioData} />;
+      return <TopologyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     default:
-      return <LatticeForm params={params} audioData={audioData} />;
+      return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
   }
 }
 
