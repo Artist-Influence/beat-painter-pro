@@ -33,7 +33,11 @@ export function useCustomVisualizers() {
   // Initialize store when user changes
   useEffect(() => {
     if (user) {
-      fetchVisualizers(user.id);
+      // Only fetch if store is empty to prevent duplicate fetches
+      const currentStore = useCustomVisualizersStore.getState();
+      if (currentStore.visualizers.length === 0 && !currentStore.isLoading) {
+        fetchVisualizers(user.id);
+      }
       checkUserRole(user.id);
       subscribeToRealtime(user.id);
     } else {
@@ -43,7 +47,7 @@ export function useCustomVisualizers() {
     return () => {
       unsubscribeFromRealtime();
     };
-  }, [user, fetchVisualizers, checkUserRole, subscribeToRealtime, unsubscribeFromRealtime]);
+  }, [user?.id]); // Only depend on user.id to prevent re-runs
 
   // Save a random visualizer (new system)
   const saveRandomVisualizer = async (params: RandomVisualizerParams, customName?: string) => {
@@ -100,13 +104,12 @@ export function useCustomVisualizers() {
         description: `${name} has been added to your collection`,
       });
 
-      // Add to store
+      // Add to store immediately - don't refetch to avoid race condition
       addVisualizer(data as CustomVisualizer);
       setVisualizerCount(visualizerCount + 1);
       
-      // Refresh
+      // Update quota check but don't refetch visualizers list
       checkUserRole(user.id);
-      await fetchVisualizers(user.id);
       
       return data;
     } catch (error: any) {
