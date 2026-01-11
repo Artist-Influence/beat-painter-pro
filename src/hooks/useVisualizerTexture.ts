@@ -13,61 +13,54 @@ export interface VisualizerTextureData {
   textureVersion: number;
 }
 
+const DEFAULT_COLORS = {
+  primary: "#ff00ff",
+  secondary: "#cccccc", 
+  accent: "#00ffff",
+  isNeon: false,
+  isMetallic: false,
+};
+
 export const useVisualizerTexture = () => {
   const [textureVersion, setTextureVersion] = useState(0);
   
   useEffect(() => {
-    const handleTextureApplied = () => {
-      console.log('Texture applied event fired');
-      setTextureVersion(v => v + 1);
-    };
-    const handleTextureCleared = () => {
-      console.log('Texture cleared event fired');
-      setTextureVersion(v => v + 1);
-    };
-    const handleStyleApplied = () => {
-      console.log('Style applied event fired');
+    const handleUpdate = () => {
       setTextureVersion(v => v + 1);
     };
     
-    window.addEventListener('texture:applied', handleTextureApplied);
-    window.addEventListener('texture:cleared', handleTextureCleared);
-    window.addEventListener('style:applied', handleStyleApplied);
+    window.addEventListener('texture:applied', handleUpdate);
+    window.addEventListener('texture:cleared', handleUpdate);
+    window.addEventListener('style:applied', handleUpdate);
     
     return () => {
-      window.removeEventListener('texture:applied', handleTextureApplied);
-      window.removeEventListener('texture:cleared', handleTextureCleared);
-      window.removeEventListener('style:applied', handleStyleApplied);
+      window.removeEventListener('texture:applied', handleUpdate);
+      window.removeEventListener('texture:cleared', handleUpdate);
+      window.removeEventListener('style:applied', handleUpdate);
     };
   }, []);
 
-  const textureData: VisualizerTextureData = useMemo(() => {
+  // Read colors FRESH on every render (not memoized) to ensure we always have latest
+  const extractedColors = (window as any).extractedColors || DEFAULT_COLORS;
+  
+  // Only memoize texture loading (expensive operation)
+  const texture = useMemo(() => {
     const appliedTextureUrl = (window as any).appliedTexture;
-    const extractedColors = (window as any).extractedColors || {
-      primary: "#ff00ff",
-      secondary: "#cccccc", 
-      accent: "#00ffff",
-      isNeon: false,
-      isMetallic: false,
-    };
-
-    let texture = null;
-    if (appliedTextureUrl) {
-      texture = new THREE.TextureLoader().load(appliedTextureUrl);
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.needsUpdate = true;
-    }
-
-    return {
-      texture,
-      colors: extractedColors,
-      textureVersion,
-    };
+    if (!appliedTextureUrl) return null;
+    
+    const tex = new THREE.TextureLoader().load(appliedTextureUrl);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
   }, [textureVersion]);
 
-  return textureData;
+  return {
+    texture,
+    colors: extractedColors,
+    textureVersion,
+  };
 };
 
 export const createVisualizerMaterial = (
