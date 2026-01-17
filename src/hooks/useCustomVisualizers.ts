@@ -113,11 +113,11 @@ export function useCustomVisualizers() {
         description: `${name} has been added to your collection`,
       });
 
-      // Add to store immediately - don't refetch to avoid race condition
-      addVisualizer(data as CustomVisualizer);
+      // DON'T add to store manually - the realtime subscription will handle it
+      // This prevents duplicate entries in the store
       setVisualizerCount(visualizerCount + 1);
       
-      // Update quota check but don't refetch visualizers list
+      // Update quota check
       checkUserRole(user.id);
       
       return data;

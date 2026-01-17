@@ -135,7 +135,11 @@ export const useCustomVisualizersStore = create<CustomVisualizersState>((set, ge
         },
         (payload) => {
           console.log('New custom visualizer created:', payload);
-          get().addVisualizer(payload.new as CustomVisualizer);
+          // Check for duplicates before adding (safety net)
+          const existing = get().visualizers.find(v => v.id === payload.new.id);
+          if (!existing) {
+            get().addVisualizer(payload.new as CustomVisualizer);
+          }
         }
       )
       .on(
