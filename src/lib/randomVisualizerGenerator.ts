@@ -1,6 +1,8 @@
 // Seeded random number generator for reproducible results
+// CRITICAL: Always ensure seed is positive and non-zero to prevent broken sequences
 export function seededRandom(seed: number) {
-  let state = seed;
+  // Ensure seed is always positive and non-zero (fixes XOR producing negative numbers)
+  let state = Math.abs(seed) || 1;
   return function() {
     state = (state * 1103515245 + 12345) & 0x7fffffff;
     return state / 0x7fffffff;

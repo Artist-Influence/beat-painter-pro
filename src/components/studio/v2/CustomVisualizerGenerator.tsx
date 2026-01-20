@@ -208,15 +208,25 @@ export function CustomVisualizerGenerator({
     setCurrentParams(newParams);
   }, []);
 
-  // Update abstract form params when complexity changes (keep same seed for continuity)
+  // Update abstract form params when complexity changes - DRAMATIC differences per level
   const handleComplexityChange = useCallback((newComplexity: number) => {
     setComplexity(newComplexity);
-    // Generate new seed for fresh visualizer when adjusting complexity
+    
+    // Generate completely new random seed for dramatic change
     const newSeed = generateRandomSeed();
+    
+    // Map complexity to dramatically different parameter ranges
+    const nodeRange = newComplexity < 4 ? { min: 10, max: 30 } :
+                      newComplexity < 7 ? { min: 40, max: 100 } :
+                      { min: 100, max: 250 };
+    
+    const nodeCount = Math.floor(nodeRange.min + Math.random() * (nodeRange.max - nodeRange.min));
+    
     const abstractForm = generateAbstractFormParams(newSeed, {
       chaosLevel: newComplexity / 10,
-      nodeCount: Math.floor(30 + newComplexity * 15),
+      nodeCount,
     });
+    
     setCurrentParams(generateRandomParams(newSeed, {
       elementCount: 1,
       abstractForm,

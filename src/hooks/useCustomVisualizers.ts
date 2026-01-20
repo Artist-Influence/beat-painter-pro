@@ -85,7 +85,6 @@ export function useCustomVisualizers() {
       const emoji = paramsToEmoji(params);
       
       // Save to database with config JSON instead of jsx_code
-      // Note: config column exists but types may not be regenerated yet
       const insertData = {
         user_id: user.id,
         name,
@@ -95,11 +94,20 @@ export function useCustomVisualizers() {
         scale_factor: 0.12,
       };
       
-      const { data, error } = await supabase
+      console.log('Attempting to save visualizer:', name);
+      
+      // Add timeout to prevent infinite hang
+      const savePromise = supabase
         .from('custom_visualizers')
         .insert(insertData)
         .select()
         .single();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Save timeout - please try again')), 10000)
+      );
+      
+      const { data, error } = await Promise.race([savePromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Save error:', error);
@@ -113,8 +121,19 @@ export function useCustomVisualizers() {
         description: `${name} has been added to your collection`,
       });
 
-      // DON'T add to store manually - the realtime subscription will handle it
-      // This prevents duplicate entries in the store
+      // FALLBACK: Manually add to store after a short delay if realtime doesn't fire
+      // This ensures the visualizer appears even if realtime subscription is slow
+      if (data) {
+        setTimeout(() => {
+          const currentStore = useCustomVisualizersStore.getState();
+          const alreadyExists = currentStore.visualizers.some(v => v.id === data.id);
+          if (!alreadyExists) {
+            console.log('Realtime did not fire, adding manually to store');
+            addVisualizer(data as CustomVisualizer);
+          }
+        }, 1500);
+      }
+      
       setVisualizerCount(visualizerCount + 1);
       
       // Update quota check
