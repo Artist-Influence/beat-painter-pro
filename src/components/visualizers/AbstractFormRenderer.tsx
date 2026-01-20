@@ -35,8 +35,10 @@ const FALLBACK_COLORS = {
 };
 
 // Helper to get safe colors - NEVER returns undefined
+// Priority: savedStyle > textureData > window.extractedColors > FALLBACK
 function getSafeColors(savedStyle?: { colors: any }, textureData?: { colors: any }) {
-  const colors = savedStyle?.colors || textureData?.colors || FALLBACK_COLORS;
+  const windowColors = typeof window !== 'undefined' ? (window as any).extractedColors : null;
+  const colors = savedStyle?.colors || textureData?.colors || windowColors || FALLBACK_COLORS;
   return {
     primary: colors.primary || FALLBACK_COLORS.primary,
     secondary: colors.secondary || FALLBACK_COLORS.secondary,
@@ -47,6 +49,7 @@ function getSafeColors(savedStyle?: { colors: any }, textureData?: { colors: any
 }
 
 // ==================== AUDIO ANALYSIS ====================
+// Matches template visualizer EQ separation for consistent punch
 
 function analyzeAudio(frequency: number[]) {
   const freq = frequency || [];
@@ -62,33 +65,66 @@ function analyzeAudio(frequency: number[]) {
       mids: 0.1 + Math.sin(time * 0.7 + 1) * 0.1,
       highs: 0.1 + Math.sin(time * 1.1 + 2) * 0.08,
       isIdle: true,
+      rawBass: 0,
+      rawMids: 0,
+      rawHighs: 0,
     };
   }
   
-  const bassRange = freq.slice(0, 15);
-  const midRange = freq.slice(15, 100);
-  const highRange = freq.slice(100);
+  // TRUE EQ SEPARATION matching template visualizers:
+  // Bass: bins 0-3 (0-250Hz - kick/sub) - focused on very low frequencies
+  // Mids: bins 4-50 (250-4000Hz - vocals/snare/melodic content)  
+  // Highs: bins 51+ (4000Hz+ - hi-hats/cymbals/air)
+  let bassSum = 0, midsSum = 0, highsSum = 0;
   
-  const bass = bassRange.length > 0 ? Math.max(0, ...bassRange) / 255 : 0;
-  const lowMids = midRange.slice(0, 20);
-  const mids = lowMids.length > 0 ? Math.max(0, ...lowMids) / 255 : 0;
-  const highs = highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length / 255 : 0;
+  // Bass - use peak value from first 4 bins for punch
+  for (let i = 0; i <= 3; i++) bassSum = Math.max(bassSum, freq[i] || 0);
   
-  // Increased multipliers for more dramatic audio response
+  // Mids - average of mid frequencies with peak bias
+  let midPeak = 0;
+  for (let i = 4; i <= 50; i++) {
+    midsSum += freq[i] || 0;
+    midPeak = Math.max(midPeak, freq[i] || 0);
+  }
+  midsSum = midsSum / 47 * 0.6 + midPeak * 0.4; // Blend avg + peak
+  
+  // Highs - average of high frequencies
+  let highCount = 0;
+  for (let i = 51; i < Math.min(freq.length, 200); i++) {
+    highsSum += freq[i] || 0;
+    highCount++;
+  }
+  highsSum = highCount > 0 ? highsSum / highCount : 0;
+  
+  // Normalize to 0-1 range with aggressive scaling for impact
+  const rawBass = Math.min(bassSum / 255, 1.0);
+  const rawMids = Math.min(midsSum / 255, 1.0);
+  const rawHighs = Math.min(highsSum / 255, 1.0);
+  
+  // Apply multipliers for dramatic response
   return {
-    bass: Math.min(bass * 4.5, 3.0),
-    mids: Math.min(mids * 3.5, 2.5),
-    highs: Math.min(highs * 3.0, 2.0),
+    bass: Math.min(rawBass * 4.5, 3.0),
+    mids: Math.min(rawMids * 3.5, 2.5),
+    highs: Math.min(rawHighs * 3.0, 2.0),
     isIdle: false,
+    rawBass,
+    rawMids,
+    rawHighs,
   };
 }
 
-// Asymmetric smoothing - fast attack, slower decay for punchy response
+// Asymmetric smoothing - VERY fast attack for punch, controlled decay
 function smoothValue(current: number, target: number): number {
-  const attackSpeed = 0.85;
-  const decaySpeed = 0.35;
+  const attackSpeed = 0.92; // Even faster attack for immediate punch
+  const decaySpeed = 0.25; // Slower decay for sustained motion
   const isRising = target > current;
   return current + (target - current) * (isRising ? attackSpeed : decaySpeed);
+}
+
+// TRANSIENT BLEND: Mix raw values for punch with smoothed for continuity
+// This matches template visualizer responsiveness
+function transientBlend(raw: number, smoothed: number): number {
+  return raw * 0.55 + smoothed * 0.45; // 55% raw for punch, 45% smooth for stability
 }
 
 // ==================== NOISE FUNCTIONS ====================
@@ -228,11 +264,12 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs, rawBass = 0, rawMids = 0, rawHighs = 0 } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
-    // Apply reactivity curves
+    // Apply reactivity curves to raw values for consistent intensity
     const bassEffect = applyReactivityCurve(bass * sens.bassMultiplier, params.bassReactivityCurve) * params.bassIntensity;
     const midsEffect = applyReactivityCurve(mids * sens.midsMultiplier, params.midsReactivityCurve) * params.midsIntensity;
     const highsEffect = applyReactivityCurve(highs * sens.highsMultiplier, params.highsReactivityCurve) * params.highsIntensity;
@@ -242,60 +279,71 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
+    // TRANSIENT BLEND for punch - mix raw + smoothed like template visualizers
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    const finalHighs = transientBlend(highsEffect, smoothedHighs.current);
+    
     if (groupRef.current) {
-      // BASS: Large-scale topology changes based on mode
+      // BASS: Large-scale topology changes based on mode - use finalBass for punch
       switch (params.bassTopologyMode) {
         case 'expand':
-          groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.8);
+          groupRef.current.scale.setScalar(1.5 + finalBass * 0.8);
           break;
         case 'fracture':
           // Nodes spread apart
-          groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
+          groupRef.current.scale.setScalar(1.5 + finalBass * 0.5);
           break;
         case 'ripple':
-          groupRef.current.position.y = Math.sin(t * 3 + smoothedBass.current * 5) * smoothedBass.current * 0.5;
+          groupRef.current.position.y = Math.sin(t * 3 + finalBass * 5) * finalBass * 0.5;
           break;
         case 'morph':
-          groupRef.current.scale.x = 1.5 + smoothedBass.current * 0.6;
-          groupRef.current.scale.y = 1.5 + smoothedBass.current * 0.3;
-          groupRef.current.scale.z = 1.5 + smoothedBass.current * 0.4;
+          groupRef.current.scale.x = 1.5 + finalBass * 0.6;
+          groupRef.current.scale.y = 1.5 + finalBass * 0.3;
+          groupRef.current.scale.z = 1.5 + finalBass * 0.4;
           break;
         case 'explode':
-          groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 1.2);
+          groupRef.current.scale.setScalar(1.5 + finalBass * 1.2);
           break;
         case 'warp':
-          groupRef.current.rotation.x = Math.sin(t + smoothedBass.current * 3) * 0.3;
-          groupRef.current.rotation.z = Math.cos(t + smoothedBass.current * 3) * 0.3;
+          groupRef.current.rotation.x = Math.sin(t + finalBass * 3) * 0.3;
+          groupRef.current.rotation.z = Math.cos(t + finalBass * 3) * 0.3;
           break;
       }
       
-      // MIDS: Secondary motion
+      // MIDS: Secondary motion - use finalMids for punch
       switch (params.midsTopologyMode) {
         case 'twist':
-          groupRef.current.rotation.y += smoothedMids.current * 0.05;
+          // Only twist when spinSpeed > 0 (rotation-based)
+          if (sens.spinSpeed > 0) {
+            groupRef.current.rotation.y += finalMids * 0.05 * sens.spinSpeed;
+          }
           break;
         case 'oscillate':
-          groupRef.current.rotation.z = Math.sin(t * 4) * smoothedMids.current * 0.2;
+          // Oscillation is time-based, not accumulating, so keep it
+          groupRef.current.rotation.z = Math.sin(t * 4) * finalMids * 0.2;
           break;
         case 'wave':
-          groupRef.current.position.x = Math.sin(t * 2) * smoothedMids.current * 0.3;
+          groupRef.current.position.x = Math.sin(t * 2) * finalMids * 0.3;
           break;
         case 'fold':
-          groupRef.current.scale.y *= (1 - smoothedMids.current * 0.3);
+          groupRef.current.scale.y *= (1 - finalMids * 0.3);
           break;
         case 'pulse':
-          const pulse = 1 + Math.sin(t * 6) * smoothedMids.current * 0.15;
+          const pulse = 1 + Math.sin(t * 6) * finalMids * 0.15;
           groupRef.current.scale.multiplyScalar(pulse);
           break;
         case 'subdivide':
-          // Visual subdivision effect through rotation
-          groupRef.current.rotation.x += smoothedMids.current * 0.03;
+          // Only subdivide-rotate when spinSpeed > 0
+          if (sens.spinSpeed > 0) {
+            groupRef.current.rotation.x += finalMids * 0.03 * sens.spinSpeed;
+          }
           break;
       }
       
       // Rotation ONLY when spinSpeed > 0
       if (sens.spinSpeed > 0) {
-        const audioIntensity = (smoothedBass.current + smoothedMids.current) * 0.5;
+        const audioIntensity = (finalBass + finalMids) * 0.5;
         const rotationMult = sens.spinSpeed * (0.1 + audioIntensity * 0.9);
         if (params.rotationAxes[0]) groupRef.current.rotation.x += params.rotationSpeeds[0] * 0.01 * rotationMult;
         if (params.rotationAxes[1]) groupRef.current.rotation.y += params.rotationSpeeds[1] * 0.01 * rotationMult;
@@ -303,13 +351,13 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
       }
     }
     
-    // HIGHS: Fine detail - update emissive intensity
+    // HIGHS: Fine detail - update emissive intensity with finalHighs
     if (material) {
-      material.emissiveIntensity = params.emissiveMin + smoothedHighs.current * (params.emissiveMax - params.emissiveMin);
+      material.emissiveIntensity = params.emissiveMin + finalHighs * (params.emissiveMax - params.emissiveMin);
       
       // Jitter/shimmer effect
       if (params.highsTopologyMode === 'jitter' || params.highsTopologyMode === 'shimmer') {
-        material.opacity = 0.8 + smoothedHighs.current * 0.2;
+        material.opacity = 0.8 + finalHighs * 0.2;
       }
     }
     
@@ -432,7 +480,8 @@ function OrganicForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -443,6 +492,11 @@ function OrganicForm({ params, audioData, savedStyle }: AbstractFormRendererProp
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    const finalHighs = transientBlend(highsEffect, smoothedHighs.current);
     
     if (meshRef.current && meshRef.current.geometry) {
       const geometry = meshRef.current.geometry;
@@ -588,7 +642,8 @@ function EnergyForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -599,6 +654,11 @@ function EnergyForm({ params, audioData, savedStyle }: AbstractFormRendererProps
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    const finalHighs = transientBlend(highsEffect, smoothedHighs.current);
     
     if (particlesRef.current) {
       const posAttr = particlesRef.current.geometry.attributes.position;
@@ -731,7 +791,8 @@ function VortexForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -743,19 +804,23 @@ function VortexForm({ params, audioData, savedStyle }: AbstractFormRendererProps
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
     
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    
     if (groupRef.current) {
-      // BASS: Vortex expansion
-      groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.6);
-      groupRef.current.position.y = smoothedBass.current * 0.3;
+      // BASS: Vortex expansion - use finalBass for punch
+      groupRef.current.scale.setScalar(1.5 + finalBass * 0.6);
+      groupRef.current.position.y = finalBass * 0.3;
     }
     
     if (armsRef.current) {
-      // MIDS: Spiral arm rotation speed
-      const spinSpeed = 0.02 + smoothedMids.current * 0.05;
+      // MIDS: Spiral arm rotation speed - use finalMids
+      const spinSpeed = 0.02 + finalMids * 0.05;
       armsRef.current.rotation.y += spinSpeed;
       
       // BASS: Arm twist intensity
-      armsRef.current.rotation.z = Math.sin(t * 2) * smoothedBass.current * 0.2;
+      armsRef.current.rotation.z = Math.sin(t * 2) * finalBass * 0.2;
     }
   });
   
@@ -833,7 +898,8 @@ function RibbonForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -844,6 +910,10 @@ function RibbonForm({ params, audioData, savedStyle }: AbstractFormRendererProps
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.4);
@@ -950,7 +1020,8 @@ function CrystallineForm({ params, audioData, savedStyle }: AbstractFormRenderer
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -961,6 +1032,11 @@ function CrystallineForm({ params, audioData, savedStyle }: AbstractFormRenderer
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    const finalHighs = transientBlend(highsEffect, smoothedHighs.current);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
@@ -1058,7 +1134,8 @@ function SymmetryForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -1069,6 +1146,10 @@ function SymmetryForm({ params, audioData, savedStyle }: AbstractFormRendererPro
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
     
     if (groupRef.current) {
       groupRef.current.scale.setScalar(1.5 + smoothedBass.current * 0.5);
@@ -1193,7 +1274,8 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
-    const { bass, mids, highs } = analyzeAudio(audioDataRef.current.frequency);
+    const audioResult = analyzeAudio(audioDataRef.current.frequency);
+    const { bass, mids, highs } = audioResult;
     const sens = audioSensitivity;
     const t = clock.getElapsedTime();
     
@@ -1204,6 +1286,11 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
     smoothedBass.current = smoothValue(smoothedBass.current, bassEffect);
     smoothedMids.current = smoothValue(smoothedMids.current, midsEffect);
     smoothedHighs.current = smoothValue(smoothedHighs.current, highsEffect);
+    
+    // TRANSIENT BLEND for punch
+    const finalBass = transientBlend(bassEffect, smoothedBass.current);
+    const finalMids = transientBlend(midsEffect, smoothedMids.current);
+    const finalHighs = transientBlend(highsEffect, smoothedHighs.current);
     
     // EXTREME topology deformation
     if (meshRef.current && meshRef.current.geometry) {

@@ -51,7 +51,21 @@ export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowi
 export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
 
 export function generateRandomSeed(): number {
-  return Math.floor(Math.random() * 1000000);
+  // Combine multiple entropy sources for true uniqueness every click
+  const random = Math.random();
+  const time = Date.now();
+  const perf = typeof performance !== 'undefined' ? performance.now() : 0;
+  const microRandom = Math.random(); // Second random call for extra entropy
+  
+  // XOR mix with bit shifting for better distribution
+  const mixed = (
+    Math.floor(random * 0x7FFFFFFF) ^
+    (time & 0x7FFFFFFF) ^
+    Math.floor(perf * 1000) ^
+    Math.floor(microRandom * 0x3FFFFFFF)
+  ) >>> 0; // Force unsigned
+  
+  return mixed % 1000000000;
 }
 
 export function generateRandomParams(
