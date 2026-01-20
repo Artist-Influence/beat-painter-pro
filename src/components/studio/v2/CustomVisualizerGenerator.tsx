@@ -34,14 +34,14 @@ interface CustomVisualizerGeneratorProps {
   onSuccess?: (visualizer: any) => void;
 }
 
-// Hook for simulated 128 BPM audio preview
+// Hook for simulated 128 BPM audio preview - OPTIMIZED for 30fps
 function useSimulatedAudio() {
   const [beatPhase, setBeatPhase] = useState(0);
   
   useEffect(() => {
     // 128 BPM = 2.133 beats per second = ~468.75ms per beat
     const beatInterval = 60000 / 128;
-    const updateInterval = 16; // ~60fps
+    const updateInterval = 33; // ~30fps (reduced from 60fps for performance)
     
     let phase = 0;
     const interval = setInterval(() => {
@@ -54,6 +54,7 @@ function useSimulatedAudio() {
   }, []);
   
   // Generate audio-like data based on beat phase - 256 elements to match analyzeAudio expectations
+  // Memoized to prevent recalculation on every render
   const audioData = useMemo(() => {
     const arr = new Array(256).fill(0);
     
@@ -70,11 +71,11 @@ function useSimulatedAudio() {
       arr[i] = 80 + wave + (i < 35 ? snareHit * (1 - (i - 15) / 20) : 0);
     }
     
-    // Highs sparkle - indices 100-256
+    // Highs sparkle - indices 100-256 (use deterministic pattern, not random for perf)
     const hihatIntensity = (beatPhase < 0.1 || (beatPhase > 0.25 && beatPhase < 0.35) || 
                            (beatPhase > 0.5 && beatPhase < 0.6) || (beatPhase > 0.75 && beatPhase < 0.85)) ? 120 : 40;
     for (let i = 100; i < 256; i++) {
-      arr[i] = hihatIntensity + Math.random() * 60;
+      arr[i] = hihatIntensity + Math.sin(i * 0.5 + beatPhase * 10) * 30 + 30;
     }
     
     return {
@@ -136,9 +137,11 @@ export function CustomVisualizerGenerator({
   useEffect(() => {
     if (isOpen) {
       const newSeed = generateRandomSeed();
+      // PREVIEW CAP: Limit initial node count to 50 max for smooth performance
+      const previewNodeCount = Math.min(50, Math.floor(20 + complexity * 3));
       const abstractForm = generateAbstractFormParams(newSeed, {
         chaosLevel: complexity / 10,
-        nodeCount: Math.floor(30 + complexity * 15),
+        nodeCount: previewNodeCount,
       });
       setCurrentParams(generateRandomParams(newSeed, {
         elementCount: 1,
@@ -216,9 +219,10 @@ export function CustomVisualizerGenerator({
     const newSeed = generateRandomSeed();
     
     // Map complexity to dramatically different parameter ranges
-    const nodeRange = newComplexity < 4 ? { min: 10, max: 30 } :
-                      newComplexity < 7 ? { min: 40, max: 100 } :
-                      { min: 100, max: 250 };
+    // PREVIEW CAP: Limit nodes to 50 max for smooth preview performance
+    const nodeRange = newComplexity < 4 ? { min: 10, max: 25 } :
+                      newComplexity < 7 ? { min: 25, max: 40 } :
+                      { min: 40, max: 50 }; // Capped at 50 for preview
     
     const nodeCount = Math.floor(nodeRange.min + Math.random() * (nodeRange.max - nodeRange.min));
     
@@ -301,14 +305,19 @@ export function CustomVisualizerGenerator({
         <div className="space-y-4">
           {/* Preview Area with animated 128 BPM */}
           <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10">
-          <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+          <Canvas 
+              camera={{ position: [0, 0, 8], fov: 60 }}
+              frameloop="demand" 
+              dpr={[1, 1.5]}
+              performance={{ min: 0.5 }}
+            >
               <React.Suspense fallback={null}>
                 {isReady && (
                   <RandomVisualizerTemplate 
                     key={`${currentParams.seed}-${styleVersion}`}
                     params={{
                       ...currentParams,
-                      savedStyle: currentStyleColors, // Pass current style colors to preview
+                      savedStyle: currentStyleColors,
                     }} 
                     audioData={previewAudio}
                   />

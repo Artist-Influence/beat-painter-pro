@@ -80,34 +80,57 @@ export function useCustomVisualizers() {
     }
 
     setIsSaving(true);
+    
+    // Track if we've timed out
+    let hasTimedOut = false;
+    const timeoutId = setTimeout(() => {
+      console.log('Save timeout reached');
+      hasTimedOut = true;
+    }, 15000); // 15s timeout
+    
     try {
       const name = customName || paramsToName(params);
       const emoji = paramsToEmoji(params);
       
-      // Save to database with config JSON instead of jsx_code
+      // Minimal payload - only essential data to reduce request size
+      const minimalParams = {
+        seed: params.seed,
+        abstractForm: params.abstractForm,
+        savedStyle: params.savedStyle,
+      };
+      
       const insertData = {
         user_id: user.id,
         name,
         preview_emoji: emoji,
-        jsx_code: JSON.stringify(params), // Store params in jsx_code for now (backwards compat)
+        jsx_code: JSON.stringify(minimalParams),
         is_public: false,
         scale_factor: 0.12,
       };
       
       console.log('Attempting to save visualizer:', name);
       
-      // Add timeout to prevent infinite hang
+      // Race between save and timeout
       const savePromise = supabase
         .from('custom_visualizers')
         .insert(insertData)
         .select()
         .single();
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Save timeout - please try again')), 10000)
-      );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const checkTimeout = setInterval(() => {
+          if (hasTimedOut) {
+            clearInterval(checkTimeout);
+            reject(new Error('Save timed out'));
+          }
+        }, 100);
+        // Clear interval after 16s regardless
+        setTimeout(() => clearInterval(checkTimeout), 16000);
+      });
       
-      const { data, error } = await Promise.race([savePromise, timeoutPromise]) as any;
+      const { data, error } = await Promise.race([savePromise, timeoutPromise]);
+      
+      clearTimeout(timeoutId);
 
       if (error) {
         console.error('Save error:', error);
@@ -122,7 +145,6 @@ export function useCustomVisualizers() {
       });
 
       // FALLBACK: Manually add to store after a short delay if realtime doesn't fire
-      // This ensures the visualizer appears even if realtime subscription is slow
       if (data) {
         setTimeout(() => {
           const currentStore = useCustomVisualizersStore.getState();
@@ -135,16 +157,16 @@ export function useCustomVisualizers() {
       }
       
       setVisualizerCount(visualizerCount + 1);
-      
-      // Update quota check
       checkUserRole(user.id);
       
       return data;
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('Failed to save visualizer:', error);
+      
       toast({
         title: "Save Failed",
-        description: error.message || "Failed to save visualizer",
+        description: error.message?.includes('timed out') ? "Request timed out - please try again" : (error.message || "Failed to save visualizer"),
         variant: "destructive",
       });
       return null;
