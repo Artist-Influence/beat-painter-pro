@@ -141,32 +141,38 @@ export function generateAbstractFormParams(
   const perfEntropy = Math.floor((typeof performance !== 'undefined' ? performance.now() : Date.now()) * 10000) % 100000000;
   const randomEntropy = Math.floor(Math.random() * 100000000);
   const secondRandom = Math.floor(Math.random() * 10000000);
+  const thirdRandom = Math.floor(Math.random() * 10000000);
   const timeEntropy = Date.now() % 1000000;
   
   // XOR all entropy sources for maximum uniqueness per generation
-  const enhancedSeed = ((baseSeed ^ perfEntropy ^ randomEntropy ^ secondRandom ^ timeEntropy) >>> 0) % 2147483647;
+  // CRITICAL: Use >>> 0 to ensure positive, then ensure non-zero with || 1
+  const enhancedSeed = (((baseSeed ^ perfEntropy ^ randomEntropy ^ secondRandom ^ thirdRandom ^ timeEntropy) >>> 0) % 2147483647) || 1;
   
-  // Generate INDEPENDENT seeds using different prime multipliers for true variety
-  // Each seed gets additional random perturbation for even more uniqueness
+  // Generate INDEPENDENT seeds - ENSURE ALL ARE POSITIVE AND NON-ZERO
+  // Use Math.abs and modulo to guarantee valid seeds for seededRandom
   const seeds = {
-    geometry: ((enhancedSeed * 31337) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
-    arrangement: ((enhancedSeed * 73856093) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
-    motion: ((enhancedSeed * 19349663) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
-    noise: ((enhancedSeed * 83492791) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
-    mapping: ((enhancedSeed * 45678901) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
+    geometry: (Math.abs((enhancedSeed * 31337) ^ Math.floor(Math.random() * 1000000)) % 2147483647) || 1,
+    arrangement: (Math.abs((enhancedSeed * 73856093) ^ Math.floor(Math.random() * 1000000)) % 2147483647) || 1,
+    motion: (Math.abs((enhancedSeed * 19349663) ^ Math.floor(Math.random() * 1000000)) % 2147483647) || 1,
+    noise: (Math.abs((enhancedSeed * 83492791) ^ Math.floor(Math.random() * 1000000)) % 2147483647) || 1,
+    mapping: (Math.abs((enhancedSeed * 45678901) ^ Math.floor(Math.random() * 1000000)) % 2147483647) || 1,
   };
   
-  const r = seededRandom(enhancedSeed);
+  // Create TRULY INDEPENDENT random functions for each decision category
+  // Use different XOR salts to break deterministic patterns
+  const rFamily = seededRandom((enhancedSeed ^ 0xDEADBEEF) >>> 0 || 1);
+  const rTopology = seededRandom((seeds.geometry ^ 0xCAFEBABE) >>> 0 || 1);
   const rGeo = seededRandom(seeds.geometry);
   const rMotion = seededRandom(seeds.motion);
   const rNoise = seededRandom(seeds.noise);
   const rMapping = seededRandom(seeds.mapping);
+  const rVisual = seededRandom((seeds.arrangement ^ 0xFEEDFACE) >>> 0 || 1);
   
-  // Form family from preferences or weighted random selection
-  const formFamily = preferences?.formFamily || selectWeightedFormFamily(r);
+  // Form family from preferences or weighted random selection (use dedicated random)
+  const formFamily = preferences?.formFamily || selectWeightedFormFamily(rFamily);
   
-  // Chaos level with wider range (0.1 to 0.9)
-  const chaosLevel = preferences?.chaosLevel ?? (0.1 + r() * 0.8);
+  // Chaos level with wider range (0.1 to 0.9) - use visual random
+  const chaosLevel = preferences?.chaosLevel ?? (0.1 + rVisual() * 0.8);
   
   // Node count based on form family with more variation
   let baseNodeCount = preferences?.nodeCount ?? Math.floor(25 + rGeo() * 150);
@@ -178,10 +184,10 @@ export function generateAbstractFormParams(
   if (formFamily === 'ribbon') baseNodeCount = Math.floor(5 + Math.floor(rGeo() * 15));
   if (formFamily === 'symmetry') baseNodeCount = [3, 4, 5, 6, 8, 12][Math.floor(rGeo() * 6)];
   
-  // Topology modes - ALWAYS set for multi-band reactivity with variety
-  const bassTopologyMode = BASS_TOPOLOGY_MODES[Math.floor(rGeo() * BASS_TOPOLOGY_MODES.length)];
-  const midsTopologyMode = MIDS_TOPOLOGY_MODES[Math.floor(rGeo() * MIDS_TOPOLOGY_MODES.length)];
-  const highsTopologyMode = HIGHS_TOPOLOGY_MODES[Math.floor(rGeo() * HIGHS_TOPOLOGY_MODES.length)];
+  // Topology modes - use DEDICATED topology random (not geometry random) for variety
+  const bassTopologyMode = BASS_TOPOLOGY_MODES[Math.floor(rTopology() * BASS_TOPOLOGY_MODES.length)];
+  const midsTopologyMode = MIDS_TOPOLOGY_MODES[Math.floor(rTopology() * MIDS_TOPOLOGY_MODES.length)];
+  const highsTopologyMode = HIGHS_TOPOLOGY_MODES[Math.floor(rTopology() * HIGHS_TOPOLOGY_MODES.length)];
   
   // Noise configuration with more variety
   const noiseType = NOISE_TYPES[Math.floor(rNoise() * NOISE_TYPES.length)];
