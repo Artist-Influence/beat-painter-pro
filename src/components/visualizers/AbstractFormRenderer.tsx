@@ -34,17 +34,107 @@ const FALLBACK_COLORS = {
   isMetallic: false,
 };
 
+// ==================== PER-FAMILY HUE ROTATION ====================
+// Each form family gets a unique color shift for visual distinction
+import type { AbstractFormFamily } from '@/lib/abstractFormGenerator';
+
+const FORM_FAMILY_HUE_SHIFTS: Record<AbstractFormFamily, number> = {
+  lattice: 0,        // Original colors (purple/blue)
+  organic: 45,       // Warmer (orange/gold)
+  energy: 180,       // Complementary (cyan/teal)
+  vortex: 270,       // Cool purple shift
+  ribbon: 300,       // Magenta/pink
+  crystalline: 210,  // Icy cyan-blue
+  symmetry: 120,     // Green tones
+  topology: 330,     // Rose/red tones
+};
+
+// Rotate hue of a hex color
+function rotateHue(hexColor: string, degrees: number): string {
+  // Parse hex to RGB
+  let hex = hexColor.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  
+  // RGB to HSL
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  
+  // Rotate hue
+  h = (h + degrees / 360) % 1;
+  if (h < 0) h += 1;
+  
+  // HSL to RGB
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  
+  let r2, g2, b2;
+  if (s === 0) {
+    r2 = g2 = b2 = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r2 = hue2rgb(p, q, h + 1/3);
+    g2 = hue2rgb(p, q, h);
+    b2 = hue2rgb(p, q, h - 1/3);
+  }
+  
+  const toHex = (c: number) => {
+    const hex = Math.round(c * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
+}
+
 // Helper to get safe colors - NEVER returns undefined
 // Priority: savedStyle > textureData > window.extractedColors > FALLBACK
-function getSafeColors(savedStyle?: { colors: any }, textureData?: { colors: any }) {
+// ADDED: formFamily parameter for per-family hue rotation
+function getSafeColors(savedStyle?: { colors: any }, textureData?: { colors: any }, formFamily?: AbstractFormFamily) {
   const windowColors = typeof window !== 'undefined' ? (window as any).extractedColors : null;
-  const colors = savedStyle?.colors || textureData?.colors || windowColors || FALLBACK_COLORS;
+  const baseColors = savedStyle?.colors || textureData?.colors || windowColors || FALLBACK_COLORS;
+  
+  let primary = baseColors.primary || FALLBACK_COLORS.primary;
+  let secondary = baseColors.secondary || FALLBACK_COLORS.secondary;
+  let accent = baseColors.accent || FALLBACK_COLORS.accent;
+  
+  // Apply per-family hue rotation for visual distinction
+  if (formFamily) {
+    const hueShift = FORM_FAMILY_HUE_SHIFTS[formFamily] || 0;
+    if (hueShift > 0) {
+      primary = rotateHue(primary, hueShift);
+      secondary = rotateHue(secondary, hueShift);
+      accent = rotateHue(accent, hueShift);
+    }
+  }
+  
   return {
-    primary: colors.primary || FALLBACK_COLORS.primary,
-    secondary: colors.secondary || FALLBACK_COLORS.secondary,
-    accent: colors.accent || FALLBACK_COLORS.accent,
-    isNeon: colors.isNeon ?? false,
-    isMetallic: colors.isMetallic ?? false,
+    primary,
+    secondary,
+    accent,
+    isNeon: baseColors.isNeon ?? false,
+    isMetallic: baseColors.isMetallic ?? false,
   };
 }
 
@@ -198,8 +288,8 @@ function LatticeForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'lattice');
   
   // Generate lattice nodes
   const { nodePositions, edgeIndices, nodeCount } = useMemo(() => {
@@ -454,8 +544,8 @@ function OrganicForm({ params, audioData, savedStyle }: AbstractFormRendererProp
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'organic');
   
   const material = useMemo(() => {
     const color = new THREE.Color(colors.primary);
@@ -611,8 +701,8 @@ function EnergyForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'energy');
   
   // Generate particle field
   const { positions, velocities, count } = useMemo(() => {
@@ -770,8 +860,8 @@ function VortexForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'vortex');
   
   // Generate spiral arm data
   const spiralData = useMemo(() => {
@@ -893,8 +983,8 @@ function RibbonForm({ params, audioData, savedStyle }: AbstractFormRendererProps
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'ribbon');
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -987,8 +1077,8 @@ function CrystallineForm({ params, audioData, savedStyle }: AbstractFormRenderer
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'crystalline');
   
   // Generate shard data
   const shards = useMemo(() => {
@@ -1129,8 +1219,8 @@ function SymmetryForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'symmetry');
   
   useFrame(({ clock }) => {
     // Use ref to always get latest audioData
@@ -1247,8 +1337,8 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   const textureData = useVisualizerTexture();
   
-  // Get safe colors - NEVER undefined
-  const colors = getSafeColors(savedStyle, textureData);
+  // Get safe colors - NEVER undefined - with per-family hue rotation
+  const colors = getSafeColors(savedStyle, textureData, 'topology');
   
   const material = useMemo(() => {
     const color = new THREE.Color(colors.primary);
@@ -1423,8 +1513,13 @@ function TopologyForm({ params, audioData, savedStyle }: AbstractFormRendererPro
 // ==================== MAIN RENDERER ====================
 
 export function AbstractFormRenderer({ params, audioData, savedStyle }: AbstractFormRendererProps) {
-  // Get safe colors for fallback
-  const colors = getSafeColors(savedStyle);
+  // Get safe colors for fallback (use form family for hue rotation)
+  const colors = getSafeColors(savedStyle, undefined, params.formFamily);
+  
+  // DEBUG: Log which form family is being rendered
+  React.useEffect(() => {
+    console.log(`🎨 Rendering form family: ${params.formFamily} | nodes: ${params.nodeCount} | seed: ${params.geometrySeed}`);
+  }, [params.formFamily, params.nodeCount, params.geometrySeed]);
   
   // Apply saved style colors IMMEDIATELY and ALWAYS when loading a saved visualizer
   React.useEffect(() => {
@@ -1455,6 +1550,7 @@ export function AbstractFormRenderer({ params, audioData, savedStyle }: Abstract
       case 'topology':
         return <TopologyForm params={params} audioData={audioData} savedStyle={savedStyle} />;
       default:
+        console.warn(`⚠️ Unknown form family: ${params.formFamily}, falling back to lattice`);
         return <LatticeForm params={params} audioData={audioData} savedStyle={savedStyle} />;
     }
   };
