@@ -105,30 +105,35 @@ function hashSeed(baseSeed: number, salt: string): number {
   return Math.abs(hash);
 }
 
-// ==================== WEIGHTED FORM FAMILY SELECTION ====================
+// ==================== ROUND-ROBIN FORM FAMILY SELECTION ====================
+// Guarantees all 8 form families are shown before any repeats
 
-// Weight form families by visual distinctiveness (higher = more likely to be selected)
-const FORM_FAMILY_WEIGHTS: Record<AbstractFormFamily, number> = {
-  lattice: 1.0,
-  organic: 1.5,      // More distinct blob shapes
-  energy: 1.5,       // Particle effects stand out
-  topology: 0.8,     // Similar to organic
-  symmetry: 1.2,     // Mandala patterns are distinctive
-  ribbon: 1.3,       // Flowing ribbons are unique
-  crystalline: 1.4,  // Shards look different
-  vortex: 1.2,       // Spirals are distinctive
-};
+let familyQueue: AbstractFormFamily[] = [];
 
-function selectWeightedFormFamily(random: () => number): AbstractFormFamily {
-  const families = ABSTRACT_FORM_FAMILIES;
-  const totalWeight = families.reduce((sum, f) => sum + FORM_FAMILY_WEIGHTS[f], 0);
-  let roll = random() * totalWeight;
-  
-  for (const family of families) {
-    roll -= FORM_FAMILY_WEIGHTS[family];
-    if (roll <= 0) return family;
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return 'lattice'; // Fallback
+  return shuffled;
+}
+
+export function getNextFormFamily(): AbstractFormFamily {
+  // If queue empty, shuffle all families
+  if (familyQueue.length === 0) {
+    familyQueue = shuffleArray(ABSTRACT_FORM_FAMILIES);
+    console.log('🎰 Shuffled family queue:', familyQueue.join(', '));
+  }
+  const next = familyQueue.pop()!;
+  console.log(`🎲 Selected form family: ${next} (${familyQueue.length} remaining in queue)`);
+  return next;
+}
+
+// Legacy weighted selection (kept for compatibility but not used)
+function selectWeightedFormFamily(random: () => number): AbstractFormFamily {
+  // Now just uses round-robin for guaranteed variety
+  return getNextFormFamily();
 }
 
 // ==================== ABSTRACT FORM GENERATOR ====================
