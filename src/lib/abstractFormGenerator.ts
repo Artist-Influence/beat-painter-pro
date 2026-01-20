@@ -137,17 +137,23 @@ export function generateAbstractFormParams(
   baseSeed: number,
   preferences?: Partial<Pick<AbstractFormParams, 'formFamily' | 'chaosLevel' | 'nodeCount'>>
 ): AbstractFormParams {
-  // Add timestamp entropy for true randomness between sessions
-  const timeEntropy = Date.now() % 100000;
-  const enhancedSeed = baseSeed ^ timeEntropy;
+  // Use performance.now() for microsecond resolution + multiple random sources
+  const perfEntropy = Math.floor((typeof performance !== 'undefined' ? performance.now() : Date.now()) * 10000) % 100000000;
+  const randomEntropy = Math.floor(Math.random() * 100000000);
+  const secondRandom = Math.floor(Math.random() * 10000000);
+  const timeEntropy = Date.now() % 1000000;
+  
+  // XOR all entropy sources for maximum uniqueness per generation
+  const enhancedSeed = ((baseSeed ^ perfEntropy ^ randomEntropy ^ secondRandom ^ timeEntropy) >>> 0) % 2147483647;
   
   // Generate INDEPENDENT seeds using different prime multipliers for true variety
+  // Each seed gets additional random perturbation for even more uniqueness
   const seeds = {
-    geometry: (enhancedSeed * 31337) % 2147483647,
-    arrangement: (enhancedSeed * 73856093) % 2147483647,
-    motion: (enhancedSeed * 19349663) % 2147483647,
-    noise: (enhancedSeed * 83492791) % 2147483647,
-    mapping: (enhancedSeed * 45678901) % 2147483647,
+    geometry: ((enhancedSeed * 31337) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
+    arrangement: ((enhancedSeed * 73856093) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
+    motion: ((enhancedSeed * 19349663) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
+    noise: ((enhancedSeed * 83492791) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
+    mapping: ((enhancedSeed * 45678901) ^ Math.floor(Math.random() * 1000000)) % 2147483647,
   };
   
   const r = seededRandom(enhancedSeed);
