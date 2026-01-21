@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { Save, RefreshCw, Sparkles } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -18,7 +17,6 @@ import {
 } from '@/lib/abstractFormGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
-
 // Default colors for global style initialization
 const DEFAULT_COLORS = {
   primary: "#ff00ff",
@@ -137,19 +135,15 @@ export function CustomVisualizerGenerator({
   useEffect(() => {
     if (isOpen) {
       const newSeed = generateRandomSeed();
-      // PREVIEW CAP: Limit initial node count to 50 max for smooth performance
-      const previewNodeCount = Math.min(50, Math.floor(20 + complexity * 3));
-      const abstractForm = generateAbstractFormParams(newSeed, {
-        chaosLevel: complexity / 10,
-        nodeCount: previewNodeCount,
-      });
+      // Pure random - no preferences, uses round-robin for form family
+      const abstractForm = generateAbstractFormParams(newSeed);
       setCurrentParams(generateRandomParams(newSeed, {
         elementCount: 1,
         abstractForm,
       }));
       setCustomName('');
     }
-  }, [isOpen]); // Only regenerate when dialog opens - intentionally exclude complexity
+  }, [isOpen]);
   
   // Reset local saving state when dialog closes/opens
   useEffect(() => {
@@ -170,40 +164,13 @@ export function CustomVisualizerGenerator({
   
   // Custom name for the visualizer
   const [customName, setCustomName] = useState<string>('');
-  
-  // Simplified controls - just complexity
-  const [complexity, setComplexity] = useState<number>(5);
 
-  // Generate new random visualizer
+  // Generate new random visualizer - pure random, no preferences
   const handleGenerate = useCallback(() => {
     setCustomName('');
     const newSeed = generateRandomSeed();
-    
-    // Generate abstract form with complexity preference
-    const abstractForm = generateAbstractFormParams(newSeed, {
-      chaosLevel: complexity / 10,
-      nodeCount: Math.floor(30 + complexity * 15),
-    });
-    
-    const newParams = generateRandomParams(newSeed, {
-      elementCount: 1,
-      abstractForm,
-    });
-    setCurrentParams(newParams);
-  }, [complexity]);
-
-  // Surprise Me - fully random everything including complexity
-  const handleSurpriseMe = useCallback(() => {
-    setCustomName('');
-    const newSeed = generateRandomSeed();
-    
-    // Randomize complexity
-    const randomComplexity = Math.floor(1 + Math.random() * 10);
-    setComplexity(randomComplexity);
-    
-    // Generate completely random abstract form
+    // Pure random - uses round-robin for guaranteed variety
     const abstractForm = generateAbstractFormParams(newSeed);
-    
     const newParams = generateRandomParams(newSeed, {
       elementCount: 1,
       abstractForm,
@@ -211,31 +178,10 @@ export function CustomVisualizerGenerator({
     setCurrentParams(newParams);
   }, []);
 
-  // Update abstract form params when complexity changes - DRAMATIC differences per level
-  const handleComplexityChange = useCallback((newComplexity: number) => {
-    setComplexity(newComplexity);
-    
-    // Generate completely new random seed for dramatic change
-    const newSeed = generateRandomSeed();
-    
-    // Map complexity to dramatically different parameter ranges
-    // PREVIEW CAP: Limit nodes to 50 max for smooth preview performance
-    const nodeRange = newComplexity < 4 ? { min: 10, max: 25 } :
-                      newComplexity < 7 ? { min: 25, max: 40 } :
-                      { min: 40, max: 50 }; // Capped at 50 for preview
-    
-    const nodeCount = Math.floor(nodeRange.min + Math.random() * (nodeRange.max - nodeRange.min));
-    
-    const abstractForm = generateAbstractFormParams(newSeed, {
-      chaosLevel: newComplexity / 10,
-      nodeCount,
-    });
-    
-    setCurrentParams(generateRandomParams(newSeed, {
-      elementCount: 1,
-      abstractForm,
-    }));
-  }, []);
+  // Surprise Me - same as Try Another now (both pure random)
+  const handleSurpriseMe = useCallback(() => {
+    handleGenerate();
+  }, [handleGenerate]);
 
   // Capture current style colors to pass to preview
   const currentStyleColors = useMemo(() => {
@@ -355,26 +301,6 @@ export function CustomVisualizerGenerator({
             />
           </div>
 
-          {/* Simplified Controls - Just Complexity */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-white/70">Complexity</label>
-                <span className="text-xs text-white/90 font-medium">{complexity}/10</span>
-              </div>
-              <Slider
-                value={[complexity]}
-                onValueChange={(value) => handleComplexityChange(value[0])}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-              <p className="text-xs text-white/50">
-                Higher complexity = more nodes, connections, and chaos
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Action Buttons */}

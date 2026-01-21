@@ -123,17 +123,11 @@ export function getNextFormFamily(): AbstractFormFamily {
   // If queue empty, shuffle all families
   if (familyQueue.length === 0) {
     familyQueue = shuffleArray(ABSTRACT_FORM_FAMILIES);
-    console.log('🎰 Shuffled family queue:', familyQueue.join(', '));
+    console.log('🎰 NEW QUEUE:', familyQueue.join(' → '));
   }
   const next = familyQueue.pop()!;
-  console.log(`🎲 Selected form family: ${next} (${familyQueue.length} remaining in queue)`);
+  console.log(`🎲 PICKED: ${next.toUpperCase()} (${familyQueue.length} left)`);
   return next;
-}
-
-// Legacy weighted selection (kept for compatibility but not used)
-function selectWeightedFormFamily(random: () => number): AbstractFormFamily {
-  // Now just uses round-robin for guaranteed variety
-  return getNextFormFamily();
 }
 
 // ==================== ABSTRACT FORM GENERATOR ====================
@@ -173,8 +167,9 @@ export function generateAbstractFormParams(
   const rMapping = seededRandom(seeds.mapping);
   const rVisual = seededRandom((seeds.arrangement ^ 0xFEEDFACE) >>> 0 || 1);
   
-  // Form family from preferences or weighted random selection (use dedicated random)
-  const formFamily = preferences?.formFamily || selectWeightedFormFamily(rFamily);
+  // ALWAYS use round-robin for form family - never allow preferences to override
+  // This guarantees all 8 families are shown before any repeats
+  const formFamily = getNextFormFamily();
   
   // Chaos level with wider range (0.1 to 0.9) - use visual random
   const chaosLevel = preferences?.chaosLevel ?? (0.1 + rVisual() * 0.8);
@@ -188,6 +183,9 @@ export function generateAbstractFormParams(
   if (formFamily === 'vortex') baseNodeCount = Math.floor(3 + Math.floor(rGeo() * 6)); // spiral arms
   if (formFamily === 'ribbon') baseNodeCount = Math.floor(5 + Math.floor(rGeo() * 15));
   if (formFamily === 'symmetry') baseNodeCount = [3, 4, 5, 6, 8, 12][Math.floor(rGeo() * 6)];
+  
+  // PERFORMANCE CAP: Limit node count to 50 for smooth preview
+  baseNodeCount = Math.min(baseNodeCount, 50);
   
   // Topology modes - use DEDICATED topology random (not geometry random) for variety
   const bassTopologyMode = BASS_TOPOLOGY_MODES[Math.floor(rTopology() * BASS_TOPOLOGY_MODES.length)];
