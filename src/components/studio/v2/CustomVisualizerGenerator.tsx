@@ -8,13 +8,10 @@ import { OrbitControls } from '@react-three/drei';
 import { 
   generateRandomSeed, 
   generateRandomParams, 
+  paramsToName,
+  paramsToEmoji,
   type RandomVisualizerParams
 } from '@/lib/randomVisualizerGenerator';
-import { 
-  generateAbstractFormParams,
-  abstractFormToName,
-  abstractFormToEmoji,
-} from '@/lib/abstractFormGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 // Default colors for global style initialization
@@ -135,12 +132,7 @@ export function CustomVisualizerGenerator({
   useEffect(() => {
     if (isOpen) {
       const newSeed = generateRandomSeed();
-      // Pure random - no preferences, uses round-robin for form family
-      const abstractForm = generateAbstractFormParams(newSeed);
-      setCurrentParams(generateRandomParams(newSeed, {
-        elementCount: 1,
-        abstractForm,
-      }));
+      setCurrentParams(generateRandomParams(newSeed));
       setCustomName('');
     }
   }, [isOpen]);
@@ -155,11 +147,7 @@ export function CustomVisualizerGenerator({
   // Current random params
   const [currentParams, setCurrentParams] = useState<RandomVisualizerParams>(() => {
     const seed = generateRandomSeed();
-    const abstractForm = generateAbstractFormParams(seed);
-    return generateRandomParams(seed, { 
-      elementCount: 1,
-      abstractForm,
-    });
+    return generateRandomParams(seed);
   });
   
   // Custom name for the visualizer
@@ -169,12 +157,7 @@ export function CustomVisualizerGenerator({
   const handleGenerate = useCallback(() => {
     setCustomName('');
     const newSeed = generateRandomSeed();
-    // Pure random - uses round-robin for guaranteed variety
-    const abstractForm = generateAbstractFormParams(newSeed);
-    const newParams = generateRandomParams(newSeed, {
-      elementCount: 1,
-      abstractForm,
-    });
+    const newParams = generateRandomParams(newSeed);
     setCurrentParams(newParams);
   }, []);
 
@@ -223,13 +206,9 @@ export function CustomVisualizerGenerator({
     }
   };
 
-  // Get name and emoji from abstract form
-  const currentName = currentParams.abstractForm 
-    ? abstractFormToName(currentParams.abstractForm)
-    : `Visualizer #${currentParams.seed % 10000}`;
-  const currentEmoji = currentParams.abstractForm
-    ? abstractFormToEmoji(currentParams.abstractForm)
-    : '✨';
+  // Get name and emoji from procedural config
+  const currentName = paramsToName(currentParams);
+  const currentEmoji = paramsToEmoji(currentParams);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -280,10 +259,10 @@ export function CustomVisualizerGenerator({
               </span>
             </div>
             
-            {/* Form family badge */}
+            {/* Shape family badge */}
             <div className="absolute top-3 right-3">
               <Badge variant="secondary" className="bg-black/60 text-white/80 text-xs">
-                {currentParams.abstractForm?.formFamily || 'Abstract'} • 128 BPM
+                {currentParams.proceduralConfig?.shape || 'Abstract'} • 128 BPM
               </Badge>
             </div>
           </div>
