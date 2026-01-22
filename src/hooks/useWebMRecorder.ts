@@ -206,30 +206,36 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       const { width, height, bitrate } = resolution;
       
       // Log export metadata for debugging
-      console.log('Export metadata:', {
-        capturedCanvas: canvasRef.current?.id || 'webgl-canvas',
+      console.log('Export metadata (before resize):', {
+        capturedCanvasId: canvasRef.current?.id || 'unknown',
+        capturedCanvasDataset: canvasRef.current?.dataset?.visualizerCanvas,
         exportDimensions: { width, height },
         aspectRatio,
         quality,
         srcCanvasSize: { w: srcCanvas.width, h: srcCanvas.height },
-        renderReady: renderGate.isReady,
       });
       
       // Store screen width at start for consistent logo scaling
       screenWidthRef.current = window.innerWidth;
       
-      // Wait for render ready gate before proceeding
-      const isRenderReady = await renderGate.waitForReady(3000);
-      if (!isRenderReady) {
-        console.warn('Recording: Render not fully ready, proceeding with best effort');
+      // WAIT FOR RENDER READY (5+ frames rendered)
+      let waitAttempts = 0;
+      while (!window.__VISUALIZER_RENDER_READY__ && waitAttempts < 50) {
+        await new Promise(r => requestAnimationFrame(r));
+        waitAttempts++;
+      }
+      if (!window.__VISUALIZER_RENDER_READY__) {
+        console.warn('Recording: Render not fully ready after 50 frames, proceeding anyway');
+      } else {
+        console.log('Recording: Render ready confirmed');
       }
       
-      // Signal canvas to render at export resolution and wait for confirmation
+      // Signal canvas to resize to export resolution and wait for confirmation
       await new Promise<void>((resolve) => {
         const timeoutId = setTimeout(() => {
-          console.warn('Recording: Timeout waiting for high-res frame, proceeding anyway');
+          console.warn('Recording: Timeout waiting for canvas resize, proceeding anyway');
           resolve();
-        }, 2000);
+        }, 3000);
         
         window.dispatchEvent(new CustomEvent('recording:start', { 
           detail: { 
@@ -238,7 +244,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             aspectRatio,
             onReady: () => {
               clearTimeout(timeoutId);
-              console.log(`Recording ready: Canvas buffer is ${srcCanvas.width}x${srcCanvas.height}`);
+              // Verify the canvas was actually resized
+              console.log(`Recording: Canvas resize confirmed - now ${srcCanvas.width}x${srcCanvas.height}`);
               resolve();
             }
           } 
@@ -390,6 +397,20 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         // Draw logo IN FRONT of visualizer if layer is 'front'
         if (logo?.url && logoImageRef.current && logo.layer === 'front') {
           drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
+        }
+
+        // DEBUG OVERLAY: Draw debug text on canvas (dev only)
+        if (process.env.NODE_ENV === 'development') {
+          ctx.save();
+          ctx.font = 'bold 20px monospace';
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.95)';
+          ctx.shadowColor = 'black';
+          ctx.shadowBlur = 4;
+          ctx.fillText(`canvas id: ${srcCanvas.id || 'unknown'}`, 10, 30);
+          ctx.fillText(`src: ${srcCanvas.width}x${srcCanvas.height}`, 10, 55);
+          ctx.fillText(`export: ${exportCanvas.width}x${exportCanvas.height}`, 10, 80);
+          ctx.fillText(`ready: ${window.__VISUALIZER_RENDER_READY__ ? 'true' : 'false'}`, 10, 105);
+          ctx.restore();
         }
 
         // Capture PNG frame for sequence mode
