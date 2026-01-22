@@ -15,28 +15,41 @@ interface VisualizerCanvasProps {
 }
 
 // Component inside Canvas to directly control renderer for high-quality recording
-// NOTE: We do NOT change DPR during recording anymore - it causes massive frame drops
-// and laggy exports. Recording at native resolution is smooth and quality is acceptable.
+// Updates camera aspect ratio for proper export framing
 function RecordingController() {
   const { gl, scene, camera } = useThree();
+  const originalAspect = useRef<number | null>(null);
   
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
-      const { onReady } = (e as CustomEvent).detail;
+      const { width, height, aspectRatio, onReady } = (e as CustomEvent).detail;
       
-      // DON'T change DPR - keep smooth performance during recording
-      // Changing DPR causes GPU overload and frame drops in both preview and export
-      console.log(`Recording: Keeping native DPR ${gl.getPixelRatio().toFixed(2)} for smooth capture`);
+      // Store original aspect ratio
+      if (camera instanceof THREE.PerspectiveCamera) {
+        originalAspect.current = camera.aspect;
+        
+        // Update camera for export aspect ratio
+        const exportAspect = width / height;
+        camera.aspect = exportAspect;
+        camera.updateProjectionMatrix();
+        
+        console.log(`Recording: Updated camera aspect to ${exportAspect.toFixed(3)} for ${aspectRatio || 'horizontal'} export`);
+      }
       
-      // Just render one frame and signal ready
+      // Force a render with new settings
       gl.render(scene, camera);
       
       if (onReady) onReady();
     };
     
     const handleRecordingStop = () => {
-      // Nothing to restore since we didn't change anything
-      console.log('Recording stopped');
+      // Restore original aspect ratio
+      if (camera instanceof THREE.PerspectiveCamera && originalAspect.current !== null) {
+        camera.aspect = originalAspect.current;
+        camera.updateProjectionMatrix();
+        originalAspect.current = null;
+        console.log('Recording stopped: Restored camera aspect');
+      }
     };
     
     window.addEventListener('recording:start', handleRecordingStart);

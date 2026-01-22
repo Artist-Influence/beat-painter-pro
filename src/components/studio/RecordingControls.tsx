@@ -29,7 +29,7 @@ const getSongName = (fileName: string | null): string => {
 };
 
 const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
-  const { selected, setSelected, background, setBackgroundColor, filters, setFilters, zoomLevel, setZoom, audioElement, audioFileName, logo, exportMode } = useStudioStore();
+  const { selected, setSelected, background, setBackgroundColor, filters, setFilters, zoomLevel, setZoom, audioElement, audioFileName, logo, exportMode, exportAspectRatio } = useStudioStore();
   const [startAt, setStartAt] = useState(0);
   const { startRecording, stopRecording, isRecording } = useWebMRecorder({ canvasRef, audioElement });
 
@@ -95,7 +95,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ canvasRef }) => {
             logEvent("recording_started", { visualizer_key: selected });
             const songName = getSongName(audioFileName);
             const vizName = formatVisualizerNameForFile(selected);
-            startRecording(startAt, background, songName, vizName, undefined, logo, exportMode);
+            startRecording(startAt, background, songName, vizName, undefined, logo, exportMode, exportAspectRatio);
           }
         }}
       >

@@ -2,9 +2,11 @@ import { useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
+import { renderGate } from "@/lib/renderReadyGate";
 
 export type ExportQuality = '1080p' | '4k' | '8k';
 export type ExportMode = 'video' | 'png-sequence';
+export type AspectRatio = 'horizontal' | 'vertical' | 'square';
 
 interface LogoState {
   url: string | null;
@@ -28,10 +30,23 @@ interface UseRecorderProps {
   audioElement: HTMLAudioElement | null;
 }
 
-const RESOLUTIONS: Record<ExportQuality, { width: number; height: number; bitrate: number }> = {
-  '1080p': { width: 1920, height: 1080, bitrate: 30_000_000 },
-  '4k': { width: 3840, height: 2160, bitrate: 80_000_000 },
-  '8k': { width: 7680, height: 4320, bitrate: 150_000_000 },
+// Resolution configurations with aspect ratio support
+const RESOLUTIONS: Record<ExportQuality, Record<AspectRatio, { width: number; height: number; bitrate: number }>> = {
+  '1080p': {
+    horizontal: { width: 1920, height: 1080, bitrate: 30_000_000 },
+    vertical: { width: 1080, height: 1920, bitrate: 30_000_000 },
+    square: { width: 1080, height: 1080, bitrate: 25_000_000 },
+  },
+  '4k': {
+    horizontal: { width: 3840, height: 2160, bitrate: 80_000_000 },
+    vertical: { width: 2160, height: 3840, bitrate: 80_000_000 },
+    square: { width: 2160, height: 2160, bitrate: 70_000_000 },
+  },
+  '8k': {
+    horizontal: { width: 7680, height: 4320, bitrate: 150_000_000 },
+    vertical: { width: 4320, height: 7680, bitrate: 150_000_000 },
+    square: { width: 4320, height: 4320, bitrate: 130_000_000 },
+  },
 };
 
 // Check for supported mime types with fallbacks
@@ -82,7 +97,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     visualizerName: string,
     quality: ExportQuality = '4k',
     logo?: LogoState,
-    exportMode: ExportMode = 'video'
+    exportMode: ExportMode = 'video',
+    aspectRatio: AspectRatio = 'horizontal'
   ) => {
     // Validate canvas
     if (!canvasRef.current) {
@@ -186,10 +202,27 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         });
       }
 
-      const { width, height, bitrate } = RESOLUTIONS[quality];
+      const resolution = RESOLUTIONS[quality][aspectRatio];
+      const { width, height, bitrate } = resolution;
+      
+      // Log export metadata for debugging
+      console.log('Export metadata:', {
+        capturedCanvas: canvasRef.current?.id || 'webgl-canvas',
+        exportDimensions: { width, height },
+        aspectRatio,
+        quality,
+        srcCanvasSize: { w: srcCanvas.width, h: srcCanvas.height },
+        renderReady: renderGate.isReady,
+      });
       
       // Store screen width at start for consistent logo scaling
       screenWidthRef.current = window.innerWidth;
+      
+      // Wait for render ready gate before proceeding
+      const isRenderReady = await renderGate.waitForReady(3000);
+      if (!isRenderReady) {
+        console.warn('Recording: Render not fully ready, proceeding with best effort');
+      }
       
       // Signal canvas to render at export resolution and wait for confirmation
       await new Promise<void>((resolve) => {
@@ -202,6 +235,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           detail: { 
             width, 
             height,
+            aspectRatio,
             onReady: () => {
               clearTimeout(timeoutId);
               console.log(`Recording ready: Canvas buffer is ${srcCanvas.width}x${srcCanvas.height}`);
