@@ -38,7 +38,7 @@ const NEUTRAL_WIREFRAME_PROPS = {
 export function ProceduralVisualizer({ config, audioData, isPlaying = true }: ProceduralVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const audioDataRef = useRef(audioData);
-  const { audioSensitivity, spinSpeed } = useStudioStore();
+  const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   
   // Audio smoother with attack/release from audio profile
   const audioConfig = getAudioConfig(config.audioProfile);
@@ -97,7 +97,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     updateMotionState(motionState, config.motion, config.motionParams, delta, effectiveMids);
     
     // Apply audio profile effects
-    const sensitivity = audioSensitivity * config.audioParams.globalSensitivity;
+    const sensitivity = audioSensitivity.animationSpeed * config.audioParams.globalSensitivity;
     const bassEffect = punchyBass * config.audioParams.bassMultiplier * sensitivity;
     const midsEffect = effectiveMids * config.audioParams.midsMultiplier * sensitivity;
     const highsEffect = effectiveHighs * config.audioParams.highsMultiplier * sensitivity;
@@ -118,7 +118,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     
     // Apply motion
     groupRef.current.rotation.x = motionState.groupRotation.x;
-    groupRef.current.rotation.y = motionState.groupRotation.y + spinSpeed * time * 0.5;
+    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5;
     groupRef.current.rotation.z = motionState.groupRotation.z;
     groupRef.current.position.copy(motionState.groupPosition);
     
@@ -136,7 +136,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     switch (config.shape) {
       case 'organic':
         return (
-          <mesh scale={aspectRatio}>
+          <mesh scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
             <icosahedronGeometry args={[1, 4]} />
             <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} />
           </mesh>
@@ -144,7 +144,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
         
       case 'torus_knot':
         return (
-          <mesh scale={aspectRatio}>
+          <mesh scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
             <torusKnotGeometry args={[0.8, 0.3, 100, 16]} />
             <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} />
           </mesh>
@@ -152,7 +152,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
         
       case 'wave_grid':
         return (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} scale={aspectRatio}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
             <planeGeometry args={[4, 4, 32, 32]} />
             <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} side={THREE.DoubleSide} />
           </mesh>
