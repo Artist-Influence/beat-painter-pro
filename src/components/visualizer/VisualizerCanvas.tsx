@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useStudioStore } from "@/stores/studioStore";
 import { visualizerRegistry, VISUALIZER_SCALES, isCustomVisualizer } from "@/components/visualizers";
@@ -14,41 +14,93 @@ interface VisualizerCanvasProps {
   logoBehind?: boolean;
 }
 
+// Declare global for render ready flag
+declare global {
+  interface Window {
+    __VISUALIZER_RENDER_READY__: boolean;
+  }
+}
+
 // Component inside Canvas to directly control renderer for high-quality recording
-// Updates camera aspect ratio for proper export framing
+// CRITICAL: Actually resizes the WebGL canvas buffer for export resolution
 function RecordingController() {
   const { gl, scene, camera } = useThree();
-  const originalAspect = useRef<number | null>(null);
+  const originalSizeRef = useRef<{ width: number; height: number; aspect: number; pixelRatio: number } | null>(null);
+  const frameCountRef = useRef(0);
+  const [renderReady, setRenderReady] = useState(false);
+  
+  // Track frames rendered and set global ready flag
+  useFrame(() => {
+    frameCountRef.current++;
+    if (frameCountRef.current >= 5 && !renderReady) {
+      setRenderReady(true);
+      window.__VISUALIZER_RENDER_READY__ = true;
+      console.log('VisualizerCanvas: Render ready after 5 frames');
+    }
+  });
+  
+  // Initialize global ready flag
+  useEffect(() => {
+    window.__VISUALIZER_RENDER_READY__ = false;
+    frameCountRef.current = 0;
+    return () => { 
+      window.__VISUALIZER_RENDER_READY__ = false; 
+    };
+  }, []);
   
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
       const { width, height, aspectRatio, onReady } = (e as CustomEvent).detail;
       
-      // Store original aspect ratio
+      // Store original size and settings
+      originalSizeRef.current = {
+        width: gl.domElement.width,
+        height: gl.domElement.height,
+        aspect: camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1,
+        pixelRatio: gl.getPixelRatio()
+      };
+      
+      console.log(`Recording: Resizing canvas from ${originalSizeRef.current.width}x${originalSizeRef.current.height} to ${width}x${height}`);
+      
+      // CRITICAL: Actually resize the WebGL canvas buffer to export resolution
+      gl.setSize(width, height, false); // false = don't update CSS style
+      gl.setPixelRatio(1); // Consistent 1:1 pixel ratio for export
+      
+      // Set solid black background for export (no transparency)
+      gl.setClearColor(0x000000, 1);
+      
+      // Update camera for new aspect ratio
       if (camera instanceof THREE.PerspectiveCamera) {
-        originalAspect.current = camera.aspect;
-        
-        // Update camera for export aspect ratio
-        const exportAspect = width / height;
-        camera.aspect = exportAspect;
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        
-        console.log(`Recording: Updated camera aspect to ${exportAspect.toFixed(3)} for ${aspectRatio || 'horizontal'} export`);
       }
       
-      // Force a render with new settings
+      // Force render at new size
       gl.render(scene, camera);
       
-      if (onReady) onReady();
+      // Wait 2 frames then signal ready
+      requestAnimationFrame(() => {
+        gl.render(scene, camera);
+        requestAnimationFrame(() => {
+          gl.render(scene, camera);
+          console.log(`Recording ready: Canvas buffer is now ${gl.domElement.width}x${gl.domElement.height}`);
+          if (onReady) onReady();
+        });
+      });
     };
     
     const handleRecordingStop = () => {
-      // Restore original aspect ratio
-      if (camera instanceof THREE.PerspectiveCamera && originalAspect.current !== null) {
-        camera.aspect = originalAspect.current;
-        camera.updateProjectionMatrix();
-        originalAspect.current = null;
-        console.log('Recording stopped: Restored camera aspect');
+      // Restore original size and settings
+      if (originalSizeRef.current) {
+        const { width, height, aspect, pixelRatio } = originalSizeRef.current;
+        gl.setSize(width, height, false);
+        gl.setPixelRatio(pixelRatio);
+        if (camera instanceof THREE.PerspectiveCamera) {
+          camera.aspect = aspect;
+          camera.updateProjectionMatrix();
+        }
+        console.log(`Recording stopped: Restored canvas to ${width}x${height}`);
+        originalSizeRef.current = null;
       }
     };
     
@@ -200,8 +252,14 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
   }, [background.color, background.type, logoBehind]);
 
   const handleCreated = useCallback(({ gl }: any) => {
+    const canvas = gl.domElement as HTMLCanvasElement;
+    
+    // TAG THE CANVAS FOR IDENTIFICATION (CRITICAL FOR EXPORT)
+    canvas.id = "visualizer-canvas";
+    canvas.dataset.visualizerCanvas = "true";
+    
     if (canvasRef) {
-      (canvasRef as any).current = gl.domElement as HTMLCanvasElement;
+      (canvasRef as any).current = canvas;
     }
     // Store renderer reference for transparency control
     rendererRef.current = gl;
@@ -212,6 +270,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       const color = new THREE.Color(background.color);
       gl.setClearColor(color, 1);
     }
+    
+    console.log(`VisualizerCanvas: WebGL canvas created with id="${canvas.id}", size=${canvas.width}x${canvas.height}`);
   }, [canvasRef, background.color, background.type, logoBehind]);
 
   return (
