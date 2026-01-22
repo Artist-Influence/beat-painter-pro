@@ -1,11 +1,7 @@
-import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import type { RandomVisualizerParams, AnimationStyle, ColorScheme } from '@/lib/randomVisualizerGenerator';
-import { seededRandom, COLOR_PALETTES } from '@/lib/randomVisualizerGenerator';
-import { useVisualizerTexture } from '@/hooks/useVisualizerTexture';
-import { useStudioStore } from '@/stores/studioStore';
-import { AbstractFormRenderer } from './AbstractFormRenderer';
+import React from 'react';
+import type { RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
+import { ProceduralVisualizer } from './ProceduralVisualizer';
+import type { VisualizerConfig } from '@/lib/visualizerFactory/config';
 
 interface RandomVisualizerTemplateProps {
   params: RandomVisualizerParams;
@@ -17,40 +13,35 @@ interface RandomVisualizerTemplateProps {
   isPlaying?: boolean;
 }
 
-// Main template component
+/**
+ * RandomVisualizerTemplate - Legacy adapter
+ * Bridges old RandomVisualizerParams to new ProceduralVisualizer
+ */
 export function RandomVisualizerTemplate({ 
   params, 
   audioData,
   isPlaying = true 
 }: RandomVisualizerTemplateProps) {
-  // If we have abstract form params, render the abstract visualizer
-  if (params.abstractForm) {
+  // If we have a procedural config, use new system
+  if (params.proceduralConfig) {
     return (
-      <group>
-        {/* Abstract form visualizer - pass savedStyle for color fallback */}
-        <AbstractFormRenderer 
-          params={params.abstractForm}
-          audioData={audioData}
-          savedStyle={params.savedStyle}
-        />
-        
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
-        <pointLight position={[4, 4, 4]} intensity={1.2} />
-        <pointLight position={[-3, -2, 2]} intensity={0.6} />
-      </group>
+      <ProceduralVisualizer 
+        config={params.proceduralConfig as VisualizerConfig}
+        audioData={audioData}
+        isPlaying={isPlaying}
+      />
     );
   }
   
-  // Fallback - should not reach here with new system
+  // Legacy fallback for old saved visualizers
   return (
     <group>
       <mesh>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial color="#8866ff" emissive="#4422aa" emissiveIntensity={0.5} />
+        <sphereGeometry args={[1.5, 32, 32]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
       </mesh>
-      <ambientLight intensity={0.4} />
-      <pointLight position={[4, 4, 4]} intensity={1.2} />
+      <ambientLight intensity={0.5} />
+      <pointLight position={[4, 4, 4]} intensity={1} />
     </group>
   );
 }
