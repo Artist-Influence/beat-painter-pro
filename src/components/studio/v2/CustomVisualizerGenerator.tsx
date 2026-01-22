@@ -14,6 +14,8 @@ import {
 } from '@/lib/randomVisualizerGenerator';
 import { RandomVisualizerTemplate } from '@/components/visualizers/RandomVisualizerTemplate';
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
+import { renderGate } from '@/lib/renderReadyGate';
+
 // Default colors for global style initialization
 const DEFAULT_COLORS = {
   primary: "#ff00ff",
@@ -131,6 +133,8 @@ export function CustomVisualizerGenerator({
   // Generate a NEW random visualizer each time the dialog opens
   useEffect(() => {
     if (isOpen) {
+      // Reset render gate for new visualizer
+      renderGate.reset();
       const newSeed = generateRandomSeed();
       setCurrentParams(generateRandomParams(newSeed));
       setCustomName('');
@@ -156,6 +160,8 @@ export function CustomVisualizerGenerator({
   // Generate new random visualizer - pure random, no preferences
   const handleGenerate = useCallback(() => {
     setCustomName('');
+    // Reset render gate for new visualizer
+    renderGate.reset();
     const newSeed = generateRandomSeed();
     const newParams = generateRandomParams(newSeed);
     setCurrentParams(newParams);

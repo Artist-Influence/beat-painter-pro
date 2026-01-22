@@ -4,7 +4,7 @@
  * Uses neutral white/gray materials suitable for texture overlays
  */
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { VisualizerConfig, AudioData } from '@/lib/visualizerFactory/config';
@@ -13,6 +13,7 @@ import { generateLayoutPositions } from '@/lib/visualizerFactory/layoutGenerator
 import { analyzeFrequencyBands, createAudioSmoother, transientBlend, getIdleAnimation } from '@/lib/visualizerFactory/audioProcessing';
 import { updateMotionState, createMotionState } from '@/lib/visualizerFactory/motionGenerator';
 import { useStudioStore } from '@/stores/studioStore';
+import { renderGate } from '@/lib/renderReadyGate';
 import { SHAPE_COMPONENTS } from './shapes';
 
 interface ProceduralVisualizerProps {
@@ -52,6 +53,15 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
   
   // Shape config for scaling
   const shapeConfig = getShapeConfig(config.shape);
+  
+  // Signal geometry ready after layout generation
+  useEffect(() => {
+    // Mark geometry ready after a short delay to ensure mount is complete
+    const timer = setTimeout(() => {
+      renderGate.markGeometryReady();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [config.seed]);
   
   // Keep audioData ref updated
   audioDataRef.current = audioData;

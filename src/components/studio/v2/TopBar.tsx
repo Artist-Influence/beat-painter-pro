@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Mic2, Film, Image } from 'lucide-react';
+import { Mic2, Film, Image, Square, RectangleVertical, RectangleHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useStudioStore } from '@/stores/studioStore';
+import { useStudioStore, AspectRatio } from '@/stores/studioStore';
 import { useWebMRecorder, ExportQuality } from '@/hooks/useWebMRecorder';
 
 interface TopBarProps {
@@ -22,9 +22,21 @@ const getSongName = (fileName: string | null): string => {
   return fileName.replace(/\.[^/.]+$/, '');
 };
 
+const ASPECT_RATIO_ICONS: Record<AspectRatio, React.ReactNode> = {
+  horizontal: <RectangleHorizontal className="w-4 h-4" />,
+  vertical: <RectangleVertical className="w-4 h-4" />,
+  square: <Square className="w-4 h-4" />,
+};
+
+const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
+  horizontal: '16:9',
+  vertical: '9:16',
+  square: '1:1',
+};
+
 export function TopBar({ canvasRef }: TopBarProps) {
   const studioState = useStudioStore();
-  const { audioElement, background, logo, exportMode, selected, audioFileName } = studioState;
+  const { audioElement, background, logo, exportMode, selected, audioFileName, exportAspectRatio, setExportAspectRatio } = studioState;
   const recorder = useWebMRecorder({ canvasRef, audioElement });
   const { isRecording, startRecording, stopRecording, frameCount } = recorder;
   const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
@@ -36,7 +48,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
       const currentTime = audioElement?.currentTime || 0;
       const songName = getSongName(audioFileName);
       const vizName = formatVisualizerName(selected);
-      startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode);
+      startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode, exportAspectRatio);
     }
   };
 
@@ -53,6 +65,25 @@ export function TopBar({ canvasRef }: TopBarProps) {
 
         {/* Record Controls - Center */}
         <div className="pointer-events-auto flex items-center gap-3">
+          {/* Aspect ratio selector */}
+          <div className="flex items-center gap-1 px-2 py-1.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
+            {(['horizontal', 'vertical', 'square'] as AspectRatio[]).map((ratio) => (
+              <button
+                key={ratio}
+                onClick={() => !isRecording && setExportAspectRatio(ratio)}
+                disabled={isRecording}
+                className={`p-1.5 rounded-full transition-colors ${
+                  exportAspectRatio === ratio
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/50 hover:text-white/80'
+                } ${isRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={ASPECT_RATIO_LABELS[ratio]}
+              >
+                {ASPECT_RATIO_ICONS[ratio]}
+              </button>
+            ))}
+          </div>
+          
           {/* Quality selector */}
           <select
             value={exportQuality}

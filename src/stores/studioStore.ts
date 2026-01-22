@@ -7,6 +7,7 @@ interface Filters {
   contrast: number;
 }
 
+export type AspectRatio = 'horizontal' | 'vertical' | 'square';
 type BackgroundType = 'color' | 'image' | 'video';
 type BackgroundMediaType = 'image' | 'gif' | 'video' | null;
 
@@ -55,6 +56,7 @@ interface StudioState {
   audioSensitivity: AudioSensitivity;
   logo: LogoState;
   exportMode: ExportMode;
+  exportAspectRatio: AspectRatio;
   customStyleTexture: CustomStyleTexture;
   setSelected: (v: VisualizerKey | `custom_${string}`) => void;
   setBackgroundColor: (c: BackgroundState["color"]) => void;
@@ -74,6 +76,7 @@ interface StudioState {
   setLogoColorMode: (mode: LogoColorMode) => void;
   clearLogo: () => void;
   setExportMode: (mode: ExportMode) => void;
+  setExportAspectRatio: (ratio: AspectRatio) => void;
   setCustomStyleTexture: (url: string | null, name?: string | null) => void;
   clearCustomStyleTexture: () => void;
 }
@@ -123,6 +126,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   },
   logo: DEFAULT_LOGO,
   exportMode: 'video',
+  exportAspectRatio: 'horizontal',
   customStyleTexture: DEFAULT_CUSTOM_STYLE,
   setSelected: (v) => set({ selected: v }),
   setBackgroundColor: (c) => set((state) => ({ 
@@ -155,6 +159,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   setLogoColorMode: (colorMode) => set((state) => ({ logo: { ...state.logo, colorMode } })),
   clearLogo: () => set({ logo: DEFAULT_LOGO }),
   setExportMode: (mode) => set({ exportMode: mode }),
+  setExportAspectRatio: (ratio) => set({ exportAspectRatio: ratio }),
   setCustomStyleTexture: (url, name = null) => {
     set({ customStyleTexture: { url, name } });
     if (url) {
