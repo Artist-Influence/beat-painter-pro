@@ -1,16 +1,11 @@
-// Seeded random number generator for reproducible results
-// CRITICAL: Always ensure seed is positive and non-zero to prevent broken sequences
-export function seededRandom(seed: number) {
-  // Ensure seed is always positive and non-zero (fixes XOR producing negative numbers)
-  let state = Math.abs(seed) || 1;
-  return function() {
-    state = (state * 1103515245 + 12345) & 0x7fffffff;
-    return state / 0x7fffffff;
-  };
-}
+/**
+ * Random Visualizer Generator
+ * Now uses the new VisualizerFactory for procedural generation
+ */
 
-import { AbstractFormParams, generateAbstractFormParams, ABSTRACT_FORM_FAMILIES, FORM_FAMILY_NAMES, FORM_FAMILY_EMOJIS, abstractFormToName, abstractFormToEmoji } from './abstractFormGenerator';
+import { generateVisualizer, generateSeed, type VisualizerConfig } from './visualizerFactory';
 
+// Legacy types for backwards compatibility
 export type BaseShape = 'orb' | 'geometric' | 'ribbons' | 'particles' | 'tunnel' | 'crystal' | 'spiral' | 'lattice' | 'helix' | 'nebula' | 'matrix' | 'membrane' | 'pulsar' | 'vortexCore' | 'cosmicEye';
 export type AnimationStyle = 'pulsing' | 'rotating' | 'flowing' | 'chaotic' | 'smooth' | 'breathing' | 'explosive';
 export type ColorScheme = 'mono' | 'neon' | 'pastel' | 'fire' | 'ice' | 'rainbow' | 'sunset' | 'ocean';
@@ -26,119 +21,106 @@ export interface RandomVisualizerParams {
   colorShift: number;
   mixedGeometry: boolean;
   connectionLines: boolean;
-  // Variance parameters for unique generations
   scaleVariation: number;
   positionSpread: number;
   rotationOffset: number;
-  // Color scheme for the visualizer
   colorScheme: ColorScheme;
-  // Glow intensity (0.0 - 2.0)
   glowIntensity: number;
-  // NEW: Abstract form params (replaces old standalone/creative templates)
-  abstractForm?: AbstractFormParams;
-  // Style snapshot at save time (for persisting visual styles with saved visualizers)
-  savedStyle?: {
-    colors: {
-      primary: string;
-      secondary: string;
-      accent: string;
-      isNeon: boolean;
-      isMetallic: boolean;
-    };
-  };
+  abstractForm?: any;
+  savedStyle?: any;
+  // NEW: Procedural config from factory
+  proceduralConfig?: VisualizerConfig;
 }
 
-export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
-export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
-export const COLOR_SCHEMES: ColorScheme[] = ['mono', 'neon', 'pastel', 'fire', 'ice', 'rainbow', 'sunset', 'ocean'];
-
+/**
+ * Generate a high-entropy seed
+ */
 export function generateRandomSeed(): number {
-  // Combine multiple entropy sources for true uniqueness every click
-  const random = Math.random();
-  const time = Date.now();
-  const perf = typeof performance !== 'undefined' ? performance.now() : 0;
-  const microRandom = Math.random(); // Second random call for extra entropy
-  
-  // XOR mix with bit shifting for better distribution
-  const mixed = (
-    Math.floor(random * 0x7FFFFFFF) ^
-    (time & 0x7FFFFFFF) ^
-    Math.floor(perf * 1000) ^
-    Math.floor(microRandom * 0x3FFFFFFF)
-  ) >>> 0; // Force unsigned
-  
-  return mixed % 1000000000;
+  return generateSeed();
 }
 
+/**
+ * Generate random params using new factory system
+ */
 export function generateRandomParams(
   seed: number,
-  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity' | 'abstractForm'>>
+  preferences?: Partial<Pick<RandomVisualizerParams, 'baseShape' | 'animationStyle' | 'elementCount' | 'connectionLines' | 'colorScheme' | 'glowIntensity'>>
 ): RandomVisualizerParams {
-  const random = seededRandom(seed);
+  // Generate procedural config from factory
+  const proceduralConfig = generateVisualizer(seed);
   
-  const baseShape = preferences?.baseShape || BASE_SHAPES[Math.floor(random() * BASE_SHAPES.length)];
-  const animationStyle = preferences?.animationStyle || ANIMATION_STYLES[Math.floor(random() * ANIMATION_STYLES.length)];
-  const colorScheme = preferences?.colorScheme || COLOR_SCHEMES[Math.floor(random() * COLOR_SCHEMES.length)];
-  
-  // Element count from preference or default to 1 (abstract forms are single elements)
-  const elementCount = preferences?.elementCount ?? 1;
-  
-  // Abstract form - use provided or generate new one
-  const abstractForm = preferences?.abstractForm ?? generateAbstractFormParams(seed);
-  
-  // Glow intensity: 0.3 - 2.0 (default random or from preferences)
-  const glowIntensity = preferences?.glowIntensity ?? (0.3 + random() * 1.7);
-  
+  // Map to legacy format for compatibility
   return {
     seed,
-    baseShape,
-    animationStyle,
-    elementCount,
-    particleCount: Math.floor(100 + random() * 300),
-    symmetry: random() > 0.5,
-    rotationSpeed: 0.1 + random() * 1.2,
-    colorShift: random() * Math.PI * 2,
+    baseShape: 'orb',
+    animationStyle: 'pulsing',
+    elementCount: proceduralConfig.shapeParams.elementCount,
+    particleCount: 100,
+    symmetry: false,
+    rotationSpeed: proceduralConfig.motionParams.speed,
+    colorShift: 0,
     mixedGeometry: false,
-    connectionLines: preferences?.connectionLines ?? false,
-    scaleVariation: 0.5 + random() * 1.0,
-    positionSpread: 2 + random() * 4,
-    rotationOffset: random() * Math.PI * 2,
-    colorScheme,
-    glowIntensity,
-    abstractForm,
+    connectionLines: false,
+    scaleVariation: 1,
+    positionSpread: proceduralConfig.layoutParams.radius,
+    rotationOffset: proceduralConfig.layoutParams.rotationOffset,
+    colorScheme: 'mono',
+    glowIntensity: 0.1,
+    proceduralConfig,
   };
 }
 
-// Generate name from abstract form
+/**
+ * Generate name from config
+ */
 export function paramsToName(params: RandomVisualizerParams): string {
-  if (params.abstractForm) {
-    return abstractFormToName(params.abstractForm);
+  if (params.proceduralConfig) {
+    const { shape, layout, motion } = params.proceduralConfig;
+    const shapeNames: Record<string, string> = {
+      lattice: 'Lattice', organic: 'Organic', particle_sphere: 'Particle Sphere',
+      particle_ring: 'Particle Ring', ribbons: 'Ribbons', helix: 'Helix',
+      shards: 'Shards', vortex: 'Vortex', torus_knot: 'Torus Knot',
+      metaball: 'Metaball', wave_grid: 'Wave Grid', radial_spokes: 'Radial Spokes',
+      fractal_tree: 'Fractal Tree', cube_lattice: 'Cube Lattice', kaleidoscope: 'Kaleidoscope',
+    };
+    return `${shapeNames[shape] || shape} ${params.seed % 1000}`;
   }
-  
-  // Fallback for legacy params
-  const random = seededRandom(params.seed + 999);
-  const uniqueNum = params.seed % 10000;
-  return `Visualizer #${uniqueNum}`;
+  return `Visualizer #${params.seed % 10000}`;
 }
 
-// Generate emoji from abstract form
+/**
+ * Generate emoji from config
+ */
 export function paramsToEmoji(params: RandomVisualizerParams): string {
-  if (params.abstractForm) {
-    return abstractFormToEmoji(params.abstractForm);
+  if (params.proceduralConfig) {
+    const emojiMap: Record<string, string> = {
+      lattice: '🔷', organic: '🫧', particle_sphere: '✨', particle_ring: '💫',
+      ribbons: '🎀', helix: '🧬', shards: '💎', vortex: '🌀',
+      torus_knot: '🔮', metaball: '🟣', wave_grid: '🌊', radial_spokes: '☀️',
+      fractal_tree: '🌳', cube_lattice: '🧊', kaleidoscope: '🎭',
+    };
+    return emojiMap[params.proceduralConfig.shape] || '✨';
   }
-  
-  // Fallback
   return '✨';
 }
 
-// Color palettes for visualizers
+// Legacy exports for compatibility
+export const BASE_SHAPES: BaseShape[] = ['orb', 'geometric', 'ribbons', 'particles', 'tunnel', 'crystal', 'spiral', 'lattice', 'helix', 'nebula', 'matrix', 'membrane', 'pulsar', 'vortexCore', 'cosmicEye'];
+export const ANIMATION_STYLES: AnimationStyle[] = ['pulsing', 'rotating', 'flowing', 'chaotic', 'smooth', 'breathing', 'explosive'];
+export const COLOR_SCHEMES: ColorScheme[] = ['mono'];
+
+// Deprecated - no longer used
 export const COLOR_PALETTES: Record<ColorScheme, string[]> = {
   mono: ['#ffffff', '#cccccc', '#888888', '#444444'],
-  neon: ['#ff00ff', '#00ffff', '#ffff00', '#ff0088'],
-  pastel: ['#ffb3ba', '#bae1ff', '#baffc9', '#ffffba'],
-  fire: ['#ff4500', '#ff6600', '#ff9900', '#ffcc00'],
-  ice: ['#00bfff', '#87ceeb', '#e0ffff', '#ffffff'],
-  rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#8b00ff'],
-  sunset: ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3'],
-  ocean: ['#0077be', '#00a8cc', '#00d4aa', '#71c9ce'],
+  neon: ['#ffffff'], pastel: ['#ffffff'], fire: ['#ffffff'],
+  ice: ['#ffffff'], rainbow: ['#ffffff'], sunset: ['#ffffff'], ocean: ['#ffffff'],
 };
+
+// Legacy seeded random - use createRNG from factory instead
+export function seededRandom(seed: number) {
+  let state = Math.abs(seed) || 1;
+  return function() {
+    state = (state * 1103515245 + 12345) & 0x7fffffff;
+    return state / 0x7fffffff;
+  };
+}
