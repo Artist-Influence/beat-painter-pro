@@ -11,8 +11,9 @@ import type { VisualizerConfig, AudioData } from '@/lib/visualizerFactory/config
 import { getShapeConfig, getAudioConfig } from '@/lib/visualizerFactory/modules';
 import { generateLayoutPositions } from '@/lib/visualizerFactory/layoutGenerator';
 import { analyzeFrequencyBands, createAudioSmoother, transientBlend, getIdleAnimation } from '@/lib/visualizerFactory/audioProcessing';
-import { updateMotionState, createMotionState, getElementMotionOffset } from '@/lib/visualizerFactory/motionGenerator';
+import { updateMotionState, createMotionState } from '@/lib/visualizerFactory/motionGenerator';
 import { useStudioStore } from '@/stores/studioStore';
+import { SHAPE_COMPONENTS } from './shapes';
 
 interface ProceduralVisualizerProps {
   config: VisualizerConfig;
@@ -20,24 +21,11 @@ interface ProceduralVisualizerProps {
   isPlaying?: boolean;
 }
 
-// Neutral material for texture overlays
-const NEUTRAL_MATERIAL_PROPS = {
-  color: '#ffffff',
-  emissive: '#ffffff',
-  emissiveIntensity: 0.1,
-  metalness: 0.0,
-  roughness: 0.8,
-};
-
-const NEUTRAL_WIREFRAME_PROPS = {
-  color: '#cccccc',
-  transparent: true,
-  opacity: 0.9,
-};
-
 export function ProceduralVisualizer({ config, audioData, isPlaying = true }: ProceduralVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const audioDataRef = useRef(audioData);
+  const timeRef = useRef(0);
+  const bandsRef = useRef({ bass: 0, mids: 0, highs: 0, rawBass: 0, rawMids: 0, rawHighs: 0 });
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   
   // Audio smoother with attack/release from audio profile
@@ -72,6 +60,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     if (!groupRef.current) return;
     
     const time = state.clock.elapsedTime;
+    timeRef.current = time;
     const audio = audioDataRef.current;
     
     // Analyze audio
@@ -93,14 +82,22 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     // Blend raw and smoothed for punch
     const punchyBass = transientBlend(bands.rawBass, effectiveBass, 0.55);
     
+    // Store for shape components
+    bandsRef.current = {
+      bass: punchyBass,
+      mids: effectiveMids,
+      highs: effectiveHighs,
+      rawBass: bands.rawBass,
+      rawMids: bands.rawMids,
+      rawHighs: bands.rawHighs,
+    };
+    
     // Update motion state
     updateMotionState(motionState, config.motion, config.motionParams, delta, effectiveMids);
     
     // Apply audio profile effects
     const sensitivity = audioSensitivity.animationSpeed * config.audioParams.globalSensitivity;
     const bassEffect = punchyBass * config.audioParams.bassMultiplier * sensitivity;
-    const midsEffect = effectiveMids * config.audioParams.midsMultiplier * sensitivity;
-    const highsEffect = effectiveHighs * config.audioParams.highsMultiplier * sensitivity;
     
     // Apply to group based on audio profile target
     const baseScale = shapeConfig.defaultScale * config.shapeParams.scale;
@@ -121,75 +118,21 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5;
     groupRef.current.rotation.z = motionState.groupRotation.z;
     groupRef.current.position.copy(motionState.groupPosition);
-    
-    // Apply mids rotation boost
-    if (audioConfig.mids.target === 'rotation') {
-      groupRef.current.rotation.y += midsEffect * 0.3;
-    }
   });
   
-  // Render shape based on family
-  const renderShape = () => {
-    const { elementCount, useWireframe, segmentDetail, aspectRatio } = config.shapeParams;
-    
-    // Simple shape rendering - can be extended per family
-    switch (config.shape) {
-      case 'organic':
-        return (
-          <mesh scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
-            <icosahedronGeometry args={[1, 4]} />
-            <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} />
-          </mesh>
-        );
-        
-      case 'torus_knot':
-        return (
-          <mesh scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
-            <torusKnotGeometry args={[0.8, 0.3, 100, 16]} />
-            <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} />
-          </mesh>
-        );
-        
-      case 'wave_grid':
-        return (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} scale={typeof aspectRatio === 'number' ? aspectRatio : 1}>
-            <planeGeometry args={[4, 4, 32, 32]} />
-            <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} side={THREE.DoubleSide} />
-          </mesh>
-        );
-        
-      default:
-        // Multi-element shapes use layout positions
-        return (
-          <group>
-            {layoutPoints.map((point, i) => (
-              <mesh
-                key={i}
-                position={point.position}
-                rotation={point.rotation}
-                scale={point.scale * 0.15}
-              >
-                {useWireframe ? (
-                  <>
-                    <icosahedronGeometry args={[1, 1]} />
-                    <meshBasicMaterial {...NEUTRAL_WIREFRAME_PROPS} wireframe />
-                  </>
-                ) : (
-                  <>
-                    <sphereGeometry args={[1, segmentDetail / 4, segmentDetail / 4]} />
-                    <meshStandardMaterial {...NEUTRAL_MATERIAL_PROPS} />
-                  </>
-                )}
-              </mesh>
-            ))}
-          </group>
-        );
-    }
-  };
+  // Get the shape component for this family
+  const ShapeComponent = SHAPE_COMPONENTS[config.shape];
   
   return (
     <group ref={groupRef}>
-      {renderShape()}
+      <ShapeComponent
+        config={config}
+        layoutPoints={layoutPoints}
+        audioData={bandsRef.current}
+        time={timeRef.current}
+        motionState={motionState}
+        audioSensitivity={audioSensitivity.animationSpeed}
+      />
       <ambientLight intensity={0.5} />
       <pointLight position={[5, 5, 5]} intensity={1} />
       <pointLight position={[-3, -3, 3]} intensity={0.5} />
