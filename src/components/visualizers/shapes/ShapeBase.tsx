@@ -6,13 +6,14 @@
 import * as THREE from 'three';
 import type { VisualizerConfig } from '@/lib/visualizerFactory/config';
 import type { MotionState } from '@/lib/visualizerFactory/motionGenerator';
+import type { LayoutPoint } from '@/lib/visualizerFactory/layoutGenerator';
 
 /**
  * Standard props for all shape components
  */
 export interface ShapeProps {
   config: VisualizerConfig;
-  layoutPoints: THREE.Vector3[];
+  layoutPoints: LayoutPoint[];
   audioData: {
     bass: number;
     mids: number;
