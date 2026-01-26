@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { VisualizerProps } from '../visualizer';
 import { RandomVisualizerTemplate } from './RandomVisualizerTemplate';
-import type { RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
+import { generateRandomParams, type RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
 
 // Legacy imports for backwards compatibility with old visualizers
 import DynamicVisualizer from '../visualizer/DynamicVisualizer';
@@ -143,12 +143,27 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
         // Try to parse jsx_code as config JSON (new system) or use as code (legacy)
         if (data.jsx_code) {
           try {
-            // New system: jsx_code contains JSON config
             const parsed = JSON.parse(data.jsx_code);
-            if (parsed.seed !== undefined && parsed.baseShape) {
+            
+            // NEW: Check for seed-only format (current save format)
+            if (parsed.seed !== undefined && !parsed.baseShape) {
+              // Regenerate full config from seed (deterministic)
+              const regeneratedParams = generateRandomParams(parsed.seed);
+              
+              // Merge saved style colors if present
+              if (parsed.savedStyle) {
+                regeneratedParams.savedStyle = parsed.savedStyle;
+              }
+              
+              setConfig(regeneratedParams);
+              sessionCache.set(visualizerId, { config: regeneratedParams });
+            }
+            // EXISTING: Check for full config format (legacy saves)
+            else if (parsed.seed !== undefined && parsed.baseShape) {
               setConfig(parsed as RandomVisualizerParams);
               sessionCache.set(visualizerId, { config: parsed });
-            } else {
+            } 
+            else {
               throw new Error('Not a config object');
             }
           } catch {
