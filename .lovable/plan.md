@@ -1,109 +1,40 @@
 
 
-# Fix: Custom Visualizer Loading Shows Fallback Sphere
-
-## Problem Summary
-
-When a custom visualizer is saved and then loaded in the main view, it shows a fallback sphere instead of the correct visualizer. The preview modal works correctly.
+# Fix: Visualizer Gets Wider & Background Disappears During Recording
 
 ## Root Cause
 
-**Data Mismatch Between Save and Load:**
+The `RecordingController` calls `gl.setSize(width, height, false)` and `camera.aspect = width/height` during recording. This resizes the **live WebGL canvas** to export dimensions (e.g., 3840x2160), which:
 
-1. **When Saving** (`useCustomVisualizers.ts`):
-   - Only saves `{ seed, abstractForm, savedStyle }` to `jsx_code` field
-   - Does NOT save the `proceduralConfig` that contains shape/layout/motion info
+1. **Changes the aspect ratio** of the live preview (visualizer appears wider/distorted)
+2. **Overrides the clear color** to solid black (`gl.setClearColor(0x000000, 1)`), hiding the background
+3. The user sees these changes because the WebGL canvas is the same element displayed in the UI
 
-2. **When Loading** (`CustomVisualizerLoader.tsx`):
-   - Parses the JSON and checks: `if (parsed.seed !== undefined && parsed.baseShape)`
-   - Since `baseShape` is NOT saved, this check fails
-   - Falls through to legacy path: treats JSON as JSX code
-   - `DynamicVisualizer` receives JSON like `{"seed":818031383,...}`, fails to compile it as JSX
-   - Shows fallback sphere
+## Fix
 
-**Why Preview Works:**
-- The preview modal uses `RandomVisualizerTemplate` directly with full `currentParams` (including `proceduralConfig`)
-- It never goes through the save/load cycle
+**Stop resizing the WebGL source canvas entirely.** The 2D export canvas (`exportCanvas`) in `useWebMRecorder` already handles compositing at the target resolution. The `ctx.drawImage(srcCanvas, ...)` call scales the source to fit the export canvas. The source canvas should remain at its UI container size.
 
-## Solution: Regenerate Config from Seed on Load
+### File: `src/components/visualizer/VisualizerCanvas.tsx`
 
-Since `generateRandomParams(seed)` is **deterministic**, we can regenerate the full config from just the seed. This is more storage-efficient than saving the entire config.
+**RecordingController changes:**
+- Remove `gl.setSize(width, height, false)` 
+- Remove `gl.setPixelRatio(1)`
+- Remove `camera.aspect = width / height` and `camera.updateProjectionMatrix()`
+- Remove `gl.setClearColor(0x000000, 1)` (the background is handled by the 2D export canvas compositor, not the WebGL clear color)
+- Remove the restore logic in `handleRecordingStop` (nothing to restore)
+- Keep the event listeners so `onReady` callback still fires (just call it immediately after a couple frames)
 
-### Changes Required
+The `RecordingController` becomes a simple frame-counter for the `renderReady` gate + a pass-through that calls `onReady`.
 
-**File 1: `src/components/visualizers/CustomVisualizerLoader.tsx`**
+### File: `src/hooks/useWebMRecorder.ts`
 
-Update the JSON parsing logic (lines 144-161):
+No changes needed - the render loop already:
+- Draws background (color/image/video) on the 2D export canvas
+- Draws the WebGL canvas on top with aspect-ratio-aware cropping
+- Draws logo overlay
+- This pipeline is correct and resolution-independent
 
-```typescript
-// Try to parse jsx_code as config JSON (new system) or use as code (legacy)
-if (data.jsx_code) {
-  try {
-    const parsed = JSON.parse(data.jsx_code);
-    
-    // NEW: Check for seed-only format (current save format)
-    if (parsed.seed !== undefined && !parsed.baseShape) {
-      // Regenerate full config from seed (deterministic)
-      const regeneratedParams = generateRandomParams(parsed.seed);
-      
-      // Merge saved style colors if present
-      if (parsed.savedStyle) {
-        regeneratedParams.savedStyle = parsed.savedStyle;
-      }
-      
-      setConfig(regeneratedParams);
-      sessionCache.set(visualizerId, { config: regeneratedParams });
-    }
-    // EXISTING: Check for full config format (legacy saves)
-    else if (parsed.seed !== undefined && parsed.baseShape) {
-      setConfig(parsed as RandomVisualizerParams);
-      sessionCache.set(visualizerId, { config: parsed });
-    } 
-    else {
-      throw new Error('Not a config object');
-    }
-  } catch {
-    // Legacy system: jsx_code contains actual JSX
-    setLegacyCode(data.jsx_code);
-    sessionCache.set(visualizerId, { code: data.jsx_code });
-  }
-}
-```
+### Trade-off
 
-**File 2: Add import** at top of `CustomVisualizerLoader.tsx`:
-
-```typescript
-import { generateRandomParams } from '@/lib/randomVisualizerGenerator';
-```
-
-### Why This Works
-
-1. The saved data `{"seed":818031383,"savedStyle":{...}}` contains the seed
-2. `generateRandomParams(818031383)` regenerates the exact same visualizer config (deterministic)
-3. We merge in the `savedStyle` to preserve the user's color choices
-4. `RandomVisualizerTemplate` renders the correct visualizer with correct colors
-
-### Verification Steps
-
-After implementing:
-1. Generate a custom visualizer in the modal (should preview correctly)
-2. Save it
-3. Close the modal - main view should show the saved visualizer (not a sphere)
-4. Reload the page - visualizer should still load correctly from database
-5. The colors should match what was saved
-
-### Optional Enhancement
-
-To further ensure consistency, we could also update the save logic to include a version marker:
-
-```typescript
-// In useCustomVisualizers.ts
-const minimalParams = {
-  version: 2,  // Add version marker
-  seed: params.seed,
-  savedStyle: params.savedStyle,
-};
-```
-
-This allows future changes to the save format to be handled gracefully.
+Upscaling from ~800px source to 1080p/4K export loses some sharpness, but the framing, background, and composition will be correct. This is the right surgical fix; high-res export can be revisited later without breaking the user experience.
 
