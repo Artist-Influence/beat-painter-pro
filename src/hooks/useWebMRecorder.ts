@@ -399,20 +399,6 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
         }
 
-        // DEBUG OVERLAY: Draw debug text on canvas (dev only)
-        if (process.env.NODE_ENV === 'development') {
-          ctx.save();
-          ctx.font = 'bold 20px monospace';
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.95)';
-          ctx.shadowColor = 'black';
-          ctx.shadowBlur = 4;
-          ctx.fillText(`canvas id: ${srcCanvas.id || 'unknown'}`, 10, 30);
-          ctx.fillText(`src: ${srcCanvas.width}x${srcCanvas.height}`, 10, 55);
-          ctx.fillText(`export: ${exportCanvas.width}x${exportCanvas.height}`, 10, 80);
-          ctx.fillText(`ready: ${window.__VISUALIZER_RENDER_READY__ ? 'true' : 'false'}`, 10, 105);
-          ctx.restore();
-        }
-
         // Capture PNG frame for sequence mode
         if (exportModeRef.current === 'png-sequence') {
           exportCanvas.toBlob((blob) => {
