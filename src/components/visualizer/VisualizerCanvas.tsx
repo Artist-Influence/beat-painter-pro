@@ -24,8 +24,6 @@ declare global {
 // Component inside Canvas to directly control renderer for high-quality recording
 // CRITICAL: Actually resizes the WebGL canvas buffer for export resolution
 function RecordingController() {
-  const { gl, scene, camera } = useThree();
-  const originalSizeRef = useRef<{ width: number; height: number; aspect: number; pixelRatio: number } | null>(null);
   const frameCountRef = useRef(0);
   const [renderReady, setRenderReady] = useState(false);
   
@@ -48,69 +46,26 @@ function RecordingController() {
     };
   }, []);
   
+  // Listen for recording events - no canvas resizing, just signal ready
   useEffect(() => {
     const handleRecordingStart = (e: Event) => {
-      const { width, height, aspectRatio, onReady } = (e as CustomEvent).detail;
+      const { onReady } = (e as CustomEvent).detail;
+      console.log('Recording: Starting (no canvas resize, export canvas handles scaling)');
       
-      // Store original size and settings
-      originalSizeRef.current = {
-        width: gl.domElement.width,
-        height: gl.domElement.height,
-        aspect: camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1,
-        pixelRatio: gl.getPixelRatio()
-      };
-      
-      console.log(`Recording: Resizing canvas from ${originalSizeRef.current.width}x${originalSizeRef.current.height} to ${width}x${height}`);
-      
-      // CRITICAL: Actually resize the WebGL canvas buffer to export resolution
-      gl.setSize(width, height, false); // false = don't update CSS style
-      gl.setPixelRatio(1); // Consistent 1:1 pixel ratio for export
-      
-      // Set solid black background for export (no transparency)
-      gl.setClearColor(0x000000, 1);
-      
-      // Update camera for new aspect ratio
-      if (camera instanceof THREE.PerspectiveCamera) {
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-      }
-      
-      // Force render at new size
-      gl.render(scene, camera);
-      
-      // Wait 2 frames then signal ready
+      // Signal ready after a couple frames
       requestAnimationFrame(() => {
-        gl.render(scene, camera);
         requestAnimationFrame(() => {
-          gl.render(scene, camera);
-          console.log(`Recording ready: Canvas buffer is now ${gl.domElement.width}x${gl.domElement.height}`);
+          console.log('Recording ready');
           if (onReady) onReady();
         });
       });
     };
     
-    const handleRecordingStop = () => {
-      // Restore original size and settings
-      if (originalSizeRef.current) {
-        const { width, height, aspect, pixelRatio } = originalSizeRef.current;
-        gl.setSize(width, height, false);
-        gl.setPixelRatio(pixelRatio);
-        if (camera instanceof THREE.PerspectiveCamera) {
-          camera.aspect = aspect;
-          camera.updateProjectionMatrix();
-        }
-        console.log(`Recording stopped: Restored canvas to ${width}x${height}`);
-        originalSizeRef.current = null;
-      }
-    };
-    
     window.addEventListener('recording:start', handleRecordingStart);
-    window.addEventListener('recording:stop', handleRecordingStop);
     return () => {
       window.removeEventListener('recording:start', handleRecordingStart);
-      window.removeEventListener('recording:stop', handleRecordingStop);
     };
-  }, [gl, camera, scene]);
+  }, []);
   
   return null;
 }
