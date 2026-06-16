@@ -208,7 +208,7 @@ export function StyleSelector() {
     <div className="space-y-3">
       {/* Custom Style Upload */}
       <div className="space-y-2">
-        <span className="text-white/60 text-xs">Custom Style Texture</span>
+        <span className="text-text-tertiary text-xs">Custom Style Texture</span>
         <input
           ref={customStyleInputRef}
           type="file"
@@ -223,16 +223,16 @@ export function StyleSelector() {
         {!customStyleTexture.url ? (
           <button
             onClick={() => customStyleInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-white/20 rounded-xl p-4 text-center hover:border-purple-500/50 transition-colors"
+            className="w-full border-2 border-dashed border-hairline/60 rounded-xl p-4 text-center hover:border-ai-red/50 transition-colors"
           >
-            <Upload className="w-5 h-5 text-white/40 mx-auto mb-2" />
-            <p className="text-white/60 text-xs">Upload any image as style</p>
+            <Upload className="w-5 h-5 text-text-tertiary mx-auto mb-2" />
+            <p className="text-text-tertiary text-xs">Upload any image as style</p>
           </button>
         ) : (
-          <div className="bg-white/5 rounded-lg p-2 border border-white/10 relative">
+          <div className="bg-surface-2/40 rounded-md p-2 border border-hairline/50 relative">
             <button
               onClick={applyCustomStyle}
-              className="flex items-center gap-2 w-full text-left hover:bg-white/10 rounded p-1 transition-colors"
+              className="flex items-center gap-2 w-full text-left hover:bg-ai-red/[0.08] rounded p-1 transition-colors"
             >
               <img 
                 src={customStyleTexture.url} 
@@ -240,8 +240,8 @@ export function StyleSelector() {
                 className="w-10 h-10 object-cover rounded"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-white/80 text-xs truncate">{customStyleTexture.name || 'Custom style'}</p>
-                <p className="text-white/40 text-[10px]">Click to apply</p>
+                <p className="text-text-secondary text-xs truncate">{customStyleTexture.name || 'Custom style'}</p>
+                <p className="text-text-tertiary text-[10px]">Click to apply</p>
               </div>
             </button>
             <button
@@ -249,17 +249,17 @@ export function StyleSelector() {
                 e.stopPropagation();
                 clearCustomStyleTexture();
               }}
-              className="absolute top-2 right-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              className="absolute top-2 right-2 p-1.5 hover:bg-ai-red/[0.08] rounded-lg transition-colors"
             >
-              <X className="w-4 h-4 text-white/60" />
+              <X className="w-4 h-4 text-text-tertiary" />
             </button>
           </div>
         )}
       </div>
       
-      <div className="border-t border-white/10 my-3"></div>
+      <div className="border-t border-hairline/50 my-3"></div>
       
-      <span className="text-white/60 text-xs">Or Generate from Presets</span>
+      <span className="text-text-tertiary text-xs">Or Generate from Presets</span>
       
       <div className="relative">
         <div className="flex flex-col gap-2">
@@ -274,21 +274,21 @@ export function StyleSelector() {
               setIsDropdownOpen((v) => !v);
             }}
             variant="outline"
-            className="w-full justify-between h-10 bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10 backdrop-blur-sm text-white"
+            className="w-full justify-between h-10 bg-surface-2/40 border-hairline/50 hover:border-ai-red/40 hover:bg-ai-red/[0.06] backdrop-blur-sm text-white"
             aria-haspopup="listbox"
             aria-expanded={isDropdownOpen}
           >
             <span className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-400" />
+              <Sparkles className="h-4 w-4 text-ai-red" />
               {selectedLabel}
             </span>
-            <ChevronDown className={`h-4 w-4 text-white/60 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-4 w-4 text-text-tertiary transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
           </Button>
           <Button
             onClick={generatePreviews}
             disabled={isGenerating || selectedStyles.length === 0}
             aria-label="Generate style previews"
-            className="w-full h-10 bg-purple-600/80 hover:bg-purple-600 text-white border-0"
+            className="w-full h-10 bg-ai-red hover:bg-ai-red/90 text-white border-0"
           >
             {isGenerating ? `Generating ${progress}/3…` : "Generate Previews"}
           </Button>
@@ -299,7 +299,7 @@ export function StyleSelector() {
           <Button
             onClick={generatePreviews}
             variant="outline"
-            className="w-full mt-2 h-10 bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-white/10 text-white/80"
+            className="w-full mt-2 h-10 bg-surface-2/40 border-hairline/50 hover:border-ai-red/40 hover:bg-ai-red/[0.06] text-text-secondary"
             disabled={selectedStyles.length === 0}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -311,18 +311,18 @@ export function StyleSelector() {
           createPortal(
             <div 
               ref={menuRef} 
-              className="fixed z-[9999] rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/50" 
+              className="fixed z-[9999] rounded-xl border border-hairline/50 bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/50" 
               style={{ top: menuPos.top, left: menuPos.left, width: Math.max(menuPos.width, 280) }} 
               role="listbox"
             >
-              <div className="max-h-96 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+              <div className="max-h-96 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-hairline scrollbar-track-transparent">
                 {selectedStyles.length > 0 && (
-                  <div className="mb-2 pb-2 border-b border-white/10">
+                  <div className="mb-2 pb-2 border-b border-hairline/50">
                     <Button
                       onClick={unselectAllStyles}
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-center text-xs h-8 text-white/60 hover:text-white hover:bg-white/10"
+                      className="w-full justify-center text-xs h-8 text-text-tertiary hover:text-white hover:bg-ai-red/[0.08]"
                     >
                       <X className="h-3 w-3 mr-1" />
                       Unselect All Styles
@@ -337,8 +337,8 @@ export function StyleSelector() {
                       key={style} 
                       className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                         checked 
-                          ? "bg-purple-600/30 text-white" 
-                          : "hover:bg-white/10 text-white/70"
+                          ? "bg-ai-red/[0.12] text-white" 
+                          : "hover:bg-ai-red/[0.08] text-text-secondary"
                       } ${disabled ? "cursor-not-allowed opacity-40" : ""}`}
                     >
                       <input 
@@ -346,7 +346,7 @@ export function StyleSelector() {
                         checked={checked} 
                         onChange={() => toggleStyle(style)} 
                         disabled={disabled} 
-                        className="h-4 w-4 rounded border-white/30 bg-white/10 text-purple-500 focus:ring-purple-500 focus:ring-offset-0" 
+                        className="h-4 w-4 rounded border-hairline/60 bg-surface-2 text-ai-red focus:ring-ai-red focus:ring-offset-0" 
                       />
                       <span>{style}</span>
                     </label>

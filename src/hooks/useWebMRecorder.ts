@@ -1,8 +1,10 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
 import { renderGate } from "@/lib/renderReadyGate";
+import { useStudioStore } from "@/stores/studioStore";
+import { vizBox } from "@/lib/compositeLayout";
 
 export type ExportQuality = '1080p' | '4k' | '8k';
 export type ExportMode = 'video' | 'png-sequence';
@@ -18,8 +20,9 @@ interface LogoState {
 }
 
 interface BackgroundMedia {
-  type: 'color' | 'image' | 'video';
+  type: 'color' | 'gradient' | 'image' | 'video' | 'transparent';
   color: string;
+  gradientUrl?: string | null;
   mediaUrl: string | null;
   mediaType: 'image' | 'gif' | 'video' | null;
   positionY: number;
@@ -29,6 +32,11 @@ interface UseRecorderProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   audioElement: HTMLAudioElement | null;
 }
+
+// Safety caps so an export can never run away: a wall-clock ceiling for video, and
+// a frame ceiling for the in-RAM PNG sequence.
+const MAX_EXPORT_MS = 12 * 60 * 1000; // 12 minutes
+const MAX_PNG_FRAMES = 5400;          // ~90s at 60fps
 
 // Resolution configurations with aspect ratio support
 const RESOLUTIONS: Record<ExportQuality, Record<AspectRatio, { width: number; height: number; bitrate: number }>> = {
@@ -49,9 +57,12 @@ const RESOLUTIONS: Record<ExportQuality, Record<AspectRatio, { width: number; he
   },
 };
 
-// Check for supported mime types with fallbacks
+// Prefer MP4 (H.264/AAC) where the browser supports it, else fall back to WebM.
 const getSupportedMimeType = (): string => {
   const types = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',  // H.264 + AAC — real MP4 with audio
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm;codecs=vp9',
@@ -70,11 +81,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const layerCanvasRef = useRef<HTMLCanvasElement | null>(null); // offscreen for rotate/feather/opacity compositing
   const chunksRef = useRef<Blob[]>([]);
   const keepRenderingRef = useRef<boolean>(false);
   const startTimeRef = useRef<number>(0);
   const [isRecording, setIsRecording] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
+  const [progress, setProgress] = useState(0); // 0..1 export progress (video mode)
+  const lastProgressRef = useRef(0);
+  const exportRangeRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
   const backgroundRef = useRef<BackgroundMedia | null>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
@@ -171,10 +186,13 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       backgroundImageRef.current = null;
       backgroundVideoRef.current = null;
       
-      if (background.type === 'image' && background.mediaUrl) {
+      const staticBgUrl = background.type === 'gradient'
+        ? background.gradientUrl
+        : (background.type === 'image' ? background.mediaUrl : null);
+      if (staticBgUrl) {
         const bgImg = new Image();
         bgImg.crossOrigin = 'anonymous';
-        bgImg.src = background.mediaUrl;
+        bgImg.src = staticBgUrl;
         await new Promise<void>((resolve) => {
           bgImg.onload = () => {
             backgroundImageRef.current = bgImg;
@@ -190,7 +208,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         bgVideo.crossOrigin = 'anonymous';
         bgVideo.src = background.mediaUrl;
         bgVideo.muted = true;
-        bgVideo.loop = true;
+        // When synced to the song, drift-correction owns the playhead — don't loop.
+        bgVideo.loop = !useStudioStore.getState().reactionSync.enabled;
         bgVideo.playsInline = true;
         await new Promise<void>((resolve) => {
           bgVideo.onloadeddata = () => {
@@ -278,10 +297,15 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       if (exportMode === 'video') {
         const videoStream = exportCanvas.captureStream(60);
         
-        // Safely capture audio stream
+        // Capture audio from the Web Audio graph's stream dest (set up in
+        // VisualizerCanvas), NOT audioElement.captureStream() — capturing the element
+        // that owns the MediaElementSource stole its output and stopped the song.
         let audioStream: MediaStream | null = null;
         try {
-          if (typeof (audioElement as any).captureStream === 'function') {
+          const dest = (window as any).__STREAM_DEST__ as MediaStreamAudioDestinationNode | undefined;
+          if (dest?.stream && dest.stream.getAudioTracks().length) {
+            audioStream = dest.stream;
+          } else if (typeof (audioElement as any).captureStream === 'function') {
             audioStream = (audioElement as any).captureStream();
           } else if (typeof (audioElement as any).mozCaptureStream === 'function') {
             audioStream = (audioElement as any).mozCaptureStream();
@@ -295,6 +319,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const combinedStream = new MediaStream([...videoTracks, ...audioTracks]);
 
         const mimeType = getSupportedMimeType();
+        const isMp4 = mimeType.startsWith('video/mp4');
+        const containerType = isMp4 ? 'video/mp4' : 'video/webm';
+        const ext = isMp4 ? 'mp4' : 'webm';
         const mediaRecorder = new MediaRecorder(combinedStream, {
           mimeType,
           videoBitsPerSecond: bitrate,
@@ -307,10 +334,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         };
 
         mediaRecorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
+          const blob = new Blob(chunksRef.current, { type: containerType });
           const url = URL.createObjectURL(blob);
 
-          const filename = `${songNameRef.current} - ${visualizerNameRef.current}.webm`;
+          const filename = `${songNameRef.current} - ${visualizerNameRef.current}.${ext}`;
 
           const a = document.createElement("a");
           a.href = url;
@@ -321,7 +348,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           URL.revokeObjectURL(url);
 
           setIsRecording(false);
-          toast.success("Recording saved!");
+          setProgress(0);
+          const mb = (blob.size / 1048576).toFixed(1);
+          toast.success(`Saved “${filename}” (${mb} MB)`, { description: 'Check your Downloads folder.', duration: 6000 });
           logVisualizerEvent();
         };
 
@@ -335,16 +364,58 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       }
 
       setIsRecording(true);
-      
+
+      // Segment export: seek to the segment start and remember when to auto-stop.
+      const segment = useStudioStore.getState().exportSegment;
+      const segEnd = segment.enabled ? segment.end : Infinity;
+      if (segment.enabled) {
+        try { audioElement.currentTime = Math.max(0, segment.start); } catch {}
+      }
+      // Progress range: the segment if set, else the whole song from where we start.
+      const songDur = isFinite(audioElement.duration) ? audioElement.duration : 0;
+      exportRangeRef.current = segment.enabled
+        ? { start: segment.start, end: segment.end }
+        : { start: audioElement.currentTime, end: songDur };
+      lastProgressRef.current = 0;
+      setProgress(0);
+
       if (audioElement.paused) {
         await audioElement.play();
       }
 
       // Continuous render loop - capture every frame for smooth output
       // captureStream handles frame rate limiting, so we capture at display refresh rate
+      const recordStartMs = performance.now();
       const render = () => {
         if (!keepRenderingRef.current) return;
-        
+
+        // Hard wall-clock cap — backstop so an export can never run forever if the
+        // song duration is unknown (streaming / metadata not loaded) and `ended`
+        // never fires. Stops cleanly and lets the user know.
+        if (performance.now() - recordStartMs > MAX_EXPORT_MS) {
+          toast.message(`Export stopped at the ${Math.round(MAX_EXPORT_MS / 60000)}-minute limit.`);
+          setProgress(1);
+          stopRecording();
+          return;
+        }
+
+        // auto-stop at the end of the chosen segment, or at the end of the song when
+        // exporting the whole track — so the artist never has to catch the stop.
+        const rEndAuto = exportRangeRef.current.end;
+        if (audioElement.currentTime >= segEnd
+          || (!segment.enabled && rEndAuto > 0 && (audioElement.ended || audioElement.currentTime >= rEndAuto - 0.05))) {
+          setProgress(1);
+          stopRecording();
+          return;
+        }
+
+        // report progress (throttled to avoid re-rendering every frame)
+        const { start: rStart, end: rEnd } = exportRangeRef.current;
+        if (rEnd > rStart) {
+          const p = Math.min(1, Math.max(0, (audioElement.currentTime - rStart) / (rEnd - rStart)));
+          if (Math.abs(p - lastProgressRef.current) > 0.005) { lastProgressRef.current = p; setProgress(p); }
+        }
+
         const ctx = ctxRef.current;
         const exportCanvas = exportCanvasRef.current;
         if (!ctx || !exportCanvas) {
@@ -355,12 +426,31 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const bg = backgroundRef.current;
         const logo = logoRef.current;
 
-        // Draw background first
-        if (exportModeRef.current === 'png-sequence') {
+        // Draw background first (transparent + png-sequence keep alpha)
+        if (exportModeRef.current === 'png-sequence' || bg?.type === 'transparent') {
           ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
         } else if (bg?.type === 'video' && backgroundVideoRef.current) {
-          drawBackgroundMedia(ctx, backgroundVideoRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
-        } else if (bg?.type === 'image' && backgroundImageRef.current) {
+          // Song-master sync: keep the reaction video aligned to the audio playhead
+          // (+ offset) so the exported overlay matches the live preview.
+          const vid = backgroundVideoRef.current;
+          const rs = useStudioStore.getState().reactionSync;
+          if (rs.enabled && audioElement) {
+            const target = audioElement.currentTime + rs.offset;
+            const dur = vid.duration;
+            if (dur && isFinite(dur)) {
+              const last = dur - 0.05;
+              if (target >= last) {
+                // clip shorter than the song — hold the last frame (no end-of-clip jitter)
+                if (!vid.paused) vid.pause();
+                if (Math.abs(vid.currentTime - last) > 0.06) { try { vid.currentTime = last; } catch {} }
+              } else {
+                const clamped = Math.max(0, target);
+                if (Math.abs(vid.currentTime - clamped) > 0.08) { try { vid.currentTime = clamped; } catch {} }
+              }
+            }
+          }
+          drawBackgroundMedia(ctx, vid, exportCanvas.width, exportCanvas.height, bg.positionY);
+        } else if ((bg?.type === 'image' || bg?.type === 'gradient') && backgroundImageRef.current) {
           drawBackgroundMedia(ctx, backgroundImageRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
         } else {
           ctx.fillStyle = bg?.color || '#000000';
@@ -372,28 +462,135 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
         }
         
-        // Draw visualizer with proper aspect ratio handling to prevent distortion
-        const srcAspect = srcCanvas.width / srcCanvas.height;
-        const destAspect = exportCanvas.width / exportCanvas.height;
-        
-        let sx = 0, sy = 0, sw = srcCanvas.width, sh = srcCanvas.height;
-        const dx = 0, dy = 0, dw = exportCanvas.width, dh = exportCanvas.height;
-        
-        // Crop source to match destination aspect ratio (prevents stretching)
-        if (Math.abs(srcAspect - destAspect) > 0.01) {
-          if (srcAspect > destAspect) {
-            // Source is wider - crop sides
-            sw = srcCanvas.height * destAspect;
-            sx = (srcCanvas.width - sw) / 2;
+        // Effects (zoom + brightness/saturation/contrast) and composite transform,
+        // applied universally so they affect every visualizer type in the export.
+        const store = useStudioStore.getState();
+        const comp = store.composite;
+        const f = store.filters;
+        // Unified framing (matches the live preview): the visualizer occupies its own
+        // aspect box (vizAspect, may differ from the export frame) within the export
+        // canvas; crop mode just clips that box to a rectangular window.
+        const box = vizBox(comp, store.exportAspectRatio);
+        const dw = box.w * exportCanvas.width;
+        const dh = box.h * exportCanvas.height;
+        const dx = box.left * exportCanvas.width;
+        const dy = box.top * exportCanvas.height;
+
+        const filterStr = `brightness(${f.brightness}%) saturate(${f.saturation}%) contrast(${f.contrast}%)`;
+        // Match the live preview's blend: over a video/image clip, drop the
+        // visualizer's opaque black background ('screen') so the footage shows
+        // through. Never blend on alpha exports (png-sequence / transparent bg).
+        const isAlphaExport = exportModeRef.current === 'png-sequence' || bg?.type === 'transparent';
+        const overlayingClip = bg?.type === 'video' || bg?.type === 'image';
+        const blendSel = comp.blend ?? (overlayingClip ? 'screen' : 'normal');
+        const blendOp: GlobalCompositeOperation = (!isAlphaExport && blendSel !== 'normal')
+          ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
+        const rot = (comp.rotate ?? 0) * Math.PI / 180;
+        const opacity = comp.opacity ?? 1;
+        const feather = comp.feather ?? 0;
+        const cxC = comp.x * exportCanvas.width, cyC = comp.y * exportCanvas.height;
+
+        // Draw the framed visualizer (crop/mask/scale) onto a target 2D context.
+        const drawViz = (tctx: CanvasRenderingContext2D) => {
+          if (comp.crop) {
+            // CROP MODE: draw the aspect-correct visualizer box, clipped to the
+            // rectangular window. `scale` (baked into the box) zooms the content;
+            // the window stays fixed — so the crop honours the visualizer's aspect.
+            const W = exportCanvas.width, H = exportCanvas.height;
+            const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
+            const wx = cxC - ww / 2, wy = cyC - wh / 2;
+            const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5
+              : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
+            tctx.save();
+            tctx.beginPath();
+            roundRectPath(tctx, wx, wy, ww, wh, round);
+            tctx.clip();
+            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
+            tctx.restore();
+          } else if (comp.mask !== 'none') {
+            // box aspect == visualizer canvas aspect, so draw the FULL canvas (no
+            // stage-aspect source crop — that would clip a non-matching vizAspect).
+            tctx.save();
+            tctx.beginPath();
+            if (comp.mask === 'circle') tctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
+            else roundRectPath(tctx, dx, dy, dw, dh, Math.min(dw, dh) * 0.08);
+            tctx.clip();
+            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
+            tctx.restore();
           } else {
-            // Source is taller - crop top/bottom
-            sh = srcCanvas.width / destAspect;
-            sy = (srcCanvas.height - sh) / 2;
+            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
           }
+        };
+
+        // Background fill: when the blend drops the visualizer's dark background, draw a
+        // black backing (at bgOpacity) under it, clipped to the same region — bringing
+        // that background back over the clip. Matches the CSS backing in the preview.
+        const bgOpacity = comp.bgOpacity ?? 0;
+        if (bgOpacity > 0 && blendOp !== 'source-over') {
+          ctx.save();
+          if (rot !== 0) { ctx.translate(cxC, cyC); ctx.rotate(rot); ctx.translate(-cxC, -cyC); }
+          ctx.beginPath();
+          if (comp.crop) {
+            const W = exportCanvas.width, H = exportCanvas.height;
+            const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
+            const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5 : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
+            roundRectPath(ctx, cxC - ww / 2, cyC - wh / 2, ww, wh, round);
+          } else if (comp.mask === 'circle') {
+            ctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
+          } else {
+            roundRectPath(ctx, dx, dy, dw, dh, comp.mask === 'rounded' ? Math.min(dw, dh) * 0.08 : 0);
+          }
+          ctx.clip();
+          ctx.globalAlpha = bgOpacity;
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+          ctx.globalAlpha = 1;
+          ctx.restore();
         }
-        
-        ctx.drawImage(srcCanvas, sx, sy, sw, sh, dx, dy, dw, dh);
-        
+
+        // Rotate / feather / opacity composite as a UNIT (matching the CSS preview),
+        // so route through an offscreen layer when any are active; else draw direct.
+        if (feather > 0 || rot !== 0 || opacity < 1) {
+          let layer = layerCanvasRef.current;
+          if (!layer) { layer = document.createElement('canvas'); layerCanvasRef.current = layer; }
+          if (layer.width !== exportCanvas.width || layer.height !== exportCanvas.height) {
+            layer.width = exportCanvas.width; layer.height = exportCanvas.height;
+          }
+          const lctx = layer.getContext('2d')!;
+          lctx.setTransform(1, 0, 0, 1, 0, 0);
+          lctx.globalCompositeOperation = 'source-over';
+          lctx.globalAlpha = 1;
+          lctx.clearRect(0, 0, layer.width, layer.height);
+          lctx.filter = filterStr;
+          if (rot !== 0) { lctx.save(); lctx.translate(cxC, cyC); lctx.rotate(rot); lctx.translate(-cxC, -cyC); drawViz(lctx); lctx.restore(); }
+          else drawViz(lctx);
+          lctx.filter = 'none';
+          if (feather > 0) {
+            // multiply a soft elliptical alpha so edges fade (no hard rectangle)
+            const W = exportCanvas.width, H = exportCanvas.height;
+            const rw = (comp.crop ? comp.cropW : comp.scale) * W * 0.5;
+            const rh = (comp.crop ? comp.cropH : comp.scale) * H * 0.5;
+            const rr = Math.max(rw, rh, 1);
+            const g = lctx.createRadialGradient(cxC, cyC, rr * (1 - feather), cxC, cyC, rr);
+            g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+            lctx.globalCompositeOperation = 'destination-in';
+            lctx.save(); lctx.translate(cxC, cyC); lctx.scale(rw / rr, rh / rr); lctx.translate(-cxC, -cyC);
+            lctx.fillStyle = g; lctx.fillRect(0, 0, W, H); lctx.restore();
+            lctx.globalCompositeOperation = 'source-over';
+          }
+          ctx.globalCompositeOperation = blendOp;
+          ctx.globalAlpha = opacity;
+          ctx.drawImage(layer, 0, 0);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = 'source-over';
+        } else {
+          ctx.filter = filterStr;
+          ctx.globalCompositeOperation = blendOp;
+          drawViz(ctx);
+          ctx.filter = 'none';
+          ctx.globalCompositeOperation = 'source-over'; // reset so logo/overlays draw normally
+        }
+
         // Draw logo IN FRONT of visualizer if layer is 'front'
         if (logo?.url && logoImageRef.current && logo.layer === 'front') {
           drawLogoWithSettings(ctx, logoImageRef.current, logo, exportCanvas, screenWidthRef.current);
@@ -401,6 +598,13 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
         // Capture PNG frame for sequence mode
         if (exportModeRef.current === 'png-sequence') {
+          // Cap frames — each is a full-res PNG held in RAM; an unbounded sequence
+          // OOMs the tab on long songs. Stop + warn at the limit.
+          if (pngFramesRef.current.length >= MAX_PNG_FRAMES) {
+            toast.message(`Reached the ${MAX_PNG_FRAMES}-frame limit — saving what’s captured.`);
+            stopRecording();
+            return;
+          }
           exportCanvas.toBlob((blob) => {
             if (blob) {
               pngFramesRef.current.push(blob);
@@ -419,8 +623,16 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       );
     } catch (error) {
       console.error("Start recording error:", error);
+      // Roll back any partial setup: stop the loop, restore the canvas resolution,
+      // and release the background video so a failed start doesn't leave the studio
+      // wedged at export resolution with a stray playing <video>.
+      keepRenderingRef.current = false;
+      window.dispatchEvent(new CustomEvent('recording:stop'));
+      try { backgroundVideoRef.current?.pause(); } catch {}
+      backgroundVideoRef.current = null;
       setIsRecording(false);
-      
+      setProgress(0);
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       
       if (errorMessage.includes('NotSupportedError')) {
@@ -436,6 +648,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   }, [canvasRef, audioElement]);
 
   const stopRecording = useCallback(async () => {
+    // Ignore stop calls when nothing is actually recording (avoids spurious
+    // resize events / "No frames" toasts if stop fires while idle).
+    if (!keepRenderingRef.current && mediaRecorderRef.current?.state !== 'recording') return;
     keepRenderingRef.current = false;
     // Signal canvas to return to normal resolution
     window.dispatchEvent(new CustomEvent('recording:stop'));
@@ -490,8 +705,26 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     }
   }, []);
 
-  return { startRecording, stopRecording, isRecording, frameCount };
+  // Guard against navigating away mid-export — leaving the tab corrupts the capture.
+  useEffect(() => {
+    if (!isRecording) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isRecording]);
+
+  return { startRecording, stopRecording, isRecording, frameCount, progress };
 };
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
 
 function drawBackgroundMedia(
   ctx: CanvasRenderingContext2D, 

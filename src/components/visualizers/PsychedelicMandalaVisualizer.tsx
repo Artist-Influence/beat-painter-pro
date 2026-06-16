@@ -251,11 +251,11 @@ export default function PsychedelicMandalaVisualizer({
         </mesh>
         
         <Sparkles
-          count={hasAudioState ? 150 : 0}
+          count={150}
           scale={[5, 5, 5]}
           size={3}
           speed={hasAudioState ? 3 : 0}
-          opacity={0.8}
+          opacity={hasAudioState ? 0.8 : 0}
           color={textureData.colors.accent}
         />
       </group>

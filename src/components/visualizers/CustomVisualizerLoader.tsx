@@ -5,25 +5,27 @@ import type { VisualizerProps } from '../visualizer';
 import { RandomVisualizerTemplate } from './RandomVisualizerTemplate';
 import { generateRandomParams, type RandomVisualizerParams } from '@/lib/randomVisualizerGenerator';
 
-// Legacy imports for backwards compatibility with old visualizers
-import DynamicVisualizer from '../visualizer/DynamicVisualizer';
-import VisualizerErrorBoundary from '../visualizer/VisualizerErrorBoundary';
-
 interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
-  initialCode?: string; // Legacy: Pre-loaded JSX code
-  initialConfig?: RandomVisualizerParams; // New: Pre-loaded config
+  initialCode?: string; // Legacy raw-JSX rows — no longer executed (see note below)
+  initialConfig?: RandomVisualizerParams; // Pre-loaded config (current format)
   isPlaying?: boolean; // Whether audio is playing
 }
 
 // Session-based cache to prevent flickering
-const sessionCache = new Map<string, { config?: RandomVisualizerParams; code?: string }>();
+const sessionCache = new Map<string, { config?: RandomVisualizerParams }>();
+
+// SECURITY: older custom visualizers stored raw JSX in `jsx_code` and used to be
+// compiled and run via `new Function(...)`. Because public rows are world-readable,
+// that allowed one user's stored code to execute in another user's browser
+// (stored XSS). We no longer execute raw code — only the deterministic, data-only
+// config format is rendered; legacy raw-code rows fall back to a placeholder.
+const LEGACY_UNSUPPORTED = 'legacy-unsupported';
 
 export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConfig, isPlaying, ...props }: CustomVisualizerLoaderProps) {
   const { user } = useAuth();
   const [config, setConfig] = useState<RandomVisualizerParams | null>(initialConfig || null);
-  const [legacyCode, setLegacyCode] = useState<string>(initialCode || '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialCode && !initialConfig ? LEGACY_UNSUPPORTED : null);
   const [isLoading, setIsLoading] = useState(!initialConfig && !initialCode);
   const requestIdRef = useRef(0);
 
@@ -54,7 +56,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
   }, [props.audioData]);
 
   useEffect(() => {
-    // Prioritize initialConfig (new system)
+    // Prioritize initialConfig (current, data-only system)
     if (initialConfig) {
       setConfig(initialConfig);
       sessionCache.set(visualizerId, { config: initialConfig });
@@ -63,20 +65,17 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
       return;
     }
 
-    // Fallback to initialCode (legacy system)
+    // Legacy raw-JSX rows are no longer executed — show the placeholder.
     if (initialCode) {
-      setLegacyCode(initialCode);
-      sessionCache.set(visualizerId, { code: initialCode });
+      setError(LEGACY_UNSUPPORTED);
       setIsLoading(false);
-      setError(null);
       return;
     }
 
     // Check session cache
     const cached = sessionCache.get(visualizerId);
-    if (cached) {
-      if (cached.config) setConfig(cached.config);
-      if (cached.code) setLegacyCode(cached.code);
+    if (cached?.config) {
+      setConfig(cached.config);
       setIsLoading(false);
       return;
     }
@@ -93,19 +92,6 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
       try {
         setIsLoading(true);
         setError(null);
-
-        // Check for in-memory preview visualizer (legacy)
-        const W = window as any;
-        const previewMap = W.__PREVIEW_VISUALIZERS__ || {};
-        if (previewMap[visualizerId]) {
-          if (currentRequestId !== requestIdRef.current) return;
-          
-          const previewCode = previewMap[visualizerId];
-          setLegacyCode(previewCode);
-          sessionCache.set(visualizerId, { code: previewCode });
-          setIsLoading(false);
-          return;
-        }
 
         if (!isValidUUID(visualizerId)) {
           setError('Invalid visualizer format');
@@ -167,9 +153,8 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
               throw new Error('Not a config object');
             }
           } catch {
-            // Legacy system: jsx_code contains actual JSX
-            setLegacyCode(data.jsx_code);
-            sessionCache.set(visualizerId, { code: data.jsx_code });
+            // Legacy row with raw JSX (not config JSON) — no longer executed.
+            setError(LEGACY_UNSUPPORTED);
           }
         } else {
           setError('No visualizer data found');
@@ -210,37 +195,14 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
     );
   }
 
-  // New system: render from config params with safe audio data
+  // Current system: render from config params with safe audio data
   if (config) {
     return (
-      <RandomVisualizerTemplate 
-        params={config} 
+      <RandomVisualizerTemplate
+        params={config}
         audioData={safeAudioData}
         isPlaying={isPlaying}
       />
-    );
-  }
-
-  // Legacy system: render from JSX code
-  if (legacyCode) {
-    return (
-      <VisualizerErrorBoundary fallback={
-        <group scale={0.25}>
-          <mesh>
-            <boxGeometry args={[2, 2, 2]} />
-            <meshBasicMaterial color="#ff0000" wireframe />
-          </mesh>
-        </group>
-      }>
-        <DynamicVisualizer 
-          jsxCode={legacyCode} 
-          audioData={safeAudioData}
-          backgroundColor={props.backgroundColor}
-          zoomLevel={props.zoomLevel}
-          width={props.width}
-          height={props.height}
-        />
-      </VisualizerErrorBoundary>
     );
   }
 

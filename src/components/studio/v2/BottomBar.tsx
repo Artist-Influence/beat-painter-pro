@@ -100,12 +100,12 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40">
         <button
           onClick={() => onToggle(!isVisible)}
-          className="p-2 backdrop-blur-xl rounded-full border border-white/10 hover:bg-white/10 transition-colors shadow-lg shadow-black/20"
+          className="p-2 glass-panel glass-panel-interactive !rounded-full transition-colors"
         >
           {isVisible ? (
-            <ChevronDown className="w-4 h-4 text-white/80" />
+            <ChevronDown className="w-4 h-4 text-text-tertiary" />
           ) : (
-            <ChevronUp className="w-4 h-4 text-white/80" />
+            <ChevronUp className="w-4 h-4 text-text-tertiary" />
           )}
         </button>
       </div>
@@ -120,22 +120,22 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="absolute bottom-16 left-0 right-0 z-30"
           >
-            <div className="mx-auto max-w-2xl p-4">
-              <div className="bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/10 p-4">
-                
+            <div className="mx-auto max-w-2xl p-2 sm:p-4">
+              <div className="glass-panel p-2.5 sm:p-4">
+
                 {/* Playback Controls */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   {/* Play Controls */}
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => handleSeek(-10)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      className="p-2 hover:bg-ai-red/[0.08] rounded-md transition-colors"
                     >
-                      <SkipBack className="w-4 h-4 text-white/80" />
+                      <SkipBack className="w-4 h-4 text-text-tertiary" />
                     </button>
-                    <button 
+                    <button
                       onClick={handlePlayPause}
-                      className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                      className="p-3 bg-ai-red hover:shadow-glow-hover rounded-full transition-all disabled:opacity-40 disabled:bg-surface-3"
                       disabled={!audioElement}
                     >
                       {!isPlaying ? (
@@ -144,25 +144,30 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                         <Pause className="w-5 h-5 text-white" />
                       )}
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleSeek(10)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      className="p-2 hover:bg-ai-red/[0.08] rounded-md transition-colors"
                     >
-                      <SkipForward className="w-4 h-4 text-white/80" />
+                      <SkipForward className="w-4 h-4 text-text-tertiary" />
                     </button>
                   </div>
 
                   {/* Timeline */}
                   <div className="flex-1 flex items-center gap-3">
-                    <span className="text-xs text-white/60 font-mono">
+                    <span className="text-xs text-text-tertiary font-mono-num">
                       {formatTime(currentTime)}
                     </span>
-                    <div className="flex-1 h-1 bg-white/20 rounded-full relative">
-                      <div 
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-100"
+                    <div className="flex-1 h-1 bg-hairline/45 rounded-full relative">
+                      <div
+                        className="absolute left-0 top-0 h-full bg-ai-red rounded-full transition-all duration-100"
                         style={{
                           width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
                         }}
+                      />
+                      {/* playhead caret */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-3 bg-ai-red rounded-full shadow-glow pointer-events-none"
+                        style={{ left: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
                       />
                       <input
                         type="range"
@@ -179,24 +184,24 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                     </div>
-                    <span className="text-xs text-white/60 font-mono">
+                    <span className="text-xs text-text-tertiary font-mono-num">
                       {formatTime(duration)}
                     </span>
                   </div>
 
-                  {/* Volume */}
-                  <div className="flex items-center gap-2">
+                  {/* Volume (desktop only — phones use system volume) */}
+                  <div className="hidden sm:flex items-center gap-2">
                     <button
                       onClick={handleToggleMute}
-                      className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                      className="p-1 hover:bg-ai-red/[0.08] rounded transition-colors cursor-pointer"
                       title={isMuted ? "Unmute" : "Mute"}
                     >
-                      <VolumeIcon className="w-4 h-4 text-white/60" />
+                      <VolumeIcon className="w-4 h-4 text-text-tertiary" />
                     </button>
                      <div className="relative w-20">
-                       <div className="h-1 bg-white/20 rounded-full">
-                         <div 
-                           className="h-full bg-white/60 rounded-full transition-all duration-100"
+                       <div className="h-1 bg-hairline/45 rounded-full">
+                         <div
+                           className="h-full bg-ai-red rounded-full transition-all duration-100"
                            style={{ width: `${volume * 100}%` }}
                          />
                        </div>

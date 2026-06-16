@@ -6,7 +6,9 @@ export function LogoOverlay() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  // Pointer events (not mouse) so dragging the logo works on touch devices too —
+  // the UI advertises "drag on screen to position", which was previously dead on mobile.
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - rect.width / 2;
@@ -15,24 +17,23 @@ export function LogoOverlay() {
     setIsDragging(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!isDragging) return;
-    
+
     const container = document.getElementById('logo-container');
     if (!container) return;
-    
+
     const rect = container.getBoundingClientRect();
     const x = ((e.clientX - dragOffset.x - rect.left) / rect.width) * 100;
     const y = ((e.clientY - dragOffset.y - rect.top) / rect.height) * 100;
-    
-    // Clamp to container bounds
+
     const clampedX = Math.max(0, Math.min(100, x));
     const clampedY = Math.max(0, Math.min(100, y));
-    
+
     setLogoPosition({ x: clampedX, y: clampedY });
   }, [isDragging, dragOffset, setLogoPosition]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
@@ -44,14 +45,16 @@ export function LogoOverlay() {
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointercancel', handlePointerUp);
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('pointercancel', handlePointerUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handlePointerMove, handlePointerUp]);
 
   const getColorFilter = (mode: typeof logo.colorMode): string => {
     switch (mode) {
@@ -74,8 +77,9 @@ export function LogoOverlay() {
           top: `${logo.position.y}%`,
           transform: 'translate(-50%, -50%)',
           opacity: logo.opacity / 100,
+          touchAction: 'none',
         }}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
       >
         <img 

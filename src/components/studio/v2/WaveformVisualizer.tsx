@@ -29,7 +29,7 @@ export function WaveformVisualizer() {
   if (isAnalyzing) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="text-white/60 text-sm">Analyzing audio...</div>
+        <div className="text-text-tertiary text-sm">Analyzing audio...</div>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export function WaveformVisualizer() {
   if (!waveformData) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="text-white/40 text-sm">No audio loaded</div>
+        <div className="text-text-tertiary text-sm">No audio loaded</div>
       </div>
     );
   }
@@ -53,7 +53,7 @@ export function WaveformVisualizer() {
     >
       {/* Progress overlay */}
       <div 
-        className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-pink-500/30 transition-all duration-100"
+        className="absolute inset-0 bg-gradient-to-r from-ai-red/40 to-ai-red/20 transition-all duration-100"
         style={{ width: `${progressPercentage}%` }}
       />
       
@@ -69,7 +69,7 @@ export function WaveformVisualizer() {
               className={`transition-colors duration-100 rounded-sm ${
                 isPassed 
                   ? 'bg-white' 
-                  : 'bg-white/30'
+                  : 'bg-hairline'
               }`}
               style={{
                 height: `${height}%`,

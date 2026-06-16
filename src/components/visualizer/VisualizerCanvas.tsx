@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useStudioStore } from "@/stores/studioStore";
@@ -7,7 +7,22 @@ import type { AudioData } from "@/hooks/useAudioAnalysis";
 import { useAudioAnalysis } from "@/hooks/useAudioAnalysis";
 import { useCustomVisualizers } from "@/hooks/useCustomVisualizers";
 import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualizerLoader";
+import { makeFractalVisualizer } from "@/components/visualizers/FractalVisualizer";
+import { makeProceduralVisualizer } from "@/components/visualizers/ProceduralPreset";
+import { makeCartoonVisualizer } from "@/components/visualizers/Cartoon2DVisualizer";
+import { makeSandVisualizer } from "@/components/visualizers/SandFlowVisualizer";
+import { usePresetStore } from "@/stores/presetStore";
+import type { Sand3DConfig } from "@/lib/sand3d/unicornEngine";
+import type { DawConfig } from "@/lib/daw/dawEngine";
 import * as THREE from "three";
+
+// Heavy visualizers are code-split (see components/visualizers/index.ts); load
+// their modules on demand here too so the saved/generated-preset path doesn't
+// pull the shaders + FFT/decode code back into the main bundle.
+const makeSand3DLazy = (preset: Sand3DConfig) =>
+  lazy(async () => ({ default: (await import("@/components/visualizers/Sand3DVisualizer")).makeSand3DVisualizer(preset) }));
+const makeDawLazy = (preset: DawConfig) =>
+  lazy(async () => ({ default: (await import("@/components/visualizers/DawWaveformVisualizer")).makeDawVisualizer(preset) }));
 
 interface VisualizerCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -71,11 +86,41 @@ function RecordingController() {
 }
 
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
-  const { selected, background, zoomLevel, audioElement, filters } = useStudioStore();
+  // Selector subscriptions (not the whole store) so the canvas only re-renders on
+  // changes it actually cares about — not on every per-frame store write.
+  const selected = useStudioStore((s) => s.selected);
+  const background = useStudioStore((s) => s.background);
+  const zoomLevel = useStudioStore((s) => s.zoomLevel);
+  const audioElement = useStudioStore((s) => s.audioElement);
   const { customVisualizers } = useCustomVisualizers();
+  const savedPresets = usePresetStore((s) => s.presets);
+  const previewConfig = usePresetStore((s) => s.preview);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   const { Visualizer, scale, initialCode, initialConfig } = useMemo(() => {
+    // Generated / saved presets (client-side): fractal shader OR procedural 3D model
+    if (selected === '__preview__' || (typeof selected === 'string' && selected.startsWith('preset_'))) {
+      const item = usePresetStore.getState().resolve(selected);
+      if (item?.kind === 'fractal') {
+        return { Visualizer: makeFractalVisualizer(item.fractal), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'procedural') {
+        return { Visualizer: makeProceduralVisualizer(item.procedural), scale: 0.5, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'cartoon') {
+        return { Visualizer: makeCartoonVisualizer(item.cartoon), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'sand') {
+        return { Visualizer: makeSandVisualizer(item.sand), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'sand3d') {
+        return { Visualizer: makeSand3DLazy(item.sand3d), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'daw') {
+        return { Visualizer: makeDawLazy(item.daw), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      return { Visualizer: undefined, scale: 1, initialCode: undefined, initialConfig: undefined };
+    }
     if (isCustomVisualizer(selected)) {
       const customViz = customVisualizers.find(viz => `custom_${viz.id}` === selected);
       
@@ -113,9 +158,9 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
         initialConfig: undefined
       };
     }
-  }, [selected, customVisualizers]);
+  }, [selected, customVisualizers, savedPresets, previewConfig]);
 
-  const [audioData, setAudioData] = useState<AudioData>({ frequency: Array(256).fill(0), amplitude: 0, beatStrength: 0, sampleRate: 44100 });
+  const audioRef = useRef<AudioData>({ frequency: new Array(256).fill(0), frequencyRaw: new Array(256).fill(0), amplitude: 0, beatStrength: 0, sampleRate: 44100 });
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [styleVersion, setStyleVersion] = useState(0);
@@ -169,9 +214,20 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     source.connect(analyserNode);
     analyserNode.connect(gainNode);
     gainNode.connect(ctx.destination);
+    // Tee the post-gain signal into a persistent MediaStream for the recorder, so
+    // export never calls captureStream() on the <audio> element (doing so stole its
+    // output and dropped the song mid-record). One stream dest per context.
+    if (!W.__STREAM_DEST__) { W.__STREAM_DEST__ = ctx.createMediaStreamDestination(); }
+    try { gainNode.connect(W.__STREAM_DEST__); } catch {}
     setAnalyser(analyserNode);
 
-    const onPlay = () => setIsPlaying(true);
+    // Keep the context alive — browsers auto-suspend it without a gesture and when
+    // the tab is backgrounded (the "song stops mid-way", esp. during long party-mode sets).
+    const resume = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
+    resume();
+    ctx.onstatechange = () => { if (ctx.state === 'suspended' && !audioElement.paused) ctx.resume().catch(() => {}); };
+
+    const onPlay = () => { resume(); setIsPlaying(true); };
     const onPause = () => setIsPlaying(false);
     audioElement.addEventListener("play", onPlay);
     audioElement.addEventListener("pause", onPause);
@@ -180,13 +236,33 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     return () => {
       audioElement.removeEventListener("play", onPlay);
       audioElement.removeEventListener("pause", onPause);
-      try {
-        analyserNode.disconnect();
-      } catch {}
+      // Fully tear down this session's graph so a re-upload doesn't leave the old
+      // gain node feeding ctx.destination / the recorder stream (double audio).
+      // Persist the volume so the freshly-built graph restores it.
+      try { W.__GAIN_VALUE__ = gainNode.gain.value; } catch {}
+      try { source.disconnect(analyserNode); } catch {}
+      try { analyserNode.disconnect(); } catch {}
+      try { gainNode.disconnect(); } catch {}
     };
   }, [audioElement]);
 
-  useAudioAnalysis(analyser, isPlaying, setAudioData);
+  // Audio bus: write the (sensitivity-scaled) audio into a STABLE ref every frame.
+  // Visualizers read it inside their own useFrame, so there is NO per-frame React
+  // re-render of the canvas subtree — this was the dominant production-lag source.
+  const writeAudio = useCallback((d: AudioData) => {
+    const ref = audioRef.current;
+    const fr = useStudioStore.getState().fractalReactivity;
+    const g = fr.enabled ? fr.sensitivity : 0;
+    const n = d.frequency.length;
+    if (ref.frequency.length !== n) { ref.frequency = new Array(n).fill(0); ref.frequencyRaw = new Array(n).fill(0); }
+    const raw = d.frequencyRaw ?? d.frequency;
+    for (let i = 0; i < n; i++) { ref.frequency[i] = Math.min(255, d.frequency[i] * g); ref.frequencyRaw[i] = Math.min(255, (raw[i] ?? 0) * g); }
+    ref.amplitude = Math.min(2.2, d.amplitude * g);
+    ref.beatStrength = Math.min(2.2, d.beatStrength * g);
+    ref.sampleRate = d.sampleRate;
+    (window as Window & { __AUDIO_LEVEL__?: { level: number; beat: number } }).__AUDIO_LEVEL__ = { level: ref.amplitude, beat: ref.beatStrength };
+  }, []);
+  useAudioAnalysis(analyser, isPlaying, writeAudio);
 
   useEffect(() => {
     const handler = () => setStyleVersion((v) => v + 1);
@@ -247,19 +323,19 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
             stencil: false,
             depth: true,
           }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
           camera={{ position: [0, 0, 5], fov: 50 }}
           style={{ width: '100%', height: '100%' }}
         >
           <RecordingController />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={0.5} />
-          <group position={[0, 0, 0]} scale={zoomLevel * scale}>
+          <group position={[0, 0, 0]} scale={scale * zoomLevel}>
             <Suspense fallback={null}>
               {Visualizer && (
-                <Visualizer 
+                <Visualizer
                   key={`${styleVersion}-${selected}`}
-                  audioData={audioData} 
+                  audioData={audioRef.current}
                   isPlaying={isPlaying}
                   backgroundColor={background.color}
                   zoomLevel={zoomLevel}

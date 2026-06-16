@@ -23,7 +23,27 @@ export type ShapeFamily =
   | 'radial_spokes'     // Wheel/spoke pattern
   | 'fractal_tree'      // Branching structure
   | 'cube_lattice'      // 3D cube grid
-  | 'kaleidoscope';     // N-fold symmetry
+  | 'kaleidoscope'      // N-fold symmetry
+  | 'sphere_grid'       // Geodesic dots on sphere
+  | 'dna_ladder'        // Straight twin-rail ladder
+  | 'mobius_strip'      // One-sided ribbon surface
+  | 'supershape_3d'     // Gielis superformula solid
+  | 'klein_bottle'      // Immersed 4D surface
+  | 'spring_coil'       // Thick coiled spring tube
+  | 'star_burst'        // 3D spikes from center
+  | 'cylinder_stack'    // Stacked discs / totem
+  | 'pyramid_array'     // Grid of popping pyramids
+  | 'ring_system'       // Planet with orbital rings
+  | 'particle_galaxy'   // Spiral particle disk
+  | 'honeycomb'         // Hex prism panel
+  | 'crystal_cluster'   // Cluster of angular crystals
+  | 'flower_3d'         // Layered blooming petals
+  | 'sphere_swarm'      // Orbiting small spheres
+  | 'fibonacci_sphere'  // Phyllotaxis point sphere
+  | 'terrain_mesh'      // Noise-displaced landscape
+  | 'lissajous_curve'   // 3D Lissajous tube knot
+  | 'gyroid_surface'    // Gyroid iso-surface dots
+  | 'tube_lattice';     // Cube-grid strut cage
 
 export interface ShapeConfig {
   id: ShapeFamily;
@@ -50,6 +70,26 @@ export const SHAPE_FAMILIES: ShapeConfig[] = [
   { id: 'fractal_tree', name: 'Fractal Tree', elementRange: [30, 150], polyBudget: 18000, supportsWireframe: true, defaultScale: 2.5 },
   { id: 'cube_lattice', name: 'Cube Lattice', elementRange: [27, 125], polyBudget: 15000, supportsWireframe: true, defaultScale: 3.0 },
   { id: 'kaleidoscope', name: 'Kaleidoscope', elementRange: [4, 12], polyBudget: 25000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'sphere_grid', name: 'Sphere Grid', elementRange: [80, 400], polyBudget: 8000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'dna_ladder', name: 'DNA Ladder', elementRange: [24, 80], polyBudget: 14000, supportsWireframe: true, defaultScale: 2.0 },
+  { id: 'mobius_strip', name: 'Mobius Strip', elementRange: [1, 1], polyBudget: 18000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'supershape_3d', name: 'Supershape', elementRange: [1, 1], polyBudget: 22000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'klein_bottle', name: 'Klein Bottle', elementRange: [1, 1], polyBudget: 18000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'spring_coil', name: 'Spring Coil', elementRange: [24, 72], polyBudget: 20000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'star_burst', name: 'Star Burst', elementRange: [20, 80], polyBudget: 15000, supportsWireframe: true, defaultScale: 2.5 },
+  { id: 'cylinder_stack', name: 'Cylinder Stack', elementRange: [6, 24], polyBudget: 14000, supportsWireframe: true, defaultScale: 2.5 },
+  { id: 'pyramid_array', name: 'Pyramid Array', elementRange: [16, 100], polyBudget: 16000, supportsWireframe: true, defaultScale: 3.0 },
+  { id: 'ring_system', name: 'Ring System', elementRange: [9, 21], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'particle_galaxy', name: 'Particle Galaxy', elementRange: [100, 400], polyBudget: 5000, supportsWireframe: false, defaultScale: 3.0 },
+  { id: 'honeycomb', name: 'Honeycomb', elementRange: [20, 100], polyBudget: 16000, supportsWireframe: true, defaultScale: 3.0 },
+  { id: 'crystal_cluster', name: 'Crystal Cluster', elementRange: [12, 40], polyBudget: 14000, supportsWireframe: true, defaultScale: 2.5 },
+  { id: 'flower_3d', name: 'Flower 3D', elementRange: [18, 36], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'sphere_swarm', name: 'Sphere Swarm', elementRange: [40, 160], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'fibonacci_sphere', name: 'Fibonacci Sphere', elementRange: [100, 400], polyBudget: 6000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'terrain_mesh', name: 'Terrain Mesh', elementRange: [144, 1024], polyBudget: 20000, supportsWireframe: true, defaultScale: 3.5 },
+  { id: 'lissajous_curve', name: 'Lissajous Curve', elementRange: [1, 5], polyBudget: 22000, supportsWireframe: false, defaultScale: 2.5 },
+  { id: 'gyroid_surface', name: 'Gyroid Surface', elementRange: [40, 90], polyBudget: 18000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'tube_lattice', name: 'Tube Lattice', elementRange: [27, 64], polyBudget: 18000, supportsWireframe: true, defaultScale: 2.5 },
 ];
 
 // =============================================================================

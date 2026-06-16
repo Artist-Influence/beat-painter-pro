@@ -13,22 +13,22 @@ export function TabButton({ icon, label, isActive, onClick, side = 'left' }: Tab
   return (
     <button
       onClick={onClick}
-      className={`relative p-3 backdrop-blur-xl rounded-full border transition-all transform hover:scale-110 shadow-lg shadow-black/20 ${
-        isActive 
-          ? 'bg-purple-600/90 border-purple-500/50 shadow-lg shadow-purple-600/30' 
-          : 'bg-black/40 border-white/10 hover:bg-white/10'
+      className={`group relative flex items-center justify-center p-3 glass-panel !rounded-full transition-all transform hover:scale-110 ${
+        isActive
+          ? 'tab-on !border-ai-red/60 bg-ai-red/[0.12] shadow-glow'
+          : 'glass-panel-interactive'
       }`}
       title={label}
     >
-      <div className="w-6 h-6 text-white">
+      <div className={`w-5 h-5 flex items-center justify-center ${isActive ? 'text-ai-red' : 'text-text-tertiary group-hover:text-text-secondary'}`}>
         {icon}
       </div>
-      
+
       {/* Tooltip */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         whileHover={{ opacity: 1, scale: 1 }}
-        className={`absolute top-1/2 -translate-y-1/2 px-3 py-1 bg-black/80 backdrop-blur-xl rounded-lg border border-white/10 text-xs text-white/80 whitespace-nowrap pointer-events-none ${
+        className={`absolute top-1/2 -translate-y-1/2 px-3 py-1 glass-panel text-xs text-text-tertiary whitespace-nowrap pointer-events-none ${
           side === 'left' ? 'left-16' : 'right-16'
         }`}
       >

@@ -5,22 +5,25 @@ import { useAuth } from '@/hooks/useAuth';
 export function useUserRole() {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
-  const [isLoading, setIsLoading] = useState(false);
+  // Start in a loading state so gates (RequireAdmin) wait for the real answer
+  // instead of briefly seeing 'user' and redirecting an admin away.
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkUserRole = async () => {
     if (!user) {
       setUserRole('user');
+      setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const { data } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
-      
+        .maybeSingle();
+
       setUserRole(data?.role || 'user');
     } catch (error) {
       console.error('Error checking user role:', error);

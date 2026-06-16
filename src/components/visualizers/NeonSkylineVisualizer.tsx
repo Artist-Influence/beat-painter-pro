@@ -201,11 +201,11 @@ export default function NeonSkylineVisualizer({
         ))}
         
         <Sparkles
-          count={smoothedBass.current > 0.02 ? 200 : 0}
+          count={200}
           scale={[12, 2, 2]}
           size={1 + smoothedBass.current * 2}
           speed={smoothedBass.current > 0.02 ? (0.3 + smoothedBass.current) : 0}
-          opacity={0.2 + smoothedBass.current * 0.3}
+          opacity={smoothedBass.current > 0.02 ? (0.2 + smoothedBass.current * 0.3) : 0}
           color={textureData.colors.primary}
         />
       </group>

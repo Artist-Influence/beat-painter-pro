@@ -18,7 +18,35 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				display: 'var(--font-display)',
+				heading: 'var(--font-heading)',
+				body: 'var(--font-body)',
+				mono: 'var(--font-mono)',
+			},
+			boxShadow: {
+				card: 'var(--shadow-card)',
+				glow: 'var(--shadow-glow)',
+				'glow-hover': 'var(--shadow-glow-hover)',
+				button: 'var(--shadow-button)',
+			},
+			transitionTimingFunction: {
+				smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
+				bounce: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+				reveal: 'cubic-bezier(0.22, 1, 0.36, 1)',
+			},
 			colors: {
+				'ai-red': 'hsl(var(--ai-red))',
+				'ai-bg': 'hsl(var(--ai-bg))',
+				'surface-1': 'hsl(var(--surface-1))',
+				'surface-2': 'hsl(var(--surface-2))',
+				'surface-3': 'hsl(var(--surface-3))',
+				hairline: 'hsl(var(--hairline-rgb))',
+				'text-primary': 'hsl(var(--text-primary))',
+				'text-secondary': 'hsl(var(--text-secondary))',
+				'text-tertiary': 'hsl(var(--text-tertiary))',
+				success: 'hsl(var(--ai-success))',
+				amber: 'hsl(var(--ai-amber))',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

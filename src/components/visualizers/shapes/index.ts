@@ -18,6 +18,26 @@ export { RadialSpokesShape } from './RadialSpokesShape';
 export { FractalTreeShape } from './FractalTreeShape';
 export { CubeLatticeShape } from './CubeLatticeShape';
 export { KaleidoscopeShape } from './KaleidoscopeShape';
+export { SphereGridShape } from './SphereGridShape';
+export { DnaLadderShape } from './DnaLadderShape';
+export { MobiusStripShape } from './MobiusStripShape';
+export { Supershape3DShape } from './Supershape3DShape';
+export { KleinBottleShape } from './KleinBottleShape';
+export { SpringCoilShape } from './SpringCoilShape';
+export { StarBurstShape } from './StarBurstShape';
+export { CylinderStackShape } from './CylinderStackShape';
+export { PyramidArrayShape } from './PyramidArrayShape';
+export { RingSystemShape } from './RingSystemShape';
+export { ParticleGalaxyShape } from './ParticleGalaxyShape';
+export { HoneycombShape } from './HoneycombShape';
+export { CrystalClusterShape } from './CrystalClusterShape';
+export { Flower3DShape } from './Flower3DShape';
+export { SphereSwarmShape } from './SphereSwarmShape';
+export { FibonacciSphereShape } from './FibonacciSphereShape';
+export { TerrainMeshShape } from './TerrainMeshShape';
+export { LissajousShape } from './LissajousShape';
+export { GyroidShape } from './GyroidShape';
+export { TubeLatticeShape } from './TubeLatticeShape';
 
 // Re-export shared utilities
 export { NEUTRAL_SOLID, NEUTRAL_WIREFRAME, NEUTRAL_EMISSIVE } from './ShapeBase';
@@ -43,6 +63,26 @@ import { RadialSpokesShape } from './RadialSpokesShape';
 import { FractalTreeShape } from './FractalTreeShape';
 import { CubeLatticeShape } from './CubeLatticeShape';
 import { KaleidoscopeShape } from './KaleidoscopeShape';
+import { SphereGridShape } from './SphereGridShape';
+import { DnaLadderShape } from './DnaLadderShape';
+import { MobiusStripShape } from './MobiusStripShape';
+import { Supershape3DShape } from './Supershape3DShape';
+import { KleinBottleShape } from './KleinBottleShape';
+import { SpringCoilShape } from './SpringCoilShape';
+import { StarBurstShape } from './StarBurstShape';
+import { CylinderStackShape } from './CylinderStackShape';
+import { PyramidArrayShape } from './PyramidArrayShape';
+import { RingSystemShape } from './RingSystemShape';
+import { ParticleGalaxyShape } from './ParticleGalaxyShape';
+import { HoneycombShape } from './HoneycombShape';
+import { CrystalClusterShape } from './CrystalClusterShape';
+import { Flower3DShape } from './Flower3DShape';
+import { SphereSwarmShape } from './SphereSwarmShape';
+import { FibonacciSphereShape } from './FibonacciSphereShape';
+import { TerrainMeshShape } from './TerrainMeshShape';
+import { LissajousShape } from './LissajousShape';
+import { GyroidShape } from './GyroidShape';
+import { TubeLatticeShape } from './TubeLatticeShape';
 
 export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   lattice: LatticeShape,
@@ -60,4 +100,24 @@ export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   fractal_tree: FractalTreeShape,
   cube_lattice: CubeLatticeShape,
   kaleidoscope: KaleidoscopeShape,
+  sphere_grid: SphereGridShape,
+  dna_ladder: DnaLadderShape,
+  mobius_strip: MobiusStripShape,
+  supershape_3d: Supershape3DShape,
+  klein_bottle: KleinBottleShape,
+  spring_coil: SpringCoilShape,
+  star_burst: StarBurstShape,
+  cylinder_stack: CylinderStackShape,
+  pyramid_array: PyramidArrayShape,
+  ring_system: RingSystemShape,
+  particle_galaxy: ParticleGalaxyShape,
+  honeycomb: HoneycombShape,
+  crystal_cluster: CrystalClusterShape,
+  flower_3d: Flower3DShape,
+  sphere_swarm: SphereSwarmShape,
+  fibonacci_sphere: FibonacciSphereShape,
+  terrain_mesh: TerrainMeshShape,
+  lissajous_curve: LissajousShape,
+  gyroid_surface: GyroidShape,
+  tube_lattice: TubeLatticeShape,
 };

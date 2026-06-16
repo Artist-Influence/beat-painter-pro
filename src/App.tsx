@@ -7,13 +7,15 @@ import Studio from "./pages/Studio";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import RequireAuth from "@/components/auth/RequireAuth";
+import RequireAdmin from "@/components/auth/RequireAdmin";
+import { AmbientFX } from "@/components/AmbientFX";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <AmbientFX />
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -23,9 +25,9 @@ const App = () => (
           <Route
             path="/admin"
             element={
-              <RequireAuth>
+              <RequireAdmin>
                 <Admin />
-              </RequireAuth>
+              </RequireAdmin>
             }
           />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

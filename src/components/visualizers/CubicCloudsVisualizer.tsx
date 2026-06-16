@@ -261,7 +261,7 @@ function OrbitingCubesVisualizer({ audioData }: any) {
         />
       </mesh>
       <Sparkles
-        count={(smoothedHighs.current > 0.02 || smoothedBass.current > 0.02) ? Math.round(5 + smoothedHighs.current * 15 + smoothedBass.current * 10) : 0}
+        count={30}
         scale={[0.8, 0.8, 0.8]}
         size={0.8 + smoothedHighs.current * 1.5 + smoothedBass.current * 1}
         speed={(smoothedHighs.current > 0.02 || smoothedBass.current > 0.02) ? (0.6 + smoothedHighs.current * 1.2 + smoothedBass.current * 1) : 0}

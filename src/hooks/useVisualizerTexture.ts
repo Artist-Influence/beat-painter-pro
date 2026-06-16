@@ -121,15 +121,29 @@ export const createVisualizerMaterial = (
         transparent: options.transparent ?? false,
       });
 
-  // Apply texture if available
+  // Apply texture if available.
+  // IMPORTANT: when a style texture is applied we normalize the look so EVERY
+  // visualizer skins consistently (the texture is the colored content). Without
+  // this, per-visualizer emissiveIntensity (0.3-4.0) made some glow far brighter
+  // than others. Drive color from the texture (white base) at a fixed intensity.
   if (effectiveTextureData.texture) {
-    if (!options.basic && options.wireframe) {
-      // For wireframe materials, we'll use emissive map to show texture
-      (material as any).emissiveMap = effectiveTextureData.texture;
-      (material as any).emissiveIntensity = Math.max(options.emissiveIntensity || 0.3, 0.8);
+    const tex = effectiveTextureData.texture;
+    const white = new THREE.Color('#ffffff');
+    material.color = white;
+    if (options.basic) {
+      // lighting-independent: the map already reads at full, consistent brightness
+      (material as any).map = tex;
+    } else if (options.wireframe) {
+      (material as any).emissive = white;
+      (material as any).emissiveMap = tex;
+      (material as any).emissiveIntensity = 0.85;
     } else {
-      (material as any).map = effectiveTextureData.texture;
-      if (!options.basic) (material as any).emissiveMap = effectiveTextureData.texture;
+      (material as any).map = tex;
+      (material as any).emissive = white;
+      (material as any).emissiveMap = tex;
+      (material as any).emissiveIntensity = 0.5;   // normalized across all visualizers
+      (material as any).metalness = 0.1;
+      (material as any).roughness = 0.85;
     }
     material.needsUpdate = true;
   }

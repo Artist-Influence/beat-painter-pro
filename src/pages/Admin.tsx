@@ -12,7 +12,8 @@ import { useEngagementTracker } from "@/hooks/useEngagementTracker";
 
 const Admin: React.FC = () => {
   useEngagementTracker();
-  const { data, isLoading } = useQuery({
+  const [search, setSearch] = React.useState("");
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: async () => {
       const [profilesRes, sessionsRes, eventsRes] = await Promise.all([
@@ -20,6 +21,10 @@ const Admin: React.FC = () => {
         supabase.from("user_sessions").select("user_id,started_at,duration_seconds"),
         supabase.from("visualizer_events").select("user_id"),
       ]);
+
+      // Surface failures instead of silently rendering zeros (e.g. RLS/network).
+      const firstErr = profilesRes.error || sessionsRes.error || eventsRes.error;
+      if (firstErr) throw new Error(firstErr.message || "Failed to load admin data");
 
       const profiles = profilesRes.data ?? [];
       const sessions = sessionsRes.data ?? [];
@@ -87,7 +92,8 @@ const Admin: React.FC = () => {
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
         <nav className="flex items-center gap-2">
-          <Input placeholder="Search users…" className="w-44 md:w-72" aria-label="Search admin" />
+          <Input placeholder="Search users by email…" className="w-44 md:w-72" aria-label="Search users"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
           <Button variant="ghost" onClick={handleSignOut}>Sign out</Button>
           <Link to="/">
             <Button variant="secondary">Back to Studio</Button>
@@ -98,11 +104,13 @@ const Admin: React.FC = () => {
       <main className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {isLoading ? (
           <p>Loading…</p>
+        ) : error ? (
+          <p className="text-destructive">Couldn’t load dashboard data: {(error as Error).message}. Check your access / connection and retry.</p>
         ) : data ? (
           <>
             <UserStatsGrid stats={data.stats} />
             <WeeklySessionsChart data={data.weekly} />
-            <UsersTable users={data.users} />
+            <UsersTable users={data.users.filter((u) => (u.email ?? "").toLowerCase().includes(search.trim().toLowerCase()))} />
           </>
         ) : (
           <p>No data</p>

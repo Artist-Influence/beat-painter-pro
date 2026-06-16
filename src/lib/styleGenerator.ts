@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { renderStyleTexture, STYLE_PALETTES } from "@/lib/textureEngine";
 
 // Extract dominant colors from an uploaded image
 export async function extractColorsFromImage(imageUrl: string): Promise<{
@@ -119,65 +119,23 @@ const STYLE_DESCRIPTORS: Record<string, string> = {
   "Sunburst Rays": "radiating sunburst beams, light rays from center, starburst pattern",
 };
 
+// Fully internal style-texture generation (no external API). Renders a pattern
+// that MATCHES the selected style names (grid, shards, marble, voronoi, ...),
+// not just a gradient. See textureEngine.categorize for the mapping.
 export async function generateStyleTexture(styles: string[], seed: number = 0): Promise<{ textureUrl: string; colors: string[] }>
 {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return { textureUrl: "", colors: [] };
-
-  // Deterministic hues and gradient based on styles + seed
-  const styleHues = styles.map((s, i) => (Math.abs(hashCode(s)) + i * 47 + seed * 29) % 360);
-  const gradient = ctx.createLinearGradient(0, 0, size, size);
-  styleHues.forEach((h, i) => {
-    const stop = i / Math.max(1, styleHues.length - 1);
-    gradient.addColorStop(stop, `hsl(${h} 70% 55%)`);
-  });
-
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-
-  // Seeded noise for texture variation
-  const rng = mulberry32(hashArray([...styles, String(seed)]));
-  const imgData = ctx.getImageData(0, 0, size, size);
-  for (let i = 0; i < imgData.data.length; i += 4) {
-    const n = (rng() - 0.5) * 10;
-    imgData.data[i] = clamp(imgData.data[i] + n, 0, 255);
-    imgData.data[i + 1] = clamp(imgData.data[i + 1] + n, 0, 255);
-    imgData.data[i + 2] = clamp(imgData.data[i + 2] + n, 0, 255);
-  }
-  ctx.putImageData(imgData, 0, 0);
-
-  // Procedural result as default
-  let textureUrl = canvas.toDataURL("image/png");
-  const colors = getStyleColors(styles);
-
-  try {
-    const descriptorText = styles.map((s) => STYLE_DESCRIPTORS[s] ?? s).join(" blending into ");
-    const colorHints = getStyleColors(styles).join(", ");
-    const prompt = `Abstract artistic background, ${descriptorText}, smooth gradients merging together, atmospheric depth, cinematic lighting, ultra high quality, 8K resolution, color palette: ${colorHints}, full frame composition, no borders, no text, no logos, no objects, no people`;
-    const negativePrompt = "tiles, tiled pattern, grid, seams, collage, patchwork, separate sections, split image, mosaic, repeated pattern, text, logo, watermark, person, face, object, photograph, realistic";
-    const { data, error } = await supabase.functions.invoke("generate-image", {
-      body: { prompt, negativePrompt, seed },
-    });
-
-    if (!error && data && typeof (data as any).image === "string" && (data as any).image.startsWith("data:image")) {
-      textureUrl = (data as any).image as string;
-    } else {
-      // eslint-disable-next-line no-console
-      console.warn("HF generation unavailable, using procedural texture.", error);
-    }
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn("HF generation error, using procedural texture.", error);
-  }
-
-  return { textureUrl, colors };
+  const textureUrl = renderStyleTexture(styles, seed, 512);
+  return { textureUrl, colors: getStyleColors(styles) };
 }
 
 export function getStyleColors(styles: string[]): string[] {
+  // Prefer the curated per-style palette (hero colours) so the extracted
+  // primary/secondary/accent the visualizers use actually match the style.
+  const named = styles.map((s) => STYLE_PALETTES[s]).filter(Boolean) as string[][];
+  if (named.length) {
+    const merged = Array.from(new Set(named.flat()));
+    return merged.slice(0, 3);
+  }
   const styleHues = styles.map((s, i) => (Math.abs(hashCode(s)) + i * 47) % 360);
   return styleHues.slice(0, 3).map((h, idx) => `hsl(${h} 70% ${idx === 0 ? 60 : idx === 1 ? 50 : 70}%)`);
 }

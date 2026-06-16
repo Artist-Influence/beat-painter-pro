@@ -370,7 +370,7 @@ function GlassSphereVisualizer({ audioData }: any) {
         <sphereGeometry args={[0.15, 32, 32]} />
       </mesh>
       <Sparkles
-        count={Math.round(8 + smoothedHighs.current * 25 + smoothedBass.current * 15)}
+        count={48}
         scale={[1.2, 1.2, 1.2]}
         size={1.2 + smoothedHighs.current * 2.5 + smoothedBass.current * 1.5}
         speed={1.0 + smoothedHighs.current * 2.0 + smoothedBass.current * 1.5}

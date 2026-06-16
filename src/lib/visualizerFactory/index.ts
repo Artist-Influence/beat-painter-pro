@@ -33,27 +33,28 @@ function generateShapeParams(shape: ShapeFamily, rng: RNG): ShapeParams {
   // Element count within family's range
   const elementCount = rng.int(config.elementRange[0], config.elementRange[1]);
   
-  // Cap for performance in preview
-  const cappedElementCount = Math.min(elementCount, 150);
-  
-  // Scale variation
-  const scale = rng.float(0.8, 1.2);
-  
+  // Cap for performance in preview (raised from 150 so particle/grid shapes read
+  // far denser and more varied; still bounded for production smoothness).
+  const cappedElementCount = Math.min(elementCount, 360);
+
+  // Scale variation (wider for more size variety roll-to-roll)
+  const scale = rng.float(0.5, 2.0);
+
   // Wireframe decision (only if supported)
-  const useWireframe = config.supportsWireframe && rng.bool(0.3);
-  
+  const useWireframe = config.supportsWireframe && rng.bool(0.35);
+
   // Detail level (affects geometry segments)
-  const segmentDetail = rng.int(16, 48);
-  
-  // Noise parameters
-  const noiseStrength = rng.float(0.02, 0.35);
-  const noiseScale = rng.float(0.5, 2.0);
-  
-  // Aspect ratio variation (subtle)
+  const segmentDetail = rng.int(12, 56);
+
+  // Noise parameters (wider so forms vary from smooth to gnarled)
+  const noiseStrength = rng.float(0.02, 0.6);
+  const noiseScale = rng.float(0.4, 3.0);
+
+  // Aspect ratio variation (can stretch noticeably)
   const aspectRatio: [number, number, number] = [
-    rng.float(0.85, 1.15),
-    rng.float(0.85, 1.15),
-    rng.float(0.85, 1.15),
+    rng.float(0.65, 1.4),
+    rng.float(0.65, 1.4),
+    rng.float(0.65, 1.4),
   ];
   
   return {
@@ -74,10 +75,10 @@ function generateLayoutParams(layout: LayoutFormation, rng: RNG): LayoutParams {
   const config = getLayoutConfig(layout);
   
   const radius = rng.float(config.radiusRange[0], config.radiusRange[1]);
-  const spread = rng.float(0.6, 1.4);
-  const offsetY = rng.float(-0.5, 0.5);
+  const spread = rng.float(0.4, 1.9);
+  const offsetY = rng.float(-0.7, 0.7);
   const rotationOffset = rng.float(0, Math.PI * 2);
-  const density = rng.float(0.3, 0.9);
+  const density = rng.float(0.2, 1.0);
   
   return {
     radius,

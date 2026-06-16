@@ -1,8 +1,9 @@
 export interface VisualizerProps {
   audioData: {
-    frequency: number[]; // 256 values preferred
-    amplitude: number;   // 0-1
-    beatStrength: number; // 0-1
+    frequency: number[]; // transient-boosted + adaptive spectrum (band-average visualizers)
+    frequencyRaw?: number[]; // lightly-smoothed raw spectrum (createBandProcessor / spectrum displays)
+    amplitude: number;   // 0-~1.7 adaptive level
+    beatStrength: number; // 0-~1.9 sharp drum onset
   };
   isPlaying?: boolean; // true when audio is playing, false when paused
   styleAdjustments?: {

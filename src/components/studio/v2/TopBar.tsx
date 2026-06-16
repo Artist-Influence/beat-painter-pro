@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Mic2, Film, Image, Square, RectangleVertical, RectangleHorizontal } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Mic2, Film, Image, Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useStudioStore, AspectRatio } from '@/stores/studioStore';
-import { useWebMRecorder, ExportQuality } from '@/hooks/useWebMRecorder';
+import { useStudioStore, AspectRatio, ExportQuality } from '@/stores/studioStore';
+import { useWebMRecorder } from '@/hooks/useWebMRecorder';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface TopBarProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -36,10 +37,10 @@ const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
 
 export function TopBar({ canvasRef }: TopBarProps) {
   const studioState = useStudioStore();
-  const { audioElement, background, logo, exportMode, selected, audioFileName, exportAspectRatio, setExportAspectRatio } = studioState;
+  const { audioElement, background, logo, exportMode, selected, audioFileName, exportAspectRatio, setExportAspectRatio, setReactionWizardOpen, exportQuality, setExportQuality } = studioState;
   const recorder = useWebMRecorder({ canvasRef, audioElement });
-  const { isRecording, startRecording, stopRecording, frameCount } = recorder;
-  const [exportQuality, setExportQuality] = useState<ExportQuality>('4k');
+  const { isRecording, startRecording, stopRecording, frameCount, progress } = recorder;
+  const { isAdmin } = useUserRole();
 
   const handleRecord = () => {
     if (isRecording) {
@@ -52,85 +53,119 @@ export function TopBar({ canvasRef }: TopBarProps) {
     }
   };
 
+  // The Reaction Reel wizard's "Export reel" button drives the same record path.
+  const recordRef = useRef(handleRecord);
+  recordRef.current = handleRecord;
+  useEffect(() => {
+    const h = () => recordRef.current();
+    window.addEventListener('reaction-reel:export', h);
+    return () => window.removeEventListener('reaction-reel:export', h);
+  }, []);
+
   return (
     <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex items-center justify-between p-4">
-        {/* Logo - Left */}
-        <div className="pointer-events-auto">
-          <div className="flex items-center gap-3 px-4 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 shadow-lg shadow-black/20">
-            <Mic2 className="w-5 h-5 text-white" />
-            <span className="text-sm font-medium text-white">Audio Visual Studio</span>
+      <div className="flex items-center justify-between gap-2 p-2 sm:p-4">
+        {/* Logo + Reaction Reel launcher - Left */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex items-center gap-3 px-3 sm:px-4 py-2 glass-panel !rounded-full">
+            <Mic2 className="w-5 h-5 text-ai-red shrink-0" />
+            <div className="hidden sm:flex flex-col leading-none">
+              <span className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-ai-red">artist influence</span>
+              <span className="text-sm font-semibold text-text-primary">Visualizer Studio</span>
+            </div>
           </div>
+          <button
+            onClick={() => setReactionWizardOpen(true)}
+            title="Make a reaction reel — guided"
+            className="flex items-center gap-2 px-4 h-11 glass-panel glass-panel-interactive !rounded-full text-sm font-semibold text-text-primary hover:text-ai-red transition-colors"
+          >
+            <Clapperboard className="w-4 h-4 text-ai-red" />
+            <span className="hidden md:inline">Reaction Reel</span>
+          </button>
         </div>
 
         {/* Record Controls - Center */}
-        <div className="pointer-events-auto flex items-center gap-3">
+        <div className="pointer-events-auto flex items-center gap-2">
           {/* Aspect ratio selector */}
-          <div className="flex items-center gap-1 px-2 py-1.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
+          <div className="flex items-center gap-1 px-1.5 py-1 glass-panel !rounded-full">
             {(['horizontal', 'vertical', 'square'] as AspectRatio[]).map((ratio) => (
               <button
                 key={ratio}
                 onClick={() => !isRecording && setExportAspectRatio(ratio)}
                 disabled={isRecording}
-                className={`p-1.5 rounded-full transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-colors ${
                   exportAspectRatio === ratio
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/50 hover:text-white/80'
+                    ? 'bg-ai-red/[0.12] text-ai-red'
+                    : 'text-text-tertiary hover:text-text-primary'
                 } ${isRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={ASPECT_RATIO_LABELS[ratio]}
               >
                 {ASPECT_RATIO_ICONS[ratio]}
+                <span className="font-mono-num text-[0.7rem] hidden sm:inline">{ASPECT_RATIO_LABELS[ratio]}</span>
               </button>
             ))}
           </div>
-          
+
           {/* Quality selector */}
           <select
             value={exportQuality}
             onChange={(e) => setExportQuality(e.target.value as ExportQuality)}
-            className="px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 text-white/70 text-xs appearance-none cursor-pointer"
+            className="hidden sm:block px-3 py-2.5 glass-panel !rounded-full text-text-tertiary text-xs font-mono-num appearance-none cursor-pointer hover:text-text-primary transition-colors"
             disabled={isRecording}
           >
-            <option value="1080p">1080p</option>
+            <option value="1080p">1080P</option>
             <option value="4k">4K</option>
             <option value="8k">8K</option>
           </select>
-          
+
           {/* Mode indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 glass-panel !rounded-full">
             {exportMode === 'video' ? (
-              <Film className="w-4 h-4 text-white/70" />
+              <Film className="w-4 h-4 text-text-tertiary" />
             ) : (
-              <Image className="w-4 h-4 text-white/70" />
+              <Image className="w-4 h-4 text-text-tertiary" />
             )}
-            <span className="text-white/70 text-xs">
-              {exportMode === 'video' ? 'WebM' : 'PNG'}
+            <span className="text-text-tertiary text-xs font-mono-num">
+              {exportMode === 'video' ? 'WEBM' : 'PNG'}
             </span>
           </div>
-          
-          {/* Record button */}
-          <button 
+
+          {/* Record button — disabled until audio is loaded so you set up and TEST the
+              composition first; export only becomes available once there's a song.
+              While exporting it shows live progress and a fill bar. */}
+          <button
             onClick={handleRecord}
-            className={`px-8 py-3 backdrop-blur-xl rounded-full text-white font-bold transition-all transform hover:scale-105 shadow-lg ${
-              isRecording 
-                ? 'bg-red-600/90 hover:bg-red-500 shadow-red-600/50 animate-pulse' 
-                : 'bg-red-600/70 hover:bg-red-600/90 shadow-red-600/30'
-            }`}
+            disabled={!isRecording && !audioElement}
+            title={!audioElement ? 'Upload audio first — set up and preview your visualizer, then export' : (isRecording ? 'Stop & save the export' : 'Export your video')}
+            className={`btn relative overflow-hidden !rounded-full px-4 sm:px-7 h-11 font-semibold tracking-wide ${
+              isRecording
+                ? 'bg-ai-red text-white shadow-glow-hover'
+                : 'btn-primary'
+            } ${!isRecording && !audioElement ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
-            {isRecording 
-              ? (exportMode === 'png-sequence' ? `STOP (${frameCount})` : 'STOP')
-              : (exportMode === 'png-sequence' ? 'REC FRAMES' : 'REC')
-            }
+            {/* progress fill (video export) */}
+            {isRecording && exportMode === 'video' && (
+              <span className="absolute inset-y-0 left-0 bg-white/25 transition-[width] duration-200" style={{ width: `${Math.round(progress * 100)}%` }} />
+            )}
+            <span className="relative flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full bg-white ${isRecording ? 'animate-pulse' : ''}`} />
+              {isRecording
+                ? (exportMode === 'png-sequence' ? `STOP · ${frameCount}` : `EXPORTING · ${Math.round(progress * 100)}%`)
+                : (exportMode === 'png-sequence' ? 'REC FRAMES' : 'EXPORT')
+              }
+            </span>
           </button>
         </div>
 
-        {/* User Menu - Right */}
-        <div className="pointer-events-auto">
-          <Link to="/admin">
-            <button className="px-4 py-2 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 text-white/80 hover:text-white transition-colors shadow-lg shadow-black/20">
-              Admin
-            </button>
-          </Link>
+        {/* User Menu - Right — Admin entry only shown to actual admins */}
+        <div className="hidden sm:block pointer-events-auto">
+          {isAdmin && (
+            <Link to="/admin">
+              <button className="btn btn-ghost !rounded-full h-10 px-4 text-text-tertiary">
+                Admin
+              </button>
+            </Link>
+          )}
         </div>
       </div>
     </div>

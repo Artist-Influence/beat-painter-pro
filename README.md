@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# Beat Painter Pro — Artist Influence Visualizer Studio
 
-## Project info
+A browser-based, audio-reactive visualizer studio. Load a track, pick or tune a 3D/particle
+visualizer, and render it out (9:16, 1:1, 16:9) for Reels, TikTok and Shorts.
 
-**URL**: https://lovable.dev/projects/a3354fa7-1803-409a-98c9-94315c35d6f5
+The app chrome follows the **Artist Influence design system** (dark glass-morphism, one electric
+red `#ED1C24`, Clash Display / Inter / JetBrains Mono). The visualizer canvas output is the
+artist's creative content and is exempt from the red discipline — scenes can use any palette.
 
-## How can I edit this code?
+## Tech
 
-There are several ways of editing your application.
+- Vite + React + TypeScript
+- React Three Fiber / Three.js (visualizer engine)
+- Tailwind CSS + shadcn-ui (chrome)
+- Zustand (studio state)
+- Supabase (auth, saved custom visualizers, edge functions)
+- Sucrase (runtime compile of AI-generated visualizers)
 
-**Use Lovable**
+## Local development
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a3354fa7-1803-409a-98c9-94315c35d6f5) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires [Bun](https://bun.sh).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+bun install
+bun run dev        # serves on http://localhost:8099
 ```
 
-**Edit a file directly in GitHub**
+Other scripts: `bun run build`, `bun run build:dev`, `bun run preview`, `bun run lint`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Git
 
-**Use GitHub Codespaces**
+This repo is the working copy, decoupled from Lovable. It tracks
+`https://github.com/Artist-Influence/beat-painter-pro` (`main`). Push directly to GitHub.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Environment
 
-## What technologies are used for this project?
+Supabase config lives in `.env` (`VITE_SUPABASE_*`). The studio runs without auth; auth gates the
+admin dashboard and persistence of custom visualizers.
 
-This project is built with:
+## Layout
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/a3354fa7-1803-409a-98c9-94315c35d6f5) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- `src/pages/Studio.tsx` — the studio (default route `/`)
+- `src/components/studio/v2/` — studio chrome (top bar, rails, transport, panels)
+- `src/components/visualizers/` — built-in visualizers + reusable shape families (`shapes/`)
+- `src/components/visualizer/` — canvas, dynamic loader, export compositor
+- `src/lib/visualizerFactory/` — procedural / randomized visualizer generation
+- `src/hooks/useWebMRecorder.ts` — WebM / PNG-sequence export
+- `src/index.css` — the Artist Influence design system (tokens, glass, eyebrow, buttons, sliders)

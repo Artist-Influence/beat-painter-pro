@@ -253,7 +253,7 @@ function CrackedCrystalOrb({ audioData }: any) {
         </mesh>
       ))}
       <Sparkles
-        count={(smoothedHighs.current > 0.02 || smoothedBeat.current > 0.02) ? Math.round(8 + smoothedHighs.current * 20) : 0}
+        count={28}
         scale={[1, 1, 1]}
         size={1 + smoothedHighs.current * 3 + smoothedBeat.current * 2}
         speed={(smoothedHighs.current > 0.02 || smoothedBeat.current > 0.02) ? (0.4 + smoothedHighs.current * 1 + smoothedBeat.current * 1.5) : 0}
