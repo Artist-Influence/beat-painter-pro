@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Mic2, Film, Image, Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useStudioStore, AspectRatio, ExportQuality } from '@/stores/studioStore';
 import { useWebMRecorder } from '@/hooks/useWebMRecorder';
 import { useUserRole } from '@/hooks/useUserRole';
+import { getExportQuota, recordExport, formatResetIn, EXPORT_LIMIT } from '@/lib/exportLimiter';
 
 interface TopBarProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -45,12 +47,19 @@ export function TopBar({ canvasRef }: TopBarProps) {
   const handleRecord = () => {
     if (isRecording) {
       stopRecording();
-    } else {
-      const currentTime = audioElement?.currentTime || 0;
-      const songName = getSongName(audioFileName);
-      const vizName = formatVisualizerName(selected);
-      startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode, exportAspectRatio);
+      return;
     }
+    // Throttle: at most EXPORT_LIMIT exports per rolling 12h (client-side soft limit).
+    const quota = getExportQuota();
+    if (!quota.allowed) {
+      toast.error(`Export limit reached (${EXPORT_LIMIT} per 12h). Try again in ${formatResetIn(quota.resetMs)}.`);
+      return;
+    }
+    recordExport();
+    const currentTime = audioElement?.currentTime || 0;
+    const songName = getSongName(audioFileName);
+    const vizName = formatVisualizerName(selected);
+    startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode, exportAspectRatio);
   };
 
   // The Reaction Reel wizard's "Export reel" button drives the same record path.
@@ -136,7 +145,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
           <button
             onClick={handleRecord}
             disabled={!isRecording && !audioElement}
-            title={!audioElement ? 'Upload audio first — set up and preview your visualizer, then export' : (isRecording ? 'Stop & save the export' : 'Export your video')}
+            title={!audioElement ? 'Upload audio first — set up and preview your visualizer, then export' : (isRecording ? 'Stop & save the export' : `Export your video — ${getExportQuota().remaining}/${EXPORT_LIMIT} exports left (per 12h)`)}
             className={`btn relative overflow-hidden !rounded-full px-4 sm:px-7 h-11 font-semibold tracking-wide ${
               isRecording
                 ? 'bg-ai-red text-white shadow-glow-hover'
