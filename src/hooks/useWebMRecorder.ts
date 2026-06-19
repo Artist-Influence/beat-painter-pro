@@ -97,6 +97,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const logoRef = useRef<LogoState | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
+  // "Export visualizer only": skip the background entirely so the clip is just the
+  // visualizer on black (MP4) / alpha (PNG seq) - drop it into an editor over your
+  // own footage. Honours the Export segment (timestamps) just like a normal export.
+  const vizOnlyRef = useRef(false);
   const pngFramesRef = useRef<Blob[]>([]);
 
   const songNameRef = useRef<string>('Untitled');
@@ -113,7 +117,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     quality: ExportQuality = '4k',
     logo?: LogoState,
     exportMode: ExportMode = 'video',
-    aspectRatio: AspectRatio = 'horizontal'
+    aspectRatio: AspectRatio = 'horizontal',
+    vizOnly = false
   ) => {
     // Validate canvas
     if (!canvasRef.current) {
@@ -161,6 +166,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       logoRef.current = logo || null;
       backgroundRef.current = background;
       exportModeRef.current = exportMode;
+      vizOnlyRef.current = vizOnly;
       songNameRef.current = songName || 'Untitled';
       visualizerNameRef.current = visualizerName || 'Visualizer';
       pngFramesRef.current = [];
@@ -426,8 +432,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const bg = backgroundRef.current;
         const logo = logoRef.current;
 
-        // Draw background first (transparent + png-sequence keep alpha)
-        if (exportModeRef.current === 'png-sequence' || bg?.type === 'transparent') {
+        // Draw background first (transparent + png-sequence + viz-only keep alpha;
+        // viz-only deliberately ignores whatever background is set so you get a
+        // clean visualizer pass - black in MP4, true alpha in a PNG sequence)
+        if (vizOnlyRef.current || exportModeRef.current === 'png-sequence' || bg?.type === 'transparent') {
           ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
         } else if (bg?.type === 'video' && backgroundVideoRef.current) {
           // Song-master sync: keep the reaction video aligned to the audio playhead

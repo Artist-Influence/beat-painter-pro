@@ -156,6 +156,7 @@ interface StudioState {
   setBackgroundColor: (c: string) => void;
   setBackgroundGradient: (config: GradientConfig, url: string) => void;
   setBackgroundTransparent: () => void;
+  setBackground: (bg: BackgroundState) => void;   // generic - used to save/restore around viz-only export
   setBackgroundMedia: (url: string, type: BackgroundMediaType) => void;
   setBackgroundPositionY: (y: number) => void;
   clearBackgroundMedia: () => void;
@@ -277,6 +278,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   setBackgroundTransparent: () => set((state) => ({
     background: { ...state.background, type: 'transparent' },
   })),
+  setBackground: (bg) => set({ background: bg }),
   setBackgroundMedia: (url, type) => set((state) => {
     // Release the previous clip's blob URL when replacing it (large video files leaked).
     const prev = state.background.mediaUrl;

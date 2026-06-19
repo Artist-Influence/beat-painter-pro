@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
+import { Square, RectangleVertical, RectangleHorizontal, Clapperboard, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useStudioStore, AspectRatio, ExportQuality } from '@/stores/studioStore';
@@ -40,7 +40,7 @@ const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
 
 export function TopBar({ canvasRef }: TopBarProps) {
   const studioState = useStudioStore();
-  const { audioElement, background, logo, exportMode, selected, audioFileName, exportAspectRatio, setExportAspectRatio, setReactionWizardOpen, exportQuality, setExportQuality } = studioState;
+  const { audioElement, background, logo, exportMode, selected, audioFileName, exportAspectRatio, setExportAspectRatio, setReactionWizardOpen, exportQuality, setExportQuality, setBackgroundTransparent, setBackground } = studioState;
   const recorder = useWebMRecorder({ canvasRef, audioElement });
   const { isRecording, startRecording, stopRecording, frameCount, progress } = recorder;
   const { isAdmin } = useUserRole();
@@ -63,6 +63,44 @@ export function TopBar({ canvasRef }: TopBarProps) {
     const vizName = formatVisualizerName(selected);
     startRecording(currentTime, background, songName, vizName, exportQuality, logo, exportMode, exportAspectRatio);
   };
+
+  // "Export visualizer only": same export path, but the background is dropped so the
+  // clip is just the visualizer (on black for MP4, true alpha for a PNG sequence).
+  // Honours the Export segment, so it's the full song or your selected timestamps.
+  // A solid-colour background is baked into the canvas clear colour, so we flip the
+  // background to transparent for the capture and restore it when the export ends.
+  const vizOnlyActiveRef = useRef(false);
+  const savedBgRef = useRef<typeof background | null>(null);
+  const handleRecordVizOnly = () => {
+    if (isRecording) { stopRecording(); return; }
+    const quota = getExportQuota();
+    if (!quota.allowed) {
+      toast.error(`Export limit reached (${EXPORT_LIMIT} per 12h). Try again in ${formatResetIn(quota.resetMs)}.`);
+      return;
+    }
+    recordExport();
+    const currentTime = audioElement?.currentTime || 0;
+    const songName = getSongName(audioFileName);
+    const vizName = formatVisualizerName(selected);
+    savedBgRef.current = useStudioStore.getState().background;
+    vizOnlyActiveRef.current = true;
+    setBackgroundTransparent();
+    // let the renderer adopt the transparent clear colour before we start capturing
+    setTimeout(() => {
+      startRecording(currentTime, useStudioStore.getState().background, songName, `${vizName} (viz only)`, exportQuality, logo, exportMode, exportAspectRatio, true);
+    }, 140);
+  };
+
+  // Restore the saved background once the viz-only export finishes (isRecording falls).
+  useEffect(() => {
+    if (!isRecording && vizOnlyActiveRef.current && savedBgRef.current) {
+      // small delay so the last frame is captured before the bg pops back in the preview
+      const bg = savedBgRef.current;
+      vizOnlyActiveRef.current = false;
+      savedBgRef.current = null;
+      setTimeout(() => setBackground(bg), 60);
+    }
+  }, [isRecording, setBackground]);
 
   // The Reaction Reel wizard's "Export reel" button drives the same record path.
   const recordRef = useRef(handleRecord);
@@ -128,6 +166,22 @@ export function TopBar({ canvasRef }: TopBarProps) {
             <option value="4k">4K</option>
             <option value="8k">8K</option>
           </select>
+
+          {/* Export visualizer only - clean visualizer pass (no background) for
+              dropping into an editor. Hidden while a normal export is running. */}
+          {!isRecording && (
+            <button
+              onClick={handleRecordVizOnly}
+              disabled={!audioElement}
+              title={!audioElement ? 'Upload audio first' : 'Export visualizer only - no background, on black (MP4) or alpha (PNG sequence). Uses your Export segment if set.'}
+              className={`btn btn-glass relative !rounded-full h-11 px-3 sm:px-4 font-semibold ${!audioElement ? 'opacity-40 cursor-not-allowed' : ''}`}
+            >
+              <span className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-ai-red" />
+                <span className="hidden lg:inline text-xs">Viz only</span>
+              </span>
+            </button>
+          )}
 
           {/* Record button - disabled until audio is loaded so you set up and TEST the
               composition first; export only becomes available once there's a song.
