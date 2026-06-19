@@ -68,7 +68,7 @@ export const AudioResponseControls: React.FC = () => {
 
       <div className="hairline my-4"></div>
 
-      {/* Universal colour — recolours any visualizer type */}
+      {/* Universal colour - recolours any visualizer type */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>

@@ -26,8 +26,8 @@ import { DAW_PRESETS, type DawConfig } from "@/lib/daw/dawEngine";
 
 // Sand3D (GPGPU particle sim) and DAW (waveform decode + FFT spectrogram) are the
 // two heaviest visualizers. We import only their PRESET DATA eagerly (the picker
-// needs it); the component modules — and therefore their GLSL shaders, FFT and
-// audio-decode code — load on demand via React.lazy, so they're tree-shaken into
+// needs it); the component modules - and therefore their GLSL shaders, FFT and
+// audio-decode code - load on demand via React.lazy, so they're tree-shaken into
 // a separate chunk and never parsed on a phone that only opens a light visualizer.
 const makeSand3DLazy = (preset: Sand3DConfig) =>
   lazy(async () => ({ default: (await import("./Sand3DVisualizer")).makeSand3DVisualizer(preset) }));

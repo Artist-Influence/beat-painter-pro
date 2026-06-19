@@ -50,7 +50,7 @@ export function ReactionReelWizard() {
   const stepDone = [hasSong, hasVideo, hasVideo, hasVideo, hasVideo];
 
   // On desktop, auto-open the most useful side panel for each step. On mobile the
-  // panels are bottom sheets that would cover the wizard, so we skip auto-open —
+  // panels are bottom sheets that would cover the wizard, so we skip auto-open -
   // the wizard's own inline controls (and explicit "Browse" buttons) drive the flow.
   useEffect(() => {
     if (isMobile) return;
@@ -77,7 +77,7 @@ export function ReactionReelWizard() {
     const audio = new Audio(URL.createObjectURL(file));
     audio.crossOrigin = 'anonymous';
     setAudioElement(audio, file.name);
-    toast.success('Song loaded — it drives the visualizer and your reel audio.');
+    toast.success('Song loaded - it drives the visualizer and your reel audio.');
   };
   const loadVideo = (file: File) => {
     if (!file.type.startsWith('video/')) {
@@ -164,7 +164,7 @@ export function ReactionReelWizard() {
                 </div>
               </div>
               <div className="space-y-1.5 pt-1">
-                <Status ok label="Visualizer" value={selected.replace(/Visualizer$/, '').replace(/([A-Z])/g, ' $1').trim() || '—'} />
+                <Status ok label="Visualizer" value={selected.replace(/Visualizer$/, '').replace(/([A-Z])/g, ' $1').trim() || '-'} />
                 <Status ok={hasSong} label="Song" value={hasSong ? (audioFileName ?? 'Loaded') : 'Not loaded'} />
               </div>
             </div>
@@ -183,7 +183,7 @@ export function ReactionReelWizard() {
                   <Check className="w-4 h-4 text-ai-red ml-auto" />
                 </div>
               )}
-              <p className="text-caption">MP4, WebM or MOV. Filmed yourself to the same song? Perfect — the next step lines it up.</p>
+              <p className="text-caption">MP4, WebM or MOV. Filmed yourself to the same song? Perfect - the next step lines it up.</p>
             </div>
           )}
 
@@ -230,7 +230,7 @@ export function ReactionReelWizard() {
                   <span className="text-sm text-text-secondary">Size</span>
                   <span className="text-xs text-text-tertiary font-mono-num">{composite.scale.toFixed(2)}x</span>
                 </div>
-                <input type="range" className="ai-range" min={0.2} max={2} step={0.01} title="Double-click to reset"
+                <input type="range" className="ai-range" min={0.05} max={4} step={0.01} title="Double-click to reset"
                   value={composite.scale} onChange={(e) => setComposite({ scale: parseFloat(e.target.value) })}
                   onDoubleClick={() => setComposite({ scale: 1 })} />
               </div>

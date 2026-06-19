@@ -151,7 +151,7 @@ export function UploadSection() {
         <button
           onClick={toggleTvFullscreen}
           className="btn btn-glass w-full h-10 mt-3 text-sm gap-2"
-          title="Fill the whole screen with just the visuals — ideal for a TV or screencast (Esc to exit)"
+          title="Fill the whole screen with just the visuals - ideal for a TV or screencast (Esc to exit)"
         >
           <Maximize2 className="w-4 h-4" />
           {isFullscreen ? 'Exit fullscreen' : 'Fullscreen for TV'}

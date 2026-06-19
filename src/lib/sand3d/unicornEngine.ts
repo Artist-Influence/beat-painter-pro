@@ -1,5 +1,5 @@
 /**
- * UR-6 "Unicorn Reactive" — 3D Sand.
+ * UR-6 "Unicorn Reactive" - 3D Sand.
  *
  * A 1:1 port of the UR-6 particle-synth visualizer (curl-noise GPU particle
  * flow with a continuously morphing shape attractor and feedback trails),
@@ -141,7 +141,7 @@ void main(){
 /* point render: samples sim textures, colours per UR-6 (twinkle + DoF + glow) */
 export const POINTS_VS = /* glsl */ `
 precision highp float;
-in vec3 position; // dummy attribute — sets the vertex (particle) count
+in vec3 position; // dummy attribute - sets the vertex (particle) count
 uniform sampler2D uPos;
 uniform sampler2D uVel;
 uniform sampler2D uSeed;

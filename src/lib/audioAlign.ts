@@ -4,7 +4,7 @@
 // background). We decode each at a low sample rate, build a coarse loudness envelope,
 // and cross-correlate the two to find the time offset where they best match. That
 // offset feeds reactionSync so the person's reactions line up with the audio-reactive
-// visualizer. It's an estimate — the user can nudge the offset slider to fine-tune.
+// visualizer. It's an estimate - the user can nudge the offset slider to fine-tune.
 
 const DECODE_HZ = 8000; // resample on decode → low memory, plenty for an envelope
 const ENV_HZ = 24;      // envelope bins per second

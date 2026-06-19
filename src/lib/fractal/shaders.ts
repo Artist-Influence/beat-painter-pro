@@ -1,7 +1,7 @@
 /**
  * GLSL for the fractal engine (WebGL1 / GLSL ES 1.0, the version three's
  * ShaderMaterial uses by default). Two fragment programs share one vertex
- * shader that draws a full-screen clip-space quad — it ignores the camera and
+ * shader that draws a full-screen clip-space quad - it ignores the camera and
  * any parent transform, so the fractal always fills the frame regardless of the
  * studio's zoom group or OrbitControls.
  */
@@ -40,7 +40,7 @@ vec3 pal(float t) {
 }
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
-// Hyperbolic helpers — not guaranteed built-in in GLSL ES 1.0.
+// Hyperbolic helpers - not guaranteed built-in in GLSL ES 1.0.
 float sinh_(float x) { return 0.5 * (exp(x) - exp(-x)); }
 float cosh_(float x) { return 0.5 * (exp(x) + exp(-x)); }
 `;
@@ -94,7 +94,7 @@ void main() {
 
   float iters = uIter * (1.0 + uTreble * uRIter * 1.0);
 
-  // Newton fractal — convergence to roots of z^3 - 1, coloured by basin + speed.
+  // Newton fractal - convergence to roots of z^3 - 1, coloured by basin + speed.
   if (uType == 6) {
     vec2 z6 = p;
     vec2 ra = vec2(1.0, 0.0);
@@ -577,7 +577,7 @@ float deJuliaBulb(vec3 p, float power) {
   return 0.5 * log(r) * r / dr;
 }
 
-// Pseudo-Kleinian (Knighty) — box fold + inversion against a sphere, IFS-like.
+// Pseudo-Kleinian (Knighty) - box fold + inversion against a sphere, IFS-like.
 float dePseudoKleinian(vec3 p) {
   vec3 off = mix(p, uJuliaC3, uJuliaMode);
   vec3 z = off;
@@ -607,7 +607,7 @@ float deSierpinskiOcta(vec3 z) {
   return length(z) * pow(scale, -float(12));
 }
 
-// Menger cross — Menger sponge variant with a cross-section twist.
+// Menger cross - Menger sponge variant with a cross-section twist.
 float deMengerCross(vec3 p) {
   p = mix(p, uJuliaC3, uJuliaMode);
   float d = max(abs(p.x), max(abs(p.y), abs(p.z))) - 1.3;
@@ -626,7 +626,7 @@ float deMengerCross(vec3 p) {
   return d;
 }
 
-// Jerusalem cube — recursive cross-shaped subtraction.
+// Jerusalem cube - recursive cross-shaped subtraction.
 float sdBox(vec3 p, vec3 b) {
   vec3 q = abs(p) - b;
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
@@ -664,7 +664,7 @@ float deAmazingBox(vec3 p, float scale) {
   return length(z) / abs(dr);
 }
 
-// Abox-mod — Mandelbox with a min-radius clamp and asymmetric fold.
+// Abox-mod - Mandelbox with a min-radius clamp and asymmetric fold.
 float deAboxMod(vec3 p, float scale) {
   vec3 offset = mix(p, uJuliaC3, uJuliaMode);
   vec3 z = p;
@@ -741,7 +741,7 @@ float deQuaternionCubic(vec3 pos) {
   return 0.25 * sqrt(mz2 / md2) * log(max(mz2, 1e-6));
 }
 
-// Octahedral IFS — fold into octahedral symmetry then scale toward a vertex.
+// Octahedral IFS - fold into octahedral symmetry then scale toward a vertex.
 float deOctahedralIFS(vec3 z) {
   float scale = 2.0;
   vec3 v = normalize(vec3(1.0, 1.0, 1.0));
@@ -757,7 +757,7 @@ float deOctahedralIFS(vec3 z) {
   return length(z) * pow(scale, -float(12));
 }
 
-// KaliBox — Mandelbox-style with the "kali" abs fold (Kali's variant).
+// KaliBox - Mandelbox-style with the "kali" abs fold (Kali's variant).
 float deKaliBox(vec3 p, float scale) {
   vec3 offset = mix(p, uJuliaC3, uJuliaMode);
   vec3 z = p;
@@ -775,7 +775,7 @@ float deKaliBox(vec3 p, float scale) {
   return length(z) / abs(dr);
 }
 
-// Mandelbrot cylinder — 2D Mandelbrot extruded with a sphere cap (z axis).
+// Mandelbrot cylinder - 2D Mandelbrot extruded with a sphere cap (z axis).
 float deMandelbrotCylinder(vec3 p) {
   vec2 c = mix(p, uJuliaC3, uJuliaMode).xy;
   vec2 z = vec2(0.0);
@@ -808,7 +808,7 @@ float deKleinianGroup(vec3 p) {
   return 0.5 * abs(z.y) / dr;
 }
 
-// Mausoleum box — Mandelbox with a "fabric" abs-x fold producing arches.
+// Mausoleum box - Mandelbox with a "fabric" abs-x fold producing arches.
 float deMausoleum(vec3 p, float scale) {
   vec3 offset = mix(p, uJuliaC3, uJuliaMode);
   vec3 z = p;
@@ -826,7 +826,7 @@ float deMausoleum(vec3 p, float scale) {
   return length(z) / abs(dr);
 }
 
-// Coral / Pseudo-Kleinian growth — repeated fold + inversion with offset.
+// Coral / Pseudo-Kleinian growth - repeated fold + inversion with offset.
 float deCoral(vec3 p) {
   vec3 z = mix(p, uJuliaC3, uJuliaMode);
   vec3 c = vec3(0.9, 0.6, 0.5);

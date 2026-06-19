@@ -7,7 +7,7 @@ import { useStudioStore } from '@/stores/studioStore';
  *
  * Two separate "fullscreens" exist in the app and both are needed for an ambient
  * TV background: `previewMode` (hides this app's editing panels) and the OS-level
- * Fullscreen API (hides the browser/OS chrome). This keeps them in sync — leaving
+ * Fullscreen API (hides the browser/OS chrome). This keeps them in sync - leaving
  * fullscreen by any means (Esc, system gesture) restores the editing chrome.
  */
 export function useTvFullscreen() {
@@ -29,7 +29,7 @@ export function useTvFullscreen() {
     try {
       await document.documentElement.requestFullscreen?.();
     } catch {
-      // Fullscreen denied (e.g. iOS Safari blocks element fullscreen) — preview
+      // Fullscreen denied (e.g. iOS Safari blocks element fullscreen) - preview
       // mode alone still gives a clean, chrome-free view to mirror/AirPlay.
     }
   }, [setPreviewMode]);

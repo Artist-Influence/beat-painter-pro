@@ -87,7 +87,7 @@ function RecordingController() {
 
 const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
   // Selector subscriptions (not the whole store) so the canvas only re-renders on
-  // changes it actually cares about — not on every per-frame store write.
+  // changes it actually cares about - not on every per-frame store write.
   const selected = useStudioStore((s) => s.selected);
   const background = useStudioStore((s) => s.background);
   const zoomLevel = useStudioStore((s) => s.zoomLevel);
@@ -221,7 +221,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     try { gainNode.connect(W.__STREAM_DEST__); } catch {}
     setAnalyser(analyserNode);
 
-    // Keep the context alive — browsers auto-suspend it without a gesture and when
+    // Keep the context alive - browsers auto-suspend it without a gesture and when
     // the tab is backgrounded (the "song stops mid-way", esp. during long party-mode sets).
     const resume = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
     resume();
@@ -248,7 +248,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
 
   // Audio bus: write the (sensitivity-scaled) audio into a STABLE ref every frame.
   // Visualizers read it inside their own useFrame, so there is NO per-frame React
-  // re-render of the canvas subtree — this was the dominant production-lag source.
+  // re-render of the canvas subtree - this was the dominant production-lag source.
   const writeAudio = useCallback((d: AudioData) => {
     const ref = audioRef.current;
     const fr = useStudioStore.getState().fractalReactivity;

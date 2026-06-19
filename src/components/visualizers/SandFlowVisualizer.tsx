@@ -7,7 +7,7 @@ import { createBandProcessor } from '@/lib/audioBands';
 import { useStudioStore } from '@/stores/studioStore';
 
 /* A point on the outline of the (limitless) shape for parameter t in [0,1).
- * Hot path: called tens of thousands of times per frame — no allocations,
+ * Hot path: called tens of thousands of times per frame - no allocations,
  * just trig/math written into `out`. Outputs are kept near a unit radius
  * (SHAPE_SCALE is applied by the caller). */
 function shapePoint(shape: ShapeDesc, t: number, out: { x: number; y: number }) {
@@ -272,7 +272,7 @@ export function SandFlowVisualizer({ config, audioData }: VisualizerProps & { co
       // radial-outward in the shape plane so particles emanate from the form
       const len = Math.hypot(x, y) || 1;
       const ox = x / len, oy = y / len;
-      // 3D curl-ish flow field — this is what gives the volumetric hair streaks
+      // 3D curl-ish flow field - this is what gives the volumetric hair streaks
       const fx = Math.sin(y * 0.7 + time * 0.5 + ph) + Math.cos(z * 0.6 - time * 0.3);
       const fy = Math.sin(z * 0.7 + time * 0.45) + Math.cos(x * 0.65 + time * 0.35 + ph);
       const fz = Math.sin(x * 0.7 + time * 0.4) + Math.cos(y * 0.62 - time * 0.4 + ph);

@@ -55,7 +55,7 @@ export function RightPanel({ activePanel, setActivePanel }: RightPanelProps) {
         />
       </div>
 
-      {/* Panel Content — side dock on desktop, bottom sheet on mobile */}
+      {/* Panel Content - side dock on desktop, bottom sheet on mobile */}
       <AnimatePresence>
         {activePanel && (
           <motion.div

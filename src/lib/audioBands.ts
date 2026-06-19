@@ -24,7 +24,7 @@ export function createBandProcessor() {
   let last = 0;
 
   // Signature kept for back-compat: callers pass (frequency, amplitude, beat, gain);
-  // amplitude/beat are now ignored — the engine derives everything from the spectrum.
+  // amplitude/beat are now ignored - the engine derives everything from the spectrum.
   return (freq: ArrayLike<number>, _amplitude = 0, _beatStrength = 0, gain = 1): Bands => {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const dt = last ? Math.min(0.05, Math.max(0.001, (now - last) / 1000)) : 0.016;

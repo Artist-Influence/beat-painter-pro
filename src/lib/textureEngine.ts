@@ -108,7 +108,7 @@ const hexLum = (hex: string) => {
 };
 
 function palette(styles: string[], seed: number): string[] {
-  // Use the curated per-style palette(s) when available — accurate to the selection.
+  // Use the curated per-style palette(s) when available - accurate to the selection.
   const named = styles.map((s) => STYLE_PALETTES[s]).filter(Boolean) as string[][];
   if (named.length) {
     const merged = Array.from(new Set(named.flat()));
@@ -279,7 +279,7 @@ export function renderStyleTexture(styles: string[], seed = 0, size = 512): stri
     }
     ctx.globalAlpha = 1;
   } else {
-    // noise / marble — value-noise turbulence mapped to palette
+    // noise / marble - value-noise turbulence mapped to palette
     const img = ctx.getImageData(0, 0, size, size);
     const d = img.data;
     const probe = document.createElement('canvas'); probe.width = cols.length; probe.height = 1;

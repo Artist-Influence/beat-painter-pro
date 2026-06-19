@@ -7,7 +7,7 @@ import { generateRandomParams, type RandomVisualizerParams } from '@/lib/randomV
 
 interface CustomVisualizerLoaderProps extends VisualizerProps {
   visualizerKey?: string; // Format: "custom_{id}"
-  initialCode?: string; // Legacy raw-JSX rows — no longer executed (see note below)
+  initialCode?: string; // Legacy raw-JSX rows - no longer executed (see note below)
   initialConfig?: RandomVisualizerParams; // Pre-loaded config (current format)
   isPlaying?: boolean; // Whether audio is playing
 }
@@ -18,7 +18,7 @@ const sessionCache = new Map<string, { config?: RandomVisualizerParams }>();
 // SECURITY: older custom visualizers stored raw JSX in `jsx_code` and used to be
 // compiled and run via `new Function(...)`. Because public rows are world-readable,
 // that allowed one user's stored code to execute in another user's browser
-// (stored XSS). We no longer execute raw code — only the deterministic, data-only
+// (stored XSS). We no longer execute raw code - only the deterministic, data-only
 // config format is rendered; legacy raw-code rows fall back to a placeholder.
 const LEGACY_UNSUPPORTED = 'legacy-unsupported';
 
@@ -65,7 +65,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
       return;
     }
 
-    // Legacy raw-JSX rows are no longer executed — show the placeholder.
+    // Legacy raw-JSX rows are no longer executed - show the placeholder.
     if (initialCode) {
       setError(LEGACY_UNSUPPORTED);
       setIsLoading(false);
@@ -153,7 +153,7 @@ export function CustomVisualizerLoader({ visualizerKey, initialCode, initialConf
               throw new Error('Not a config object');
             }
           } catch {
-            // Legacy row with raw JSX (not config JSON) — no longer executed.
+            // Legacy row with raw JSX (not config JSON) - no longer executed.
             setError(LEGACY_UNSUPPORTED);
           }
         } else {

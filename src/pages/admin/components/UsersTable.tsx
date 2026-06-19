@@ -30,11 +30,11 @@ const UsersTable: React.FC<{ users: UserRow[] }> = ({ users }) => {
             <TableBody>
               {users.map((u) => (
                 <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.email ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{u.email ?? "-"}</TableCell>
                   <TableCell>{u.visualizers}</TableCell>
                   <TableCell>{Math.round(u.totalMinutes)}</TableCell>
                   <TableCell>
-                    {u.lastActive ? new Date(u.lastActive).toLocaleString() : "—"}
+                    {u.lastActive ? new Date(u.lastActive).toLocaleString() : "-"}
                   </TableCell>
                 </TableRow>
               ))}

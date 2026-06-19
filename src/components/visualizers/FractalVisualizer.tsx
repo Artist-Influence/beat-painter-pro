@@ -147,7 +147,7 @@ export function makeFractalVisualizer(config: FractalConfig) {
 }
 
 /**
- * Random Fractal — generates a unique config on mount and re-rolls whenever a
+ * Random Fractal - generates a unique config on mount and re-rolls whenever a
  * `fractal:reroll` window event fires (the studio dispatches this when the user
  * re-clicks the Random card). Every roll is a genuinely different scene.
  */

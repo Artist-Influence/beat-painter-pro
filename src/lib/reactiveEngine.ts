@@ -1,12 +1,12 @@
 /**
- * Reactive audio engine — the single source of truth for transient-driven motion.
+ * Reactive audio engine - the single source of truth for transient-driven motion.
  *
  * Design goals (per spec):
  *  - React to DRUMS/onsets, not average loudness. Each band runs spectral-flux
  *    onset detection (rectified energy rise vs a running baseline), peak-normalised
  *    so it fires across genres/masters.
- *  - Exponential envelopes: near-instant attack (0–30 ms) and short punchy decay
- *    (80–250 ms) so movement SNAPS on impact then resets, without mush.
+ *  - Exponential envelopes: near-instant attack (0-30 ms) and short punchy decay
+ *    (80-250 ms) so movement SNAPS on impact then resets, without mush.
  *  - Separate smoothing PER frequency band (sub/bass/lowMid/highMid/high) so a
  *    kick doesn't smear the hats and vice-versa.
  *  - Adaptive normalisation + gain so quiet sections still move and loud sections
@@ -18,16 +18,16 @@
 
 export interface ReactivityConfig {
   enabled: boolean;
-  transientSensitivity: number; // 0..2 — how easily onsets fire (higher = touchier)
-  attackMs: number;             // 0..40 — envelope rise time (near-instant)
-  decayMs: number;              // 60..400 — transient fall time (punchy)
-  bassResponse: number;         // 0..2 — sub+bass layer gain
-  midResponse: number;          // 0..2 — low/high-mid layer gain
-  highResponse: number;         // 0..2 — highs layer gain
-  peakBoost: number;            // 0..2 — how much transients dominate over sustain
-  smoothing: number;            // 0..1 — extra smoothing on sustained motion (low = sharp)
-  motionIntensity: number;      // 0..2 — overall movement drive
-  dynamics: number;             // 0..1 — adaptive normalisation strength (0 raw, 1 fully levelled)
+  transientSensitivity: number; // 0..2 - how easily onsets fire (higher = touchier)
+  attackMs: number;             // 0..40 - envelope rise time (near-instant)
+  decayMs: number;              // 60..400 - transient fall time (punchy)
+  bassResponse: number;         // 0..2 - sub+bass layer gain
+  midResponse: number;          // 0..2 - low/high-mid layer gain
+  highResponse: number;         // 0..2 - highs layer gain
+  peakBoost: number;            // 0..2 - how much transients dominate over sustain
+  smoothing: number;            // 0..1 - extra smoothing on sustained motion (low = sharp)
+  motionIntensity: number;      // 0..2 - overall movement drive
+  dynamics: number;             // 0..1 - adaptive normalisation strength (0 raw, 1 fully levelled)
 }
 
 export const DEFAULT_REACTIVITY: ReactivityConfig = {
@@ -53,14 +53,14 @@ export const REACTIVITY_PRESETS: Record<string, Partial<ReactivityConfig>> = {
 };
 
 export interface ReactiveFrame {
-  // sustained, enveloped band levels (~0..1.7) — secondary motion
+  // sustained, enveloped band levels (~0..1.7) - secondary motion
   sub: number; bass: number; lowMid: number; highMid: number; high: number;
-  // sharp transient pulses per band (~0..1.7) — instant attack, punchy decay
+  // sharp transient pulses per band (~0..1.7) - instant attack, punchy decay
   subHit: number; bassHit: number; lowMidHit: number; highMidHit: number; highHit: number;
   // legacy/aggregate channels
-  bassBand: number;   // max(sub, bass) — kick/sub
-  midBand: number;    // max(lowMid, highMid) — body/snare
-  trebleBand: number; // high — hats/air
+  bassBand: number;   // max(sub, bass) - kick/sub
+  midBand: number;    // max(lowMid, highMid) - body/snare
+  trebleBand: number; // high - hats/air
   level: number;      // overall enveloped level (adaptive)
   beat: number;       // master drum onset (kick+snare weighted), sharp
   punch: number;      // strongest transient across all bands
@@ -92,9 +92,9 @@ interface BandState {
   i0: number; i1: number; // cached bin range
 }
 
-const SLOW_TAU = 0.32;      // s — flux baseline tracker
-const PEAK_TAU = 1.6;       // s — energy peak decay
-const FLUXPEAK_TAU = 1.1;   // s — flux peak decay
+const SLOW_TAU = 0.32;      // s - flux baseline tracker
+const PEAK_TAU = 1.6;       // s - energy peak decay
+const FLUXPEAK_TAU = 1.1;   // s - flux peak decay
 const ENERGY_FLOOR = 0.04;
 const FLUX_FLOOR = 0.015;
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -194,7 +194,7 @@ export function createReactiveEngine(): ReactiveEngine {
 
       // combined band: transient-dominant + a little sustained body. Kept LINEAR
       // (peak sits under the safety clamp) so the ratio-decay exactly tracks the
-      // punchy hit envelope — no saturation "hold" that smears the reset.
+      // punchy hit envelope - no saturation "hold" that smears the reset.
       const combined = hitRaw * cfg.peakBoost * 0.55 + sustainedRaw * 0.4;
       (out as unknown as Record<string, number>)[def.key] = clamp(combined * cfg.motionIntensity, 0, 1.9);
     }

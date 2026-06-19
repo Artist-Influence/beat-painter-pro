@@ -60,7 +60,7 @@ const RESOLUTIONS: Record<ExportQuality, Record<AspectRatio, { width: number; he
 // Prefer MP4 (H.264/AAC) where the browser supports it, else fall back to WebM.
 const getSupportedMimeType = (): string => {
   const types = [
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',  // H.264 + AAC — real MP4 with audio
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',  // H.264 + AAC - real MP4 with audio
     'video/mp4;codecs=avc1.42E01E',
     'video/mp4',
     'video/webm;codecs=vp9,opus',
@@ -208,7 +208,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         bgVideo.crossOrigin = 'anonymous';
         bgVideo.src = background.mediaUrl;
         bgVideo.muted = true;
-        // When synced to the song, drift-correction owns the playhead — don't loop.
+        // When synced to the song, drift-correction owns the playhead - don't loop.
         bgVideo.loop = !useStudioStore.getState().reactionSync.enabled;
         bgVideo.playsInline = true;
         await new Promise<void>((resolve) => {
@@ -298,7 +298,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const videoStream = exportCanvas.captureStream(60);
         
         // Capture audio from the Web Audio graph's stream dest (set up in
-        // VisualizerCanvas), NOT audioElement.captureStream() — capturing the element
+        // VisualizerCanvas), NOT audioElement.captureStream() - capturing the element
         // that owns the MediaElementSource stole its output and stopped the song.
         let audioStream: MediaStream | null = null;
         try {
@@ -389,7 +389,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       const render = () => {
         if (!keepRenderingRef.current) return;
 
-        // Hard wall-clock cap — backstop so an export can never run forever if the
+        // Hard wall-clock cap - backstop so an export can never run forever if the
         // song duration is unknown (streaming / metadata not loaded) and `ended`
         // never fires. Stops cleanly and lets the user know.
         if (performance.now() - recordStartMs > MAX_EXPORT_MS) {
@@ -400,7 +400,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         }
 
         // auto-stop at the end of the chosen segment, or at the end of the song when
-        // exporting the whole track — so the artist never has to catch the stop.
+        // exporting the whole track - so the artist never has to catch the stop.
         const rEndAuto = exportRangeRef.current.end;
         if (audioElement.currentTime >= segEnd
           || (!segment.enabled && rEndAuto > 0 && (audioElement.ended || audioElement.currentTime >= rEndAuto - 0.05))) {
@@ -440,7 +440,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             if (dur && isFinite(dur)) {
               const last = dur - 0.05;
               if (target >= last) {
-                // clip shorter than the song — hold the last frame (no end-of-clip jitter)
+                // clip shorter than the song - hold the last frame (no end-of-clip jitter)
                 if (!vid.paused) vid.pause();
                 if (Math.abs(vid.currentTime - last) > 0.06) { try { vid.currentTime = last; } catch {} }
               } else {
@@ -494,7 +494,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           if (comp.crop) {
             // CROP MODE: draw the aspect-correct visualizer box, clipped to the
             // rectangular window. `scale` (baked into the box) zooms the content;
-            // the window stays fixed — so the crop honours the visualizer's aspect.
+            // the window stays fixed - so the crop honours the visualizer's aspect.
             const W = exportCanvas.width, H = exportCanvas.height;
             const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
             const wx = cxC - ww / 2, wy = cyC - wh / 2;
@@ -508,7 +508,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             tctx.restore();
           } else if (comp.mask !== 'none') {
             // box aspect == visualizer canvas aspect, so draw the FULL canvas (no
-            // stage-aspect source crop — that would clip a non-matching vizAspect).
+            // stage-aspect source crop - that would clip a non-matching vizAspect).
             tctx.save();
             tctx.beginPath();
             if (comp.mask === 'circle') tctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
@@ -522,7 +522,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         };
 
         // Background fill: when the blend drops the visualizer's dark background, draw a
-        // black backing (at bgOpacity) under it, clipped to the same region — bringing
+        // black backing (at bgOpacity) under it, clipped to the same region - bringing
         // that background back over the clip. Matches the CSS backing in the preview.
         const bgOpacity = comp.bgOpacity ?? 0;
         if (bgOpacity > 0 && blendOp !== 'source-over') {
@@ -597,10 +597,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
 
         // Capture PNG frame for sequence mode
         if (exportModeRef.current === 'png-sequence') {
-          // Cap frames — each is a full-res PNG held in RAM; an unbounded sequence
+          // Cap frames - each is a full-res PNG held in RAM; an unbounded sequence
           // OOMs the tab on long songs. Stop + warn at the limit.
           if (pngFramesRef.current.length >= MAX_PNG_FRAMES) {
-            toast.message(`Reached the ${MAX_PNG_FRAMES}-frame limit — saving what’s captured.`);
+            toast.message(`Reached the ${MAX_PNG_FRAMES}-frame limit - saving what’s captured.`);
             stopRecording();
             return;
           }
@@ -704,7 +704,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
     }
   }, []);
 
-  // Guard against navigating away mid-export — leaving the tab corrupts the capture.
+  // Guard against navigating away mid-export - leaving the tab corrupts the capture.
   useEffect(() => {
     if (!isRecording) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };

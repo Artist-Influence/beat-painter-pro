@@ -85,7 +85,7 @@ export function StudioLayoutV2() {
     try { sessionStorage.setItem('bp_getstarted_seen', '1'); } catch { /* private mode */ }
     setGsDismissed(true);
   }, []);
-  // Loading a song counts as "session started" — don't pop it back up afterwards.
+  // Loading a song counts as "session started" - don't pop it back up afterwards.
   useEffect(() => { if (audioElement) dismissGetStarted(); }, [audioElement, dismissGetStarted]);
 
   // Enter preview = go true OS fullscreen (the click is the required user gesture)
@@ -120,7 +120,7 @@ export function StudioLayoutV2() {
   // Effects + zoom applied as CSS on the visualizer wrapper so they work for
   // EVERY visualizer type (fractal shader, mesh, procedural model, 2D).
   const effectFilter = `brightness(${filters.brightness}%) saturate(${filters.saturation}%) contrast(${filters.contrast}%)`;
-  // Framing (size/crop/position) always applies — default scale 1 / centered / no
+  // Framing (size/crop/position) always applies - default scale 1 / centered / no
   // mask = fullscreen. The visualizer starts fullscreen and is edited from there.
   // Mask shapes also control the corner rounding of the crop window.
   const maskRound = composite.mask === 'circle' ? '50%' : composite.mask === 'rounded' ? '8%' : '0';
@@ -131,7 +131,7 @@ export function StudioLayoutV2() {
   // when overlaying a reactive visualizer on their own video). Auto unless the user
   // explicitly picked a blend. Over a solid colour we keep normal compositing.
   const overlayingClip = background.type === 'video' || background.type === 'image';
-  // Default to NORMAL — the visualizer renders solid/opaque as drawn. Users opt into
+  // Default to NORMAL - the visualizer renders solid/opaque as drawn. Users opt into
   // 'screen' (Glow) in Frame → Blend to drop the dark background over a clip. (Auto-
   // screening over any video made every visualizer look washed/semi-transparent.)
   const blendSel = composite.blend ?? 'normal';
@@ -149,7 +149,7 @@ export function StudioLayoutV2() {
   const rotStr = rot ? ` rotate(${rot}deg)` : '';
 
   // Unified geometry: the visualizer always occupies its own aspect-ratio box
-  // (vizAspect — may differ from the export frame), positioned/sized by x/y/scale and
+  // (vizAspect - may differ from the export frame), positioned/sized by x/y/scale and
   // rotated. The clip is either the crop WINDOW (a rectangle mapped into the box's
   // local space, so the crop honours the visualizer's aspect) or the mask shape.
   let vizStyle: React.CSSProperties;
@@ -193,7 +193,7 @@ export function StudioLayoutV2() {
       opacity: op,
     } as React.CSSProperties;
     // When a blend drops the visualizer's dark background, a black fill behind it
-    // (at bgOpacity) brings that background back over the clip — solid → transparent.
+    // (at bgOpacity) brings that background back over the clip - solid → transparent.
     const bgOpacity = composite.bgOpacity ?? 0;
     if (vizBlend && bgOpacity > 0) {
       backingStyle = { ...boxGeom, backgroundColor: '#000', opacity: bgOpacity } as React.CSSProperties;
@@ -218,7 +218,7 @@ export function StudioLayoutV2() {
     return () => cancelAnimationFrame(raf);
   }, [backgroundReactive]);
 
-  // Reaction Reel sync: the song (audioElement) is the master clock — drive the
+  // Reaction Reel sync: the song (audioElement) is the master clock - drive the
   // background reaction video's playhead from it (+ a nudgeable offset) so the
   // person's movements line up with the audio-reactive visualizer. Drift-corrected
   // so the video plays smoothly and only re-seeks when it diverges.
@@ -235,7 +235,7 @@ export function StudioLayoutV2() {
         if (dur && isFinite(dur)) {
           const last = dur - 0.05;
           if (target >= last) {
-            // The clip is shorter than the song — hold on the last frame instead of
+            // The clip is shorter than the song - hold on the last frame instead of
             // jittering between the final frames (re-seeking near the end looped badly).
             if (!v.paused) v.pause();
             if (Math.abs(v.currentTime - last) > 0.06) { try { v.currentTime = last; } catch {} }
@@ -274,7 +274,7 @@ export function StudioLayoutV2() {
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* Centered preview stage — the canvas lives in its chosen aspect frame,
+      {/* Centered preview stage - the canvas lives in its chosen aspect frame,
           floating on the dark void with generous margin. */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
@@ -340,7 +340,7 @@ export function StudioLayoutV2() {
             </div>
           )}
 
-          {/* Black backing behind the visualizer — brings back its dark background
+          {/* Black backing behind the visualizer - brings back its dark background
               over the clip (bgOpacity) when a blend would otherwise drop it. */}
           {backingStyle && <div className="z-[2] pointer-events-none" style={backingStyle} />}
 
@@ -355,7 +355,7 @@ export function StudioLayoutV2() {
             <CompositeFrame stageRef={stageElRef} onDeselect={() => setComposite({ enabled: false })} />
           )}
 
-          {/* First-run empty state — shown once per session, and never to the admin.
+          {/* First-run empty state - shown once per session, and never to the admin.
               No song yet → guide into the Reaction Reel flow. */}
           {!audioElement && !reactionWizardOpen && !previewMode && !isAdmin && !gsDismissed && (
             <div className="absolute inset-0 z-[16] flex items-center justify-center p-5">
@@ -369,12 +369,12 @@ export function StudioLayoutV2() {
                 </button>
                 <p className="text-eyebrow">get started</p>
                 <h2 className="text-text-primary text-lg font-semibold leading-tight">Make a reactive music video</h2>
-                <p className="text-caption">Add your song, drop a visualizer over your clip, and export for socials — in a few taps.</p>
+                <p className="text-caption">Add your song, drop a visualizer over your clip, and export for socials - in a few taps.</p>
                 <button
                   onClick={() => { dismissGetStarted(); setReactionWizardOpen(true); }}
                   className="btn btn-primary !rounded-full w-full h-11 font-semibold"
                 >
-                  Start — guided setup
+                  Start - guided setup
                 </button>
                 <p className="text-caption opacity-70">or use the panels to set it up yourself</p>
               </div>
@@ -422,7 +422,7 @@ export function StudioLayoutV2() {
       {!previewMode && !reactionWizardOpen && (
         <button
           onClick={enterPreview}
-          title="Fullscreen preview — hide all controls (Esc to exit)"
+          title="Fullscreen preview - hide all controls (Esc to exit)"
           className="absolute bottom-32 sm:bottom-24 left-4 z-50 p-3 glass-panel glass-panel-interactive !rounded-full transition-colors"
         >
           <Eye className="w-5 h-5 text-text-tertiary" />

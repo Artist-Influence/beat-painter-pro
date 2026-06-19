@@ -109,7 +109,7 @@ export function ReactivitySection() {
           onChange={(e) => setFractalReactivity({ sensitivity: parseFloat(e.target.value) })}
           onDoubleClick={resetSensitivity} />
       </div>
-      {/* Universal spin — works for fractals and 3D models alike */}
+      {/* Universal spin - works for fractals and 3D models alike */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-secondary">Spin</span>
@@ -123,7 +123,7 @@ export function ReactivitySection() {
 
       <div className="hairline" />
 
-      {/* ===== Global transient engine — applies to EVERY visualizer ===== */}
+      {/* ===== Global transient engine - applies to EVERY visualizer ===== */}
       <div>
         <p className="text-eyebrow">transient engine</p>
         <p className="text-caption -mt-0.5">Locks motion to drums &amp; transients. Sharp attack, punchy decay, per-band.</p>

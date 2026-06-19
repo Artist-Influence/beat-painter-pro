@@ -70,7 +70,7 @@ function randomHarmonic(r: () => number): ShapeDesc {
   return { mode: 'harmonic', m: 0, n1: 1, n2: 1, n3: 1, harmonics: h };
 }
 
-// Builders for every new mode — each randomizes its own params so even the
+// Builders for every new mode - each randomizes its own params so even the
 // same mode looks different roll to roll.
 const SHAPE_BUILDERS: Array<(r: () => number) => ShapeDesc> = [
   // existing families (kept generously represented)

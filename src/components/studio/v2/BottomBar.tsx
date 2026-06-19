@@ -189,7 +189,7 @@ export function BottomBar({ isVisible, onToggle }: BottomBarProps) {
                     </span>
                   </div>
 
-                  {/* Volume (desktop only — phones use system volume) */}
+                  {/* Volume (desktop only - phones use system volume) */}
                   <div className="hidden sm:flex items-center gap-2">
                     <button
                       onClick={handleToggleMute}

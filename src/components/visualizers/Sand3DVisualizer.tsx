@@ -90,7 +90,7 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
   const isMobile = typeof navigator !== 'undefined' &&
     (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 900));
   const area = (typeof window !== 'undefined' ? window.innerWidth * window.innerHeight : 1920 * 1080);
-  // Budget trimmed for production smoothness (was 95k/40k) — still dense, far cheaper.
+  // Budget trimmed for production smoothness (was 95k/40k) - still dense, far cheaper.
   const target = Math.min(isMobile ? 26000 : 62000, Math.max(16000, area / 18));
   const texSize = Math.max(128, Math.ceil(Math.sqrt(target)));
   const count = texSize * texSize;
@@ -270,7 +270,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     grooveRef.current += (grooveT - grooveRef.current) * (1 - Math.exp(-dt * 0.7));
     const groove = grooveRef.current;
 
-    // visual character (no console knobs in the studio — autonomous defaults that
+    // visual character (no console knobs in the studio - autonomous defaults that
     // gently sweep the orb→ring shape and key off the music)
     const vScatter = Math.pow(0.30, 1.45);
     const vSpeed = 0.50, vGlow = 0.55;
@@ -287,7 +287,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     sm.uDt.value = dt; sm.uTime.value = t;
     sm.uSpeed.value = (0.1 + vSpeed * 1.3 + lowL * 1.2 + lowT * 0.7) * (0.8 + groove * 0.5);
     sm.uSwirl.value = (0.45 + vSpeed * 0.5 + midL * 2.7 + midT * 1.0) * (0.34 + vScatter * 0.59);
-    // kicks AND snares fling particles outward — the big visible "hit" response
+    // kicks AND snares fling particles outward - the big visible "hit" response
     sm.uScatter.value = Math.pow(lowT, 1.05) * 2.9 * (0.7 + groove * 0.7) * (0.12 + vScatter * 1.4) + midT * 0.85 + Math.pow(vScatter, 1.6) * 0.6;
     sm.uPump.value = lowL * 1.2 + lowT * 0.75;
     sm.uPull.value = (0.9 + groove * 1.0) * (2.9 - vScatter * 2.27);
@@ -362,7 +362,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     pm.uPassSize.value = 1.0; pm.uPassAlpha.value = 1.0;
     res.pointsObj.geometry.setDrawRange(0, res.count);
     gl.render(res.pointsScene, res.dummyCam);
-    // fake-bloom subset (sparse, big and dim) — UR-6's soft halos
+    // fake-bloom subset (sparse, big and dim) - UR-6's soft halos
     pm.uPassSize.value = 3.0; pm.uPassAlpha.value = 0.16;
     res.pointsObj.geometry.setDrawRange(0, Math.floor(res.count / 3));
     gl.render(res.pointsScene, res.dummyCam);

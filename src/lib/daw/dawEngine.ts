@@ -1,5 +1,5 @@
 /**
- * DAW Waveform / Spectrogram Hybrid — engine.
+ * DAW Waveform / Spectrogram Hybrid - engine.
  *
  * Analyses the *actual* uploaded track once (decoded PCM) into a cached bundle:
  *  - env  : per-column peak envelope (the classic DAW waveform shape)

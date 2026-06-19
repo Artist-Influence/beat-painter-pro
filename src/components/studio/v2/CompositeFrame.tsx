@@ -65,7 +65,7 @@ export function CompositeFrame({ stageRef, onDeselect }: { stageRef: React.RefOb
       if (crop) setComposite({ cropW: clamp(hw * 2, 0.1, 1), cropH: clamp(hh * 2, 0.1, 1) });
       // derive scale from the dragged half-extent relative to the fit box, so resize
       // tracks the corner for any visualizer aspect (fw/fh = the box at scale 1).
-      else setComposite({ scale: clamp(Math.max((hw * 2) / box.fw, (hh * 2) / box.fh), 0.2, 2) });
+      else setComposite({ scale: clamp(Math.max((hw * 2) / box.fw, (hh * 2) / box.fh), 0.05, 4) });
     }
   };
   const onUp = (e: React.PointerEvent) => { drag.current = null; try { outerRef.current?.releasePointerCapture(e.pointerId); } catch {} };

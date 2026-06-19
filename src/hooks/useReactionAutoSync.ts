@@ -6,7 +6,7 @@ import { alignVideoToSong } from '@/lib/audioAlign';
 /**
  * One-tap "line up my reaction video to the song". Available whenever both a song
  * (audioElement) and a video background are loaded. Runs the cross-correlation,
- * sets reactionSync.offset, and reports the result — the user can still nudge.
+ * sets reactionSync.offset, and reports the result - the user can still nudge.
  */
 export function useReactionAutoSync() {
   const audioElement = useStudioStore((s) => s.audioElement);
@@ -28,12 +28,12 @@ export function useReactionAutoSync() {
       const sign = offsetSeconds >= 0 ? '+' : '';
       toast.success(
         `Lined up (${sign}${offsetSeconds.toFixed(2)}s).` +
-          (confidence < 0.12 ? ' Low confidence — nudge the offset to fine-tune.' : ' Nudge the offset if it’s slightly off.'),
+          (confidence < 0.12 ? ' Low confidence - nudge the offset to fine-tune.' : ' Nudge the offset if it’s slightly off.'),
         { id, duration: 6000 },
       );
     } catch (e) {
       console.error('auto-sync failed', e);
-      toast.error('Couldn’t auto-line-up — line it up with the offset slider instead.', { id });
+      toast.error('Couldn’t auto-line-up - line it up with the offset slider instead.', { id });
     } finally {
       setRunning(false);
     }

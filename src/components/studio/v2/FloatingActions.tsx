@@ -38,7 +38,7 @@ export function FloatingActions() {
 
   return (
     <>
-      {/* Quick Settings Fab — lifted above the transport on mobile */}
+      {/* Quick Settings Fab - lifted above the transport on mobile */}
       <div className="absolute bottom-32 sm:bottom-24 right-4 z-50">
         <div className="relative">
           {/* Settings Menu */}

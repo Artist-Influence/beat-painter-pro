@@ -42,7 +42,7 @@ const VIZ_ASPECTS: { key: 'match' | AspectRatio; label: string }[] = [
   { key: 'square', label: '1:1' },
   { key: 'vertical', label: '9:16' },
 ];
-// One-tap layouts — set position + size + shape in a single click (no slider fiddling).
+// One-tap layouts - set position + size + shape in a single click (no slider fiddling).
 const LAYOUTS: { key: string; label: string; apply: Partial<CompositeState> }[] = [
   { key: 'full', label: 'Fullscreen', apply: { vizAspect: 'match', scale: 1, x: 0.5, y: 0.5, crop: false, mask: 'none', rotate: 0 } },
   { key: 'center', label: 'Centered', apply: { vizAspect: 'square', scale: 0.92, x: 0.5, y: 0.5, crop: false, mask: 'none', rotate: 0 } },
@@ -61,7 +61,7 @@ export function CompositeControls() {
         <h3 className="text-text-primary text-sm font-semibold">Size, crop & dimension</h3>
       </div>
 
-      {/* One-tap layouts — the easy path. Sets position/size/shape in a single click. */}
+      {/* One-tap layouts - the easy path. Sets position/size/shape in a single click. */}
       <div className="space-y-2">
         <p className="text-eyebrow">quick layout</p>
         <div className="grid grid-cols-2 gap-2">
@@ -87,7 +87,7 @@ export function CompositeControls() {
         </div>
       </div>
 
-      {/* Visualizer shape — independent of the export frame above (e.g. a 1:1 or
+      {/* Visualizer shape - independent of the export frame above (e.g. a 1:1 or
           16:9 visualizer placed inside a 9:16 short-form video). */}
       <div className="space-y-2">
         <p className="text-eyebrow">visualizer shape</p>
@@ -100,11 +100,11 @@ export function CompositeControls() {
           ))}
         </div>
         <p className="text-caption">
-          The visualizer's own shape — independent of the video frame. Applies in both Crop and Size modes.
+          The visualizer's own shape - independent of the video frame. Applies in both Crop and Size modes.
         </p>
       </div>
 
-      {/* Blend over clip — when a video/image is the background, drop the
+      {/* Blend over clip - when a video/image is the background, drop the
           visualizer's opaque black so the footage shows through. Defaults to Glow
           automatically; shown only when there is actually a clip behind. */}
       {hasBgMedia && (
@@ -121,18 +121,18 @@ export function CompositeControls() {
               </button>
             ))}
           </div>
-          {/* Background fill — only meaningful when the blend is dropping the black. */}
+          {/* Background fill - only meaningful when the blend is dropping the black. */}
           {(composite.blend ?? 'screen') !== 'normal' && (
             <div className="pt-1">
               <Slider label="Background" value={composite.bgOpacity ?? 0} min={0} max={1} step={0.01}
                 fmt={(v) => v === 0 ? 'clear' : `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ bgOpacity: v })} defaultValue={0} />
-              <p className="text-caption">Bring back the visualizer's dark background over your clip — clear (just the glow) → solid.</p>
+              <p className="text-caption">Bring back the visualizer's dark background over your clip - clear (just the glow) → solid.</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Crop window — clip the visualizer to a rectangle so the background shows
+      {/* Crop window - clip the visualizer to a rectangle so the background shows
           around it. This is the publish-to-socials overlay workflow. */}
       <div className="rounded-md p-3 border border-hairline/50 bg-surface-2/40 space-y-2">
         <div className="flex items-center justify-between">
@@ -162,14 +162,14 @@ export function CompositeControls() {
         <Switch checked={composite.enabled} onCheckedChange={(v) => setComposite({ enabled: v })} />
       </div>
 
-      <Slider label={composite.crop ? 'Size (zoom content)' : 'Size'} value={composite.scale} min={0.2} max={2} step={0.01}
+      <Slider label={composite.crop ? 'Size (zoom content)' : 'Size'} value={composite.scale} min={0.05} max={4} step={0.01}
         fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setComposite({ scale: v })} defaultValue={1} />
       <Slider label="Position X" value={composite.x} min={0} max={1} step={0.01}
         fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ x: v })} defaultValue={0.5} />
       <Slider label="Position Y" value={composite.y} min={0} max={1} step={0.01}
         fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ y: v })} defaultValue={0.5} />
 
-      {/* Rotate / Opacity / Feather — frame the visualizer however the clip needs. */}
+      {/* Rotate / Opacity / Feather - frame the visualizer however the clip needs. */}
       <Slider label="Rotate" value={composite.rotate ?? 0} min={-180} max={180} step={1}
         fmt={(v) => `${Math.round(v)}°`} onChange={(v) => setComposite({ rotate: v })} defaultValue={0} />
       <Slider label="Opacity" value={composite.opacity ?? 1} min={0.1} max={1} step={0.01}
@@ -201,7 +201,7 @@ export function CompositeControls() {
         <p className="text-caption">
           Your clip is the background and the visualizer is already blending over it. Turn on{' '}
           <span className="text-text-secondary">Crop window</span> (or drag the corners on stage) to size and
-          place it where you want, then hit export — the video shows through automatically.
+          place it where you want, then hit export - the video shows through automatically.
         </p>
       ) : (
         <p className="text-caption">

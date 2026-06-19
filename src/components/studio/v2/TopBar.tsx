@@ -87,7 +87,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
           </div>
           <button
             onClick={() => setReactionWizardOpen(true)}
-            title="Make a reaction reel — guided"
+            title="Make a reaction reel - guided"
             className="flex items-center gap-2 px-4 h-11 glass-panel glass-panel-interactive !rounded-full text-sm font-semibold text-text-primary hover:text-ai-red transition-colors"
           >
             <Clapperboard className="w-4 h-4 text-ai-red" />
@@ -129,13 +129,13 @@ export function TopBar({ canvasRef }: TopBarProps) {
             <option value="8k">8K</option>
           </select>
 
-          {/* Record button — disabled until audio is loaded so you set up and TEST the
+          {/* Record button - disabled until audio is loaded so you set up and TEST the
               composition first; export only becomes available once there's a song.
               While exporting it shows live progress and a fill bar. */}
           <button
             onClick={handleRecord}
             disabled={!isRecording && !audioElement}
-            title={!audioElement ? 'Upload audio first — set up and preview your visualizer, then export' : (isRecording ? 'Stop & save the export' : `Export your video — ${getExportQuota().remaining}/${EXPORT_LIMIT} exports left (per 12h)`)}
+            title={!audioElement ? 'Upload audio first - set up and preview your visualizer, then export' : (isRecording ? 'Stop & save the export' : `Export your video - ${getExportQuota().remaining}/${EXPORT_LIMIT} exports left (per 12h)`)}
             className={`btn relative overflow-hidden !rounded-full px-4 sm:px-7 h-11 font-semibold tracking-wide ${
               isRecording
                 ? 'bg-ai-red text-white shadow-glow-hover'
@@ -156,7 +156,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
           </button>
         </div>
 
-        {/* User Menu - Right — Admin entry for admins; a discreet Log in for
+        {/* User Menu - Right - Admin entry for admins; a discreet Log in for
             everyone else so the admin can actually sign in to reach the dashboard. */}
         <div className="hidden sm:block pointer-events-auto">
           {isAdmin ? (

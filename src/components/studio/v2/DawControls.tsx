@@ -86,7 +86,7 @@ export function DawControls() {
       <div>
         <p className="text-eyebrow">daw / waveform</p>
         <h3 className="text-text-primary text-sm font-semibold">Waveform Studio</h3>
-        <p className="text-caption mt-1">Pick a preset, upload a track — or tweak everything below.</p>
+        <p className="text-caption mt-1">Pick a preset, upload a track - or tweak everything below.</p>
       </div>
 
       {/* Presets first */}

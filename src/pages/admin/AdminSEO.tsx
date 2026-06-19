@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 
 const AdminSEO: React.FC = () => {
   useEffect(() => {
-    document.title = "Admin Dashboard – Audio Visual Studio";
+    document.title = "Admin Dashboard - Audio Visual Studio";
 
     const desc =
       "Operator dashboard for campaigns, creators, and analytics in Audio Visual Studio.";

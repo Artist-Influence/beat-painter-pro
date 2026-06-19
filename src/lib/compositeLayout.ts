@@ -16,7 +16,7 @@ export interface VizBox {
 
 /**
  * The visualizer's box within the export stage. The visualizer can have its own
- * aspect (`composite.vizAspect`) that differs from the export frame — e.g. a 1:1
+ * aspect (`composite.vizAspect`) that differs from the export frame - e.g. a 1:1
  * or 16:9 visualizer sitting inside a 9:16 short-form video. At scale 1 the box is
  * the largest box of that aspect that fits ("contains") inside the stage; scale,
  * x and y then size and place it. When vizAspect is 'match' (default) the box is

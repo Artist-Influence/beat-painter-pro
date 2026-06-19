@@ -3,7 +3,7 @@ import App from './App.tsx'
 import './index.css'
 import { useStudioStore } from './stores/studioStore'
 
-// Debug/E2E affordance: expose the studio store ONLY for local automated testing —
+// Debug/E2E affordance: expose the studio store ONLY for local automated testing -
 // requires both the ?e2e flag and a localhost origin, so the live deploy never
 // exposes the store regardless of URL params. No effect for normal users.
 if (typeof window !== 'undefined') {

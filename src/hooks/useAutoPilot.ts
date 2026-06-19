@@ -13,8 +13,8 @@ const LIBRARY_KEYS = [
 
 /**
  * Auto-pilot / party mode: while a mix plays, switch to a fresh visualizer
- * every 15 seconds — random fractals, procedural 3D models, and library
- * pieces — so it works as an ambient background to screencast.
+ * every 15 seconds - random fractals, procedural 3D models, and library
+ * pieces - so it works as an ambient background to screencast.
  */
 const SWITCH_MS = 15000;
 export function useAutoPilot() {

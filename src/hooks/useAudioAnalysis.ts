@@ -45,7 +45,7 @@ export const useAudioAnalysis = (
 
     const updateAudioData = () => {
       if (stopped) return;
-      // Schedule the next frame FIRST so the loop is self-healing — a single persistent
+      // Schedule the next frame FIRST so the loop is self-healing - a single persistent
       // loop that survives scrubbing/seeking instead of being restarted by an effect.
       animationFrameRef.current = requestAnimationFrame(updateAudioData);
 
@@ -93,7 +93,7 @@ export const useAudioAnalysis = (
       (window as Window).__REACTIVE_FRAME__ = frame;
       const boosted = engineRef.current.boost(sm, cfg, boostBufRef.current);
 
-      // Pass the live reused arrays (no per-frame slice allocation) — the consumer
+      // Pass the live reused arrays (no per-frame slice allocation) - the consumer
       // copies them into its stable ref synchronously.
       onUpdateRef.current({
         frequency: boosted,

@@ -48,7 +48,7 @@ export interface CompositeState {
   opacity?: number; // 0..1 visualizer layer opacity (cover fully at 1, semi-transparent below)
   feather?: number; // 0..1 soft edge so transparent visualizers (sand, particles) fade instead of hard-cutting
   vizAspect?: 'match' | AspectRatio; // visualizer's own shape, independent of the export frame (e.g. a 1:1 viz inside a 9:16 video). 'match'/undefined = follow the export aspect
-  bgOpacity?: number; // 0..1 — when a blend drops the visualizer's dark background, how much of it to bring back over the clip (0 = fully transparent, 1 = solid)
+  bgOpacity?: number; // 0..1 - when a blend drops the visualizer's dark background, how much of it to bring back over the clip (0 = fully transparent, 1 = solid)
 }
 type BackgroundType = 'color' | 'gradient' | 'image' | 'video' | 'transparent';
 type BackgroundMediaType = 'image' | 'gif' | 'video' | null;
@@ -133,7 +133,7 @@ interface StudioState {
   setFractalReactivity: (p: Partial<FractalReactivity>) => void;
   initFractalReactivity: (r: AudioReactivity) => void;
   applyFractalQuickMode: (mode: FractalQuickMode) => void;
-  // Global transient engine — shapes the shared audio signal for EVERY visualizer
+  // Global transient engine - shapes the shared audio signal for EVERY visualizer
   reactivity: ReactivityConfig;
   setReactivity: (p: Partial<ReactivityConfig>) => void;
   applyReactivityPreset: (name: keyof typeof REACTIVITY_PRESETS) => void;

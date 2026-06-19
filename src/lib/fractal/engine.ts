@@ -17,7 +17,7 @@
 
 export type FractalFamily = '2d' | '3d';
 
-// Shader int ids — keep in sync with shaders.ts
+// Shader int ids - keep in sync with shaders.ts
 export const TYPE_2D = {
   mandelbrot: 0,
   julia: 1,
@@ -156,7 +156,7 @@ export interface FractalConfig {
   power: number;        // mandelbulb exponent / box scale
   camDist: number;
   camSpeed: number;
-  rotIter: [number, number, number];  // per-iteration rotation (radians) — infinite variety
+  rotIter: [number, number, number];  // per-iteration rotation (radians) - infinite variety
   juliaC3: [number, number, number];  // 3D julia offset
   juliaMode: number;                  // 0 mandelbrot, 1 julia
 
@@ -164,7 +164,7 @@ export interface FractalConfig {
 }
 
 /* --------------------------------------------------------------------------
- * Seeded RNG (mulberry32) — deterministic, so a seed reproduces a scene.
+ * Seeded RNG (mulberry32) - deterministic, so a seed reproduces a scene.
  * ------------------------------------------------------------------------ */
 export function makeRng(seed: number) {
   let s = seed >>> 0;
@@ -181,7 +181,7 @@ const pick = <T,>(r: () => number, arr: T[]): T => arr[Math.floor(r() * arr.leng
 const range = (r: () => number, lo: number, hi: number) => lerp(lo, hi, r());
 
 /* --------------------------------------------------------------------------
- * Palette generation — IQ cosine palettes. Produces vivid, varied gradients.
+ * Palette generation - IQ cosine palettes. Produces vivid, varied gradients.
  * ------------------------------------------------------------------------ */
 export function randomPalette(r: () => number): PaletteCoeffs {
   // a = base, b = amplitude, c = frequency (per-channel for wild variety), d = phase.
@@ -318,7 +318,7 @@ const MANDEL_CENTERS: [number, number][] = [
 ];
 
 /* --------------------------------------------------------------------------
- * The randomizer — produce a unique FractalConfig from a seed.
+ * The randomizer - produce a unique FractalConfig from a seed.
  * ------------------------------------------------------------------------ */
 export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?: PromptTheme): FractalConfig {
   const r = makeRng(seed);
@@ -439,7 +439,7 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
 }
 
 /* --------------------------------------------------------------------------
- * Curated preset library — the "standard" template base.
+ * Curated preset library - the "standard" template base.
  * ------------------------------------------------------------------------ */
 function preset(p: Partial<FractalConfig> & Pick<FractalConfig, 'id' | 'name' | 'emoji' | 'family' | 'type' | 'typeName'>): FractalConfig {
   return {

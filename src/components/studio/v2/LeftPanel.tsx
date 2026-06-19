@@ -35,7 +35,7 @@ export function LeftPanel({ activePanel, setActivePanel }: LeftPanelProps) {
         />
       </div>
 
-      {/* Panel Content — side dock on desktop, bottom sheet on mobile */}
+      {/* Panel Content - side dock on desktop, bottom sheet on mobile */}
       <AnimatePresence>
         {activePanel && (
           <motion.div

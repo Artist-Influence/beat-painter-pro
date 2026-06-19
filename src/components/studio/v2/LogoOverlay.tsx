@@ -6,7 +6,7 @@ export function LogoOverlay() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Pointer events (not mouse) so dragging the logo works on touch devices too —
+  // Pointer events (not mouse) so dragging the logo works on touch devices too -
   // the UI advertises "drag on screen to position", which was previously dead on mobile.
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();

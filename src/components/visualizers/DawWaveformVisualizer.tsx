@@ -340,7 +340,7 @@ function drawWave(
     ctx.stroke();
     if (cfg.symmetry) { ctx.beginPath(); for (let i = 0; i < M; i++) { const x01 = i / (M - 1); const x = r.x + x01 * r.w, y = cy + peakHold[i] * halfH; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke(); }
   } else {
-    // filled / mirrored / clipped / glitch — a filled envelope shape
+    // filled / mirrored / clipped / glitch - a filled envelope shape
     drawEnvFill(ctx, r, cols, sampleEnv, cy, halfH, cfg, grad, true, cfg.symmetry);
     if (mode === 'glitch' && bands.punch > 0.4) {
       const slices = 2 + Math.floor((cfg.glitch + 0.3) * 4);
