@@ -10,8 +10,9 @@ import * as THREE from 'three';
 import type { VisualizerConfig, AudioData } from '@/lib/visualizerFactory/config';
 import { getShapeConfig, getAudioConfig } from '@/lib/visualizerFactory/modules';
 import { generateLayoutPositions } from '@/lib/visualizerFactory/layoutGenerator';
-import { analyzeFrequencyBands, createAudioSmoother, transientBlend, getIdleAnimation } from '@/lib/visualizerFactory/audioProcessing';
+import { getIdleAnimation } from '@/lib/visualizerFactory/audioProcessing';
 import { updateMotionState, createMotionState } from '@/lib/visualizerFactory/motionGenerator';
+import { createBandProcessor } from '@/lib/audioBands';
 import { useStudioStore } from '@/stores/studioStore';
 import { renderGate } from '@/lib/renderReadyGate';
 import { SHAPE_COMPONENTS } from './shapes';
@@ -29,16 +30,12 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
   const bandsRef = useRef({ bass: 0, mids: 0, highs: 0, rawBass: 0, rawMids: 0, rawHighs: 0 });
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   
-  // Audio smoother with attack/release from audio profile
+  // Audio profile (still used to pick how bass drives the group: scale vs expand).
   const audioConfig = getAudioConfig(config.audioProfile);
-  const smoother = useMemo(() => createAudioSmoother({
-    bassAttack: audioConfig.bass.attack,
-    bassRelease: audioConfig.bass.release,
-    midsAttack: audioConfig.mids.attack,
-    midsRelease: audioConfig.mids.release,
-    highsAttack: audioConfig.highs.attack,
-    highsRelease: audioConfig.highs.release,
-  }), [config.audioProfile]);
+  // Punchy, onset-driven bands - the SAME transient engine every other visualizer
+  // family uses. Replaces the old band-average smoother so models actually SNAP to
+  // drums (instant attack + short decay) instead of drifting on loudness averages.
+  const band = useMemo(() => createBandProcessor(), []);
   
   // Motion state
   const motionState = useMemo(() => createMotionState(config.shapeParams.elementCount), [config]);
@@ -168,60 +165,45 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     const time = state.clock.elapsedTime;
     timeRef.current = time;
     const audio = audioDataRef.current;
-    
-    // Analyze audio
-    const rawBands = analyzeFrequencyBands(audio.frequency);
-    const bands = smoother.update(rawBands);
-    
-    // Apply idle animation if no audio
-    let effectiveBass = bands.bass;
-    let effectiveMids = bands.mids;
-    let effectiveHighs = bands.highs;
-    
-    if (bands.isIdle) {
+
+    // Punchy onset-driven bands (instant attack, short decay, peak-normalised).
+    const f = band(audio.frequency || [], audio.amplitude || 0, audio.beatStrength || 0);
+    let bass = f.bass, mids = f.mid, highs = f.treble, beat = f.beat;
+
+    // Idle breathing only when there's effectively no signal at all.
+    const isIdle = (f.level + f.bass + f.mid + f.treble) < 0.025;
+    if (isIdle) {
       const idle = getIdleAnimation(time);
-      effectiveBass = idle.bass;
-      effectiveMids = idle.mids;
-      effectiveHighs = idle.highs;
+      bass = idle.bass; mids = idle.mids; highs = idle.highs; beat = 0;
     }
-    
-    // Blend raw and smoothed for punch
-    const punchyBass = transientBlend(bands.rawBass, effectiveBass, 0.55);
-    
-    // Store for shape components
+
+    // Hand the shapes the punchy bands so each shape's own per-element reactivity
+    // (scale pulses, orbit speed, displacement) snaps on the beat. rawBass carries
+    // the pure transient hit for shapes that want the sharpest spike.
     bandsRef.current = {
-      bass: punchyBass,
-      mids: effectiveMids,
-      highs: effectiveHighs,
-      rawBass: bands.rawBass,
-      rawMids: bands.rawMids,
-      rawHighs: bands.rawHighs,
+      bass, mids, highs,
+      rawBass: isIdle ? bass : Math.max(bass, f.bassHit),
+      rawMids: isIdle ? mids : Math.max(mids, f.lowMidHit, f.highMidHit),
+      rawHighs: isIdle ? highs : Math.max(highs, f.highHit),
     };
-    
+
     // Update motion state
-    updateMotionState(motionState, config.motion, config.motionParams, delta, effectiveMids);
-    
-    // Apply audio profile effects
+    updateMotionState(motionState, config.motion, config.motionParams, delta, mids);
+
+    // Group-level drive: bass swells the whole model, the master beat adds a sharp
+    // pop on top. Clamped so a hard drop can't balloon it past ~2.4x.
     const sensitivity = audioSensitivity.animationSpeed * config.audioParams.globalSensitivity;
-    const bassEffect = punchyBass * config.audioParams.bassMultiplier * sensitivity;
-    
-    // Apply to group based on audio profile target
+    const bassEffect = bass * config.audioParams.bassMultiplier * sensitivity;
+    const beatPop = beat * sensitivity;
     const baseScale = shapeConfig.defaultScale * config.shapeParams.scale;
-    
-    switch (audioConfig.bass.target) {
-      case 'scale':
-        groupRef.current.scale.setScalar(baseScale * (1 + bassEffect * 0.9));
-        break;
-      case 'expand':
-        groupRef.current.scale.setScalar(baseScale * (1 + bassEffect * 1.3));
-        break;
-      default:
-        groupRef.current.scale.setScalar(baseScale * (1 + bassEffect * 0.6));
-    }
-    
-    // Apply motion
-    groupRef.current.rotation.x = motionState.groupRotation.x;
-    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5;
+    const gain = audioConfig.bass.target === 'expand' ? 1.1 : audioConfig.bass.target === 'scale' ? 0.85 : 0.6;
+    const pulse = Math.min(2.4, 1 + bassEffect * gain + beatPop * 0.22);
+    groupRef.current.scale.setScalar(baseScale * pulse);
+
+    // Motion + a transient rotational kick on every drum hit (decays with the beat
+    // envelope) so the model visibly lurches in time with the track.
+    groupRef.current.rotation.x = motionState.groupRotation.x + beat * 0.10;
+    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.14;
     groupRef.current.rotation.z = motionState.groupRotation.z;
     groupRef.current.position.copy(motionState.groupPosition);
   });

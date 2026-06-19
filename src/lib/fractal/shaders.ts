@@ -882,24 +882,31 @@ void main() {
 
   // orbiting camera, spun by the music
   float a = uTime * uCamSpeed + uBeat * uRRot * 1.5;
-  float dist = uCamDist * (1.0 - uBass * uRZoom * 0.35);
+  float dist = uCamDist * (1.0 - uBass * uRZoom * 0.30);
   vec3 ro = vec3(sin(a) * dist, sin(uTime * 0.13) * 0.6, cos(a) * dist);
   vec3 ta = vec3(0.0);
   vec3 ww = normalize(ta - ro);
   vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
   vec3 vv = cross(uu, ww);
-  vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.4 * ww);
+  // focal length 1.15 -> ~47deg vertical FOV: frames the whole form with margin
+  // (the smaller this is, the wider the lens and the more of the fractal fits).
+  vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.15 * ww);
 
   float t = 0.0;
   float glow = 0.0;
   float hit = 0.0;
-  for (int i = 0; i < 96; i++) {
+  int steps = 0;
+  // march to just past the far side of the form (scales with camera distance so a
+  // pulled-back camera still reaches the surface instead of giving up in empty space)
+  float tmax = dist + 5.0;
+  for (int i = 0; i < 130; i++) {
+    steps = i;
     vec3 p = ro + rd * t;
     float d = map(p);
-    glow += exp(-d * 7.0);
-    if (d < 0.0008) { hit = 1.0; break; }
-    if (t > 8.0) break;
-    t += d * 0.85;
+    glow += exp(-d * 9.0);
+    if (d < 0.0006) { hit = 1.0; break; }
+    if (t > tmax) break;
+    t += d * 0.82;
   }
 
   vec3 col = vec3(0.0);
@@ -907,21 +914,28 @@ void main() {
   if (hit > 0.5) {
     vec3 p = ro + rd * t;
     vec3 nor = calcNormal(p);
-    vec3 lig = normalize(vec3(0.6, 0.7, 0.4));
+    vec3 lig = normalize(vec3(0.6, 0.75, 0.45));
     float dif = clamp(dot(nor, lig), 0.0, 1.0);
-    float amb = 0.4 + 0.6 * nor.y;
-    float ao = 1.0 / (1.0 + t * 0.12);
-    float shade = (amb * 0.5 + dif * 0.8) * ao;
-    col = pal(t * 0.18 * uColorScale + hueShift) * shade;
+    float bac = clamp(dot(nor, -lig), 0.0, 1.0) * 0.22;          // soft back-fill
+    float amb = 0.26 + 0.34 * (0.5 + 0.5 * nor.y);               // sky/ground ambient
+    // ambient occlusion from distance + how many steps it took to converge (more
+    // steps = deeper in a crevice = darker), so detail reads in 3D instead of flat
+    float ao = (1.0 / (1.0 + t * 0.10)) * (1.0 - float(steps) / 200.0);
+    float fre = pow(1.0 - clamp(dot(nor, -rd), 0.0, 1.0), 3.0);  // rim / fresnel
+    float shade = (amb * 0.55 + dif * 1.0 + bac) * ao;
+    col = pal(t * 0.16 * uColorScale + hueShift) * shade;
+    col += pal(hueShift + 0.5) * fre * 0.45 * (0.5 + uTreble * 0.8); // bright rim picks out the silhouette
   } else {
-    col = pal(hueShift) * 0.05; // faint background tint
+    col = pal(hueShift) * 0.035; // faint background tint
   }
 
-  // additive glow from the marched proximity field
-  col += pal(hueShift + 0.4) * glow * 0.012 * (uGlow + uBeat * uRGlow * 1.8);
-  col *= 0.6 + uLevel * 0.9;
+  // additive glow from the marched proximity field - tightened so it haloes the
+  // form instead of milking the whole frame to a flat haze
+  col += pal(hueShift + 0.4) * glow * 0.0065 * (uGlow + uBeat * uRGlow * 1.6);
+  col *= 0.82 + uLevel * 0.5; // less audio wash-out than before
 
-  col = pow(clamp(col, 0.0, 1.0), vec3(0.85));
+  // keep blacks black so the silhouette reads (no midtone lift / wash-out)
+  col = pow(clamp(col, 0.0, 1.0), vec3(1.02));
   gl_FragColor = vec4(col, 1.0);
 }
 `;

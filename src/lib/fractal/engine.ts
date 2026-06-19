@@ -83,30 +83,58 @@ export const TYPE_3D = {
  * by range(1.05, 1.35) so the camera is always pulled back enough.
  * ------------------------------------------------------------------------ */
 export const FIT_3D: Record<string, number> = {
+  // bulb / quaternion family - compact, bounded to radius ~1.2
   mandelbulb: 4.6,
-  mandelbox: 7.0,
-  menger: 5.8,
-  quaternion: 4.4,
-  sierpinski: 4.8,
-  apollonian: 4.8,
   juliaBulb: 4.6,
-  pseudoKleinian: 5.6,
-  sierpinskiOctahedron: 5.0,
-  mengerCross: 6.2,
-  jerusalemCube: 7.2,
-  amazingBox: 7.0,
-  aboxMod: 7.0,
-  tgladBox: 7.2,
-  hybridBulbBox: 6.4,
+  quaternion: 4.4,
   quaternionCubic: 4.6,
-  octahedralIFS: 5.2,
-  kaliBox: 6.8,
-  mandelbrotCylinder: 5.6,
-  kleinianGroup: 5.8,
-  mausoleumBox: 7.4,
-  coral: 5.6,
+  // menger / sierpinski / octahedral - mid-sized lattices
+  menger: 5.6,
+  sierpinski: 4.8,
+  sierpinskiOctahedron: 5.0,
+  octahedralIFS: 5.0,
+  mengerCross: 5.4,
+  mandelbrotCylinder: 5.0,
+  // box-fold family - MUCH more compact than they look; framed at ~d3.4 not d7
+  // (measured: a scale-2.2 mandelbox fills the frame at d3.2 and is a speck at d6.5)
+  mandelbox: 3.4,
+  amazingBox: 3.4,
+  aboxMod: 3.4,
+  tgladBox: 3.6,
+  kaliBox: 3.4,
+  mausoleumBox: 3.8,
+  hybridBulbBox: 3.8,
+  jerusalemCube: 4.4,
+  // kleinian / apollonian / coral - space-filling; pull back to show the structure
+  apollonian: 8.5,
+  pseudoKleinian: 8.0,
+  kleinianGroup: 8.5,
+  coral: 7.5,
 };
 const fit3d = (typeName: string): number => FIT_3D[typeName] ?? 5.0;
+
+// Box-fold DEs (Mandelbox & relatives). Their size swings wildly with the scale /
+// julia-offset / rotation params, so a julia offset or a big rotation fold turns
+// them into a sprawling space-filling mess that overflows any framing. We keep
+// these BOUNDED (no julia offset, tiny rotation, classic scale band) so they sit
+// as a compact form the camera can actually frame.
+const BOX_FOLD = new Set<string>([
+  'mandelbox', 'amazingBox', 'aboxMod', 'tgladBox', 'kaliBox', 'mausoleumBox', 'hybridBulbBox',
+]);
+// Genuinely space-filling tilings (use fract()/inversion to repeat forever). There
+// is no "whole form" to frame - they are immersive detail views by nature.
+const SPACE_FILLING = new Set<string>([
+  'apollonian', 'pseudoKleinian', 'kleinianGroup', 'coral', 'mengerCross', 'jerusalemCube',
+]);
+// Types that render as a clean, bounded WHOLE form the camera can frame with margin.
+// Random rolls draw from these most of the time so a roll is almost always a nicely
+// framed fractal instead of a space-filling wall of detail (the rest still appear
+// occasionally, for variety).
+const WELL_FRAMED_3D: string[] = [
+  'mandelbulb', 'juliaBulb', 'quaternion', 'quaternionCubic',
+  'sierpinski', 'sierpinskiOctahedron', 'menger', 'octahedralIFS',
+  'mandelbrotCylinder', 'mandelbox',
+];
 
 export type Fractal2DType = keyof typeof TYPE_2D;
 export type Fractal3DType = keyof typeof TYPE_3D;
@@ -399,14 +427,26 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
     };
   }
 
-  const pool3 = theme?.types3d?.length ? theme.types3d : (Object.keys(TYPE_3D) as Fractal3DType[]);
+  // Theme types win; otherwise favour the well-framed set 80% of the time so a
+  // random roll is rarely a space-filling wall.
+  const pool3 = (theme?.types3d?.length
+    ? theme.types3d
+    : (r() < 0.8 ? WELL_FRAMED_3D : Object.keys(TYPE_3D))) as Fractal3DType[];
   const typeName = pick(r, pool3);
   const type = TYPE_3D[typeName];
 
-  // Limitless variety: per-iteration rotation + julia offset turn each type into a
-  // continuous infinite family rather than one fixed formula.
-  const rotAmt = r() < 0.78 ? range(r, 0.04, 0.55) : 0; // most get a rotation fold
-  const julia = r() < 0.55;
+  const isBox = BOX_FOLD.has(typeName);
+  const isFill = SPACE_FILLING.has(typeName);
+
+  // Limitless variety from per-iteration rotation + julia offset - but bounded for
+  // the box-fold / space-filling families, which otherwise balloon past the frame.
+  // Clean DEs (bulb, sierpinski, quaternion, menger) keep the full wild range.
+  const rotAmt = (isBox || isFill)
+    ? (r() < 0.5 ? range(r, 0.02, 0.12) : 0)   // tiny fold only - keeps the form compact
+    : (r() < 0.78 ? range(r, 0.04, 0.55) : 0);
+  const julia = !isBox && !isFill && r() < 0.55; // no detached offset for box/fill types
+  // box scale stays in the classic bounded band; other types keep their range
+  const boxScale = range(r, 1.9, 2.3);
   return {
     id: `fr_${seed}`,
     name: themeName ?? 'Random Fractal',
@@ -426,10 +466,13 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
     kaleido: 0,
     rotationSpeed: range(r, -0.1, 0.1) * speed,
     warpAmount: 0,
-    power: typeName === 'mandelbulb' || typeName === 'juliaBulb' ? range(r, 3, 12) : typeName === 'mandelbox' || typeName === 'amazingBox' || typeName === 'aboxMod' || typeName === 'tgladBox' || typeName === 'kaliBox' || typeName === 'mausoleumBox' || typeName === 'hybridBulbBox' ? range(r, 1.6, 3.0) : range(r, 1.8, 2.6),
-    // Per-type fit baseline pulled BACK by 1.35-1.85x so the whole form is in
-    // frame by default and definitely visible at full zoom-out (zoom 0.5 doubles it).
-    camDist: fit3d(typeName) * range(r, 1.35, 1.85),
+    power: typeName === 'mandelbulb' || typeName === 'juliaBulb' ? range(r, 3, 12)
+      : isBox ? boxScale
+      : range(r, 1.8, 2.6),
+    // Per-type fit baseline (now calibrated to frame the whole form with the
+    // wider ~47deg FOV) with a small random pull-back for variety. Zoom-out still
+    // doubles it, so the form is always fully in frame.
+    camDist: fit3d(typeName) * range(r, 1.1, 1.4),
     camSpeed: range(r, 0.05, 0.25) * speed,
     rotIter: [range(r, -rotAmt, rotAmt), range(r, -rotAmt, rotAmt), range(r, -rotAmt, rotAmt)],
     juliaC3: julia ? [range(r, -1.0, 1.0), range(r, -1.0, 1.0), range(r, -1.0, 1.0)] : [0, 0, 0],
@@ -508,7 +551,7 @@ export const FRACTAL_PRESETS: FractalConfig[] = [
   preset({
     id: 'FractalMandelbox', name: 'Mandelbox', emoji: '📦', family: '3d',
     type: TYPE_3D.mandelbox, typeName: 'mandelbox',
-    palette: PALETTES.acid, power: 2.2, camDist: 6.5, camSpeed: 0.1,
+    palette: PALETTES.acid, power: 2.2, camDist: 3.2, camSpeed: 0.1,
     react: { ...defaultReact(), morph: 0.6, hue: 0.7 },
   }),
   preset({
@@ -532,7 +575,7 @@ export const FRACTAL_PRESETS: FractalConfig[] = [
   preset({
     id: 'FractalApollonian', name: 'Apollonian', emoji: '🫧', family: '3d',
     type: TYPE_3D.apollonian, typeName: 'apollonian',
-    palette: PALETTES.gold, camDist: 4.6, camSpeed: 0.1, glow: 1.0,
+    palette: PALETTES.gold, camDist: 8.5, camSpeed: 0.1, glow: 1.0,
     react: { ...defaultReact(), glow: 0.9, rotation: 0.4 },
   }),
 ];
