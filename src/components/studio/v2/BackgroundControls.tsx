@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { Shuffle, Upload, X } from 'lucide-react';
+import { Shuffle, Upload, X, Wand2, Loader2 } from 'lucide-react';
 import { useStudioStore } from '@/stores/studioStore';
 import { generateRandomGradient } from '@/lib/gradientEngine';
+import { useReactionAutoSync } from '@/hooks/useReactionAutoSync';
 import { Switch } from '@/components/ui/switch';
 
 type Mode = 'color' | 'gradient' | 'transparent' | 'custom';
@@ -21,6 +22,7 @@ export function BackgroundControls() {
     setBackgroundReactive,
   } = useStudioStore();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { canAutoSync, running, runAutoSync } = useReactionAutoSync();
 
   const mode: Mode =
     background.type === 'gradient' ? 'gradient'
@@ -174,6 +176,14 @@ export function BackgroundControls() {
             </button>
           )}
           <p className="text-caption">PNG, JPG, GIF, MP4, WebM. Max ~50MB.</p>
+          {/* Auto-sync: line up the reaction video's audio to the loaded song */}
+          {canAutoSync && background.mediaType === 'video' && (
+            <button onClick={runAutoSync} disabled={running}
+              className="btn btn-primary w-full h-10 disabled:opacity-60">
+              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              {running ? 'Lining up…' : 'Auto-sync video to track'}
+            </button>
+          )}
           {background.mediaUrl && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">

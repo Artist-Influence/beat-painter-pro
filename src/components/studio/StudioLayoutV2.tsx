@@ -9,9 +9,11 @@ import { FloatingActions } from './v2/FloatingActions';
 import { LogoOverlay } from './v2/LogoOverlay';
 import { ReactionReelWizard } from './v2/ReactionReelWizard';
 import { CompositeFrame } from './v2/CompositeFrame';
+import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAutoPilot } from '@/hooks/useAutoPilot';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useReactionAutoSync } from '@/hooks/useReactionAutoSync';
 import { useStudioStore, AspectRatio } from '@/stores/studioStore';
 import { vizBox } from '@/lib/compositeLayout';
 
@@ -60,6 +62,20 @@ export function StudioLayoutV2() {
   const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen } = useStudioStore();
   const stage = useStageSize(exportAspectRatio, previewMode);
   const { isAdmin } = useUserRole();
+
+  // Offer to auto-line-up a freshly-added reaction video to the song (once per clip).
+  const { runAutoSync } = useReactionAutoSync();
+  const autoSyncOfferedRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    const url = background.type === 'video' ? background.mediaUrl : null;
+    if (!url || !audioElement || autoSyncOfferedRef.current === url) return;
+    autoSyncOfferedRef.current = url;
+    toast('Line up your video to the song automatically?', {
+      description: 'We’ll match the audio in your clip to the track so reactions sync up.',
+      action: { label: 'Auto-sync', onClick: () => runAutoSync() },
+      duration: 12000,
+    });
+  }, [background.type, background.mediaUrl, audioElement, runAutoSync]);
 
   // "Get started" card: show once per browser session, and never for the admin.
   const [gsDismissed, setGsDismissed] = useState(() => {

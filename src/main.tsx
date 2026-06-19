@@ -10,6 +10,9 @@ if (typeof window !== 'undefined') {
   const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   if (isLocal && new URLSearchParams(window.location.search).has('e2e')) {
     (window as unknown as { __studioStore?: unknown }).__studioStore = useStudioStore;
+    import('./lib/audioAlign').then((m) => {
+      (window as unknown as { __alignVideoToSong?: unknown }).__alignVideoToSong = m.alignVideoToSong;
+    });
   }
 }
 
