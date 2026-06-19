@@ -11,6 +11,7 @@ import { ReactionReelWizard } from './v2/ReactionReelWizard';
 import { CompositeFrame } from './v2/CompositeFrame';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAutoPilot } from '@/hooks/useAutoPilot';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useStudioStore, AspectRatio } from '@/stores/studioStore';
 import { vizBox } from '@/lib/compositeLayout';
 
@@ -26,11 +27,16 @@ function useStageSize(aspect: AspectRatio, preview = false) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const compute = () => {
+      // Preview = true fullscreen: the stage fills the ENTIRE viewport edge-to-edge
+      // (no aspect-ratio letterbox / blank margins). The visualizer covers the screen.
+      if (preview) {
+        setSize({ w: window.innerWidth, h: window.innerHeight });
+        return;
+      }
       const phone = window.innerWidth < 640;
-      // In preview mode the chrome is hidden, so the stage fills the screen.
-      const marginX = preview ? 8 : (phone ? 10 : 32);
-      const marginTop = preview ? 8 : (phone ? 68 : 84);     // header
-      const marginBottom = preview ? 8 : (phone ? 112 : 96); // transport (taller chrome on mobile)
+      const marginX = phone ? 10 : 32;
+      const marginTop = phone ? 68 : 84;     // header
+      const marginBottom = phone ? 112 : 96; // transport (taller chrome on mobile)
       const availW = Math.max(120, window.innerWidth - marginX * 2);
       const availH = Math.max(120, window.innerHeight - marginTop - marginBottom);
       const ratio = RATIO[aspect];
@@ -53,6 +59,25 @@ export function StudioLayoutV2() {
   const stageElRef = React.useRef<HTMLDivElement>(null);
   const { logo, background, exportAspectRatio, backgroundReactive, composite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen } = useStudioStore();
   const stage = useStageSize(exportAspectRatio, previewMode);
+  const { isAdmin } = useUserRole();
+
+  // "Get started" card: show once per browser session, and never for the admin.
+  const [gsDismissed, setGsDismissed] = useState(() => {
+    try { return sessionStorage.getItem('bp_getstarted_seen') === '1'; } catch { return false; }
+  });
+  const dismissGetStarted = React.useCallback(() => {
+    try { sessionStorage.setItem('bp_getstarted_seen', '1'); } catch { /* private mode */ }
+    setGsDismissed(true);
+  }, []);
+  // Loading a song counts as "session started" — don't pop it back up afterwards.
+  useEffect(() => { if (audioElement) dismissGetStarted(); }, [audioElement, dismissGetStarted]);
+
+  // Enter preview = go true OS fullscreen (the click is the required user gesture)
+  // AND fill the viewport, so the visualizer is edge-to-edge with no blank margins.
+  const enterPreview = React.useCallback(() => {
+    setPreviewMode(true);
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }, [setPreviewMode]);
 
   // Exiting preview also drops out of true fullscreen (TV mode), so a single
   // tap / Esc fully returns to the editor instead of leaving a half-exited state.
@@ -60,6 +85,13 @@ export function StudioLayoutV2() {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     setPreviewMode(false);
   }, [setPreviewMode]);
+
+  // If the user leaves browser fullscreen (Esc / F11), drop out of preview too.
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement && previewMode) setPreviewMode(false); };
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, [previewMode, setPreviewMode]);
 
   // Esc exits preview-framing mode.
   useEffect(() => {
@@ -228,11 +260,11 @@ export function StudioLayoutV2() {
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           ref={stageElRef}
-          className="relative rounded-xl overflow-hidden"
+          className={`relative overflow-hidden ${previewMode ? '' : 'rounded-xl'}`}
           style={{
             width: stage.w || undefined,
             height: stage.h || undefined,
-            boxShadow: '0 24px 80px hsl(225 18% 2% / 0.6)',
+            boxShadow: previewMode ? 'none' : '0 24px 80px hsl(225 18% 2% / 0.6)',
           }}
         >
           {/* hairline frame */}
@@ -302,16 +334,23 @@ export function StudioLayoutV2() {
               immediately; the "Move on stage" toggle forces it on otherwise. */}
           {(composite.enabled || overlayingClip) && !previewMode && <CompositeFrame stageRef={stageElRef} />}
 
-          {/* First-run empty state — the front door. No song yet → guide into the
-              guided Reaction Reel flow instead of the bare control panels. */}
-          {!audioElement && !reactionWizardOpen && !previewMode && (
+          {/* First-run empty state — shown once per session, and never to the admin.
+              No song yet → guide into the Reaction Reel flow. */}
+          {!audioElement && !reactionWizardOpen && !previewMode && !isAdmin && !gsDismissed && (
             <div className="absolute inset-0 z-[16] flex items-center justify-center p-5">
-              <div className="max-w-xs w-full text-center glass-panel rounded-2xl p-6 space-y-3 backdrop-blur-xl bg-[hsl(225_18%_6%/0.82)]">
+              <div className="relative max-w-xs w-full text-center glass-panel rounded-2xl p-6 space-y-3 backdrop-blur-xl bg-[hsl(225_18%_6%/0.82)]">
+                <button
+                  onClick={dismissGetStarted}
+                  title="Dismiss"
+                  className="absolute top-2 right-2 w-7 h-7 grid place-items-center rounded-full text-text-tertiary hover:text-text-primary hover:bg-white/5 transition-colors"
+                >
+                  <span className="text-lg leading-none">×</span>
+                </button>
                 <p className="text-eyebrow">get started</p>
                 <h2 className="text-text-primary text-lg font-semibold leading-tight">Make a reactive music video</h2>
                 <p className="text-caption">Add your song, drop a visualizer over your clip, and export for socials — in a few taps.</p>
                 <button
-                  onClick={() => setReactionWizardOpen(true)}
+                  onClick={() => { dismissGetStarted(); setReactionWizardOpen(true); }}
                   className="btn btn-primary !rounded-full w-full h-11 font-semibold"
                 >
                   Start — guided setup
@@ -361,8 +400,8 @@ export function StudioLayoutV2() {
       {/* Preview framing: a one-tap clean look at the export frame */}
       {!previewMode && !reactionWizardOpen && (
         <button
-          onClick={() => setPreviewMode(true)}
-          title="Preview framing — hide all controls (Esc to exit)"
+          onClick={enterPreview}
+          title="Fullscreen preview — hide all controls (Esc to exit)"
           className="absolute bottom-32 sm:bottom-24 left-4 z-50 p-3 glass-panel glass-panel-interactive !rounded-full transition-colors"
         >
           <Eye className="w-5 h-5 text-text-tertiary" />

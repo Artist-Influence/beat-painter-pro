@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { Mic2, Film, Image, Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
+import { Film, Image, Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useStudioStore, AspectRatio, ExportQuality } from '@/stores/studioStore';
 import { useWebMRecorder } from '@/hooks/useWebMRecorder';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
 import { getExportQuota, recordExport, formatResetIn, EXPORT_LIMIT } from '@/lib/exportLimiter';
 
 interface TopBarProps {
@@ -43,6 +44,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
   const recorder = useWebMRecorder({ canvasRef, audioElement });
   const { isRecording, startRecording, stopRecording, frameCount, progress } = recorder;
   const { isAdmin } = useUserRole();
+  const { user } = useAuth();
 
   const handleRecord = () => {
     if (isRecording) {
@@ -77,7 +79,7 @@ export function TopBar({ canvasRef }: TopBarProps) {
         {/* Logo + Reaction Reel launcher - Left */}
         <div className="pointer-events-auto flex items-center gap-2">
           <div className="flex items-center gap-3 px-3 sm:px-4 py-2 glass-panel !rounded-full">
-            <Mic2 className="w-5 h-5 text-ai-red shrink-0" />
+            <img src="/ai-logo.png" alt="Artist Influence" className="w-6 h-6 object-contain shrink-0" />
             <div className="hidden sm:flex flex-col leading-none">
               <span className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-ai-red">artist influence</span>
               <span className="text-sm font-semibold text-text-primary">Visualizer Studio</span>
@@ -166,15 +168,22 @@ export function TopBar({ canvasRef }: TopBarProps) {
           </button>
         </div>
 
-        {/* User Menu - Right — Admin entry only shown to actual admins */}
+        {/* User Menu - Right — Admin entry for admins; a discreet Log in for
+            everyone else so the admin can actually sign in to reach the dashboard. */}
         <div className="hidden sm:block pointer-events-auto">
-          {isAdmin && (
+          {isAdmin ? (
             <Link to="/admin">
               <button className="btn btn-ghost !rounded-full h-10 px-4 text-text-tertiary">
                 Admin
               </button>
             </Link>
-          )}
+          ) : !user ? (
+            <Link to="/auth">
+              <button className="btn btn-ghost !rounded-full h-10 px-4 text-text-tertiary">
+                Log in
+              </button>
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
