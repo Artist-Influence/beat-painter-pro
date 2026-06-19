@@ -117,8 +117,8 @@ void main() {
     float hue6 = uPaletteShift + max(found, 0.0) / 3.0 + uTreble * uRHue * 0.55 + uTime * 0.02;
     vec3 col6 = pal(hue6) * (0.3 + 0.7 * shade);
     col6 += pal(hue6 + 0.5) * shade * uBeat * uRGlow * 0.6;
-    col6 *= 0.6 + uLevel * 1.0;
-    col6 = pow(clamp(col6, 0.0, 1.0), vec3(0.85));
+    col6 *= 0.46 + uLevel * 0.4;
+    col6 = pow(clamp(col6, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col6, 1.0);
     return;
   }
@@ -141,11 +141,11 @@ void main() {
     float t16 = (sn16 / iters) * uColorScale;
     float hs16 = uPaletteShift + uTreble * uRHue * 0.85 + uTime * 0.02;
     vec3 c16 = pal(t16 + hs16);
-    c16 += exp(-trap16 * 2.2) * (uGlow + uBeat * uRGlow * 1.8) * pal(hs16 + 0.5);
+    c16 += exp(-trap16 * 2.2) * (uGlow + uBeat * uRGlow * 0.85) * pal(hs16 + 0.5);
     c16 *= mix(0.1, 1.0, esc16);
     c16 *= smoothstep(0.0, 6.0, sn16);
-    c16 *= 0.6 + uLevel * 1.0;
-    c16 = pow(clamp(c16, 0.0, 1.0), vec3(0.85));
+    c16 *= 0.46 + uLevel * 0.4;
+    c16 = pow(clamp(c16, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(c16, 1.0);
     return;
   }
@@ -173,10 +173,10 @@ void main() {
     float t17 = (sn17 / iters) * uColorScale;
     float hs17 = uPaletteShift + uTreble * uRHue * 0.85 + uTime * 0.02;
     vec3 col17 = pal(t17 + hs17);
-    col17 += exp(-trap17 * 2.2) * (uGlow + uBeat * uRGlow * 1.8) * pal(hs17 + 0.5);
+    col17 += exp(-trap17 * 2.2) * (uGlow + uBeat * uRGlow * 0.85) * pal(hs17 + 0.5);
     col17 *= smoothstep(0.0, 4.0, sn17);
-    col17 *= 0.6 + uLevel * 1.0;
-    col17 = pow(clamp(col17, 0.0, 1.0), vec3(0.85));
+    col17 *= 0.46 + uLevel * 0.4;
+    col17 = pow(clamp(col17, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col17, 1.0);
     return;
   }
@@ -206,10 +206,10 @@ void main() {
     float t18 = (n18 / iters) * uColorScale;
     float hs18 = uPaletteShift + uTreble * uRHue * 0.85 + uTime * 0.02;
     vec3 col18 = pal(t18 + hs18);
-    col18 += exp(-trap18 * 2.2) * (uGlow + uBeat * uRGlow * 1.8) * pal(hs18 + 0.5);
+    col18 += exp(-trap18 * 2.2) * (uGlow + uBeat * uRGlow * 0.85) * pal(hs18 + 0.5);
     col18 *= smoothstep(0.0, 4.0, n18);
-    col18 *= 0.6 + uLevel * 1.0;
-    col18 = pow(clamp(col18, 0.0, 1.0), vec3(0.85));
+    col18 *= 0.46 + uLevel * 0.4;
+    col18 = pow(clamp(col18, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col18, 1.0);
     return;
   }
@@ -231,11 +231,11 @@ void main() {
     float t19 = (sn19 / iters) * uColorScale;
     float hs19 = uPaletteShift + uTreble * uRHue * 0.85 + uTime * 0.02;
     vec3 col19 = pal(t19 + hs19);
-    col19 += exp(-trap19 * 2.2) * (uGlow + uBeat * uRGlow * 1.8) * pal(hs19 + 0.5);
+    col19 += exp(-trap19 * 2.2) * (uGlow + uBeat * uRGlow * 0.85) * pal(hs19 + 0.5);
     col19 *= mix(0.1, 1.0, esc19);
     col19 *= smoothstep(0.0, 6.0, sn19);
-    col19 *= 0.6 + uLevel * 1.0;
-    col19 = pow(clamp(col19, 0.0, 1.0), vec3(0.85));
+    col19 *= 0.46 + uLevel * 0.4;
+    col19 = pow(clamp(col19, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col19, 1.0);
     return;
   }
@@ -257,11 +257,11 @@ void main() {
     float t20 = (sn20 / iters) * uColorScale;
     float hs20 = uPaletteShift + uTreble * uRHue * 0.85 + uTime * 0.02;
     vec3 col20 = pal(t20 + hs20);
-    col20 += exp(-trap20 * 2.2) * (uGlow + uBeat * uRGlow * 1.8) * pal(hs20 + 0.5);
+    col20 += exp(-trap20 * 2.2) * (uGlow + uBeat * uRGlow * 0.85) * pal(hs20 + 0.5);
     col20 *= mix(0.1, 1.0, esc20);
     col20 *= smoothstep(0.0, 6.0, sn20);
-    col20 *= 0.6 + uLevel * 1.0;
-    col20 = pow(clamp(col20, 0.0, 1.0), vec3(0.85));
+    col20 *= 0.46 + uLevel * 0.4;
+    col20 = pow(clamp(col20, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col20, 1.0);
     return;
   }
@@ -291,8 +291,8 @@ void main() {
     vec3 col21 = pal(t21 + hs21);
     col21 += exp(-trap21 * 2.2) * (uGlow + uBeat * uRGlow * 1.2) * pal(hs21 + 0.5);
     col21 *= 0.4 + 0.6 * conv21;
-    col21 *= 0.6 + uLevel * 1.0;
-    col21 = pow(clamp(col21, 0.0, 1.0), vec3(0.85));
+    col21 *= 0.46 + uLevel * 0.4;
+    col21 = pow(clamp(col21, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col21, 1.0);
     return;
   }
@@ -318,8 +318,8 @@ void main() {
     col22 += exp(-trap22 * 0.6) * (uGlow + uBeat * uRGlow * 1.4) * pal(hs22 + 0.5);
     col22 *= mix(0.1, 1.0, esc22);
     col22 *= smoothstep(0.0, 4.0, n22);
-    col22 *= 0.6 + uLevel * 1.0;
-    col22 = pow(clamp(col22, 0.0, 1.0), vec3(0.85));
+    col22 *= 0.46 + uLevel * 0.4;
+    col22 = pow(clamp(col22, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col22, 1.0);
     return;
   }
@@ -345,8 +345,8 @@ void main() {
     col23 += exp(-trap23 * 0.6) * (uGlow + uBeat * uRGlow * 1.4) * pal(hs23 + 0.5);
     col23 *= mix(0.1, 1.0, esc23);
     col23 *= smoothstep(0.0, 4.0, n23);
-    col23 *= 0.6 + uLevel * 1.0;
-    col23 = pow(clamp(col23, 0.0, 1.0), vec3(0.85));
+    col23 *= 0.46 + uLevel * 0.4;
+    col23 = pow(clamp(col23, 0.0, 1.0), vec3(1.05)) * 0.9;
     gl_FragColor = vec4(col23, 1.0);
     return;
   }
@@ -432,7 +432,7 @@ void main() {
   vec3 col = pal(t + hueShift);
 
   // orbit-trap glow, kicked by the beat
-  float g = exp(-trap * 2.2) * (uGlow + uBeat * uRGlow * 1.8);
+  float g = exp(-trap * 2.2) * (uGlow + uBeat * uRGlow * 0.85);
   col += g * pal(hueShift + 0.5);
 
   // darken the interior, and fade the flat far-field to black so the fractal
@@ -441,9 +441,9 @@ void main() {
   col *= smoothstep(0.0, 6.0, sn);
 
   // overall level lift
-  col *= 0.6 + uLevel * 1.0;
+  col *= 0.46 + uLevel * 0.4;
 
-  col = pow(clamp(col, 0.0, 1.0), vec3(0.85)); // gentle gamma for punch
+  col = pow(clamp(col, 0.0, 1.0), vec3(1.05)) * 0.9; // gentle gamma for punch
   gl_FragColor = vec4(col, 1.0);
 }
 `;

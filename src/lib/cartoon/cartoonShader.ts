@@ -565,8 +565,10 @@ void main(){
   uv.x *= ar;
   float aa = 2.0 / iResolution.y;
 
-  // bouncing + spinning main shape
-  float scale = 0.55 * uZoomFx * (1.0 + uBass*0.7 + 0.05*sin(uTime*2.2) + uBeat*0.28);
+  // bouncing + spinning main shape. Lower base scale frames the WHOLE shape with
+  // margin by default (0.55 cropped it); the bass/beat pump is gentler so a hit
+  // zooms in a touch instead of slamming the shape past the edges.
+  float scale = 0.40 * uZoomFx * (1.0 + uBass*0.35 + 0.05*sin(uTime*2.2) + uBeat*0.15);
   vec2 p = rot(uSpin*uTime + uBeat*0.3) * uv / scale;
   float d = shapeSDF(p, uTime) * scale;
 

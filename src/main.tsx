@@ -15,7 +15,10 @@ if (typeof window !== 'undefined') {
     });
     // Preview a procedural 3D model / random 3D fractal by seed (for automated
     // framing + reactivity checks). e2e+localhost only, so the live build is clean.
-    Promise.all([import('./lib/modelGenerator'), import('./lib/fractal/engine'), import('./stores/presetStore')]).then(([m, f, p]) => {
+    Promise.all([
+      import('./lib/modelGenerator'), import('./lib/fractal/engine'),
+      import('./lib/cartoon/cartoonEngine'), import('./stores/presetStore'),
+    ]).then(([m, f, c, p]) => {
       const setSel = (id: string) => (useStudioStore.getState() as unknown as { setSelected: (id: string) => void }).setSelected(id);
       const setPrev = (i: unknown) => (p.usePresetStore.getState() as unknown as { setPreview: (i: unknown) => void }).setPreview(i);
       (window as unknown as { __previewModel?: unknown }).__previewModel = (seed: number, shapes?: string[]) => {
@@ -27,6 +30,11 @@ if (typeof window !== 'undefined') {
         const fractal = f.randomFractal(seed, '3d');
         setPrev({ kind: 'fractal', fractal, standalone: false }); setSel('__preview__');
         return { type: fractal.typeName, camDist: fractal.camDist };
+      };
+      (window as unknown as { __previewCartoon?: unknown }).__previewCartoon = (seed: number, shape?: number) => {
+        const cartoon = c.randomCartoon(seed, shape !== undefined ? { shape } : {});
+        setPrev({ kind: 'cartoon', cartoon, standalone: false }); setSel('__preview__');
+        return cartoon.shape;
       };
     });
   }
