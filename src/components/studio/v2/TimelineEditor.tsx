@@ -136,6 +136,10 @@ export function TimelineEditor() {
   );
 
   const selClip = timeline.clips.find((c) => c.id === timeline.selectedClipId) || null;
+  // ruler tick marks at a readable interval for the song length
+  const tickStep = duration <= 20 ? 5 : duration <= 60 ? 10 : duration <= 180 ? 30 : 60;
+  const ticks: number[] = [];
+  for (let t = 0; t <= duration + 0.01; t += tickStep) ticks.push(Math.round(t));
 
   return (
     <div className="space-y-2">
@@ -158,15 +162,28 @@ export function TimelineEditor() {
       </div>
 
       <div className="flex gap-2">
-        <div className="w-9 shrink-0 flex flex-col gap-1.5 pt-0">
+        <div className="w-9 shrink-0 flex flex-col gap-1.5">
+          <div className="h-4" />{/* aligns with the ruler row */}
           <div className="h-9 flex items-center text-[10px] uppercase tracking-wide text-text-tertiary">Viz</div>
           <div className="h-9 flex items-center text-[10px] uppercase tracking-wide text-text-tertiary">BG</div>
         </div>
-        <div ref={areaRef} className="relative flex-1 flex flex-col gap-1.5">
-          <ClipRow track="viz" />
-          <ClipRow track="bg" />
-          {/* playhead spans both tracks */}
-          <div className="absolute top-0 bottom-0 w-px bg-white pointer-events-none z-20" style={{ left: `${(now / duration) * 100}%` }} />
+        {/* timed area scrolls horizontally on small screens so clips stay tappable */}
+        <div className="flex-1 overflow-x-auto">
+          <div ref={areaRef} className="relative min-w-[480px] flex flex-col gap-1.5">
+            {/* ruler */}
+            <div className="relative h-4">
+              {ticks.map((t) => (
+                <div key={t} className="absolute top-0 flex flex-col items-start" style={{ left: `${(t / duration) * 100}%` }}>
+                  <div className="w-px h-1.5 bg-hairline/70" />
+                  <span className="text-[9px] leading-none text-text-tertiary font-mono-num">{fmt(t)}</span>
+                </div>
+              ))}
+            </div>
+            <ClipRow track="viz" />
+            <ClipRow track="bg" />
+            {/* playhead spans the ruler + both tracks */}
+            <div className="absolute top-0 bottom-0 w-px bg-white pointer-events-none z-20" style={{ left: `${(now / duration) * 100}%` }} />
+          </div>
         </div>
       </div>
 
