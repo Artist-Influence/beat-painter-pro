@@ -128,10 +128,10 @@ void main(){
   vec3 v = aVel;
   v += (curl * uSwirl * 2.6 * weather + toT * uPull) * uDt;
   vec3 rdir = normalize(aPos + hash3(aSeed) * 0.5 + 0.0001);
-  v += rdir * uScatter * 7.0 * uDt;
-  v *= exp(-uDt * 2.4);
+  v += rdir * uScatter * 3.4 * uDt;
+  v *= exp(-uDt * 2.7);
   vec3 p = aPos + v * uDt * (0.25 + uSpeed * 2.2);
-  if (length(p) > 7.0 || fract(aSeed * 977.7 + uTime * 0.013) > 0.999) {
+  if (length(p) > 5.6 || fract(aSeed * 977.7 + uTime * 0.013) > 0.999) {
     p = tgt + hash3(aSeed * 5.1) * 0.05; v = vec3(0.0);
   }
   oPos = vec4(p, 1.0);
@@ -165,9 +165,9 @@ void main(){
 
   float sp = clamp(length(aVel) * 0.9, 0.0, 1.0);
   float tw = step(0.78, fract(aSeed*7.13 + uTime*2.6));
-  float h = fract(uBaseHue + uHue + sp*0.05 + fract(aSeed*17.3)*0.03);
-  float s = uBaseSat - sp*0.25 - uSparkle*tw*0.3;
-  float v = (0.45 + sp*0.8) * uGlowB + uSparkle*tw*1.7;
+  float h = fract(uBaseHue + uHue + sp*0.02 + fract(aSeed*17.3)*0.02);
+  float s = clamp(uBaseSat + 0.12 - sp*0.10 - uSparkle*tw*0.18, 0.0, 1.0);
+  float v = (0.40 + sp*0.6) * uGlowB + uSparkle*tw*0.9;
   vec4 mv = uVP * vec4(aPos, 1.0);
   gl_Position = mv;
   float defocus = abs(mv.w - uFocus) / max(uFocus, 0.5);
@@ -206,9 +206,13 @@ in vec2 vUv;
 out vec4 o;
 void main(){
   vec4 t = texture(uTrail, vUv);
-  vec3 col = vec3(1.0) - exp(-max(t.rgb, 0.0) * uExposure);
-  float a = max(max(col.r, col.g), col.b);
-  a = clamp(max(a, t.a), 0.0, 1.0);
+  vec3 c = max(t.rgb, 0.0);
+  // Hue-preserving tone-map: compress the PEAK brightness and keep the colour ratio,
+  // so dense areas stay vividly coloured instead of saturating every channel to white.
+  float peak = max(max(c.r, c.g), c.b);
+  float lt = 1.0 - exp(-peak * uExposure);
+  vec3 col = peak > 1e-4 ? (c / peak) * lt : vec3(0.0);
+  float a = clamp(max(lt, t.a), 0.0, 1.0);
   o = vec4(col, a);
 }`;
 

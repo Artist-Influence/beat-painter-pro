@@ -201,7 +201,7 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
     depthTest: false,
     depthWrite: false,
     blending: THREE.NormalBlending,
-    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 1.35 } },
+    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 1.25 } },
   });
 
   const cam = new THREE.PerspectiveCamera(48.7, trailW / trailH, 0.1, 100);
@@ -278,19 +278,20 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     const st = useStudioStore.getState();
     const zoom = (zoomLevel || st.zoomLevel || 1);
-    const camDist = clamp(6.2 / zoom, 2.6, 11);
+    // Pull back so the whole morphing cloud sits in frame as a field (not in your face).
+    const camDist = clamp(7.6 / zoom, 3.2, 13);
 
     // ---- simulation uniforms (UR-6 mapping) ----
     const sm = res.simMat.uniforms;
     sm.uPos.value = res.simRT[res.cur].textures[0];
     sm.uVel.value = res.simRT[res.cur].textures[1];
     sm.uDt.value = dt; sm.uTime.value = t;
-    sm.uSpeed.value = (0.1 + vSpeed * 1.3 + lowL * 1.2 + lowT * 0.7) * (0.8 + groove * 0.5);
-    sm.uSwirl.value = (0.45 + vSpeed * 0.5 + midL * 2.7 + midT * 1.0) * (0.34 + vScatter * 0.59);
-    // kicks AND snares fling particles outward - the big visible "hit" response
-    sm.uScatter.value = Math.pow(lowT, 1.05) * 2.9 * (0.7 + groove * 0.7) * (0.12 + vScatter * 1.4) + midT * 0.85 + Math.pow(vScatter, 1.6) * 0.6;
-    sm.uPump.value = lowL * 1.2 + lowT * 0.75;
-    sm.uPull.value = (0.9 + groove * 1.0) * (2.9 - vScatter * 2.27);
+    sm.uSpeed.value = (0.1 + vSpeed * 1.1 + lowL * 1.0 + lowT * 0.6) * (0.8 + groove * 0.5);
+    sm.uSwirl.value = (0.5 + vSpeed * 0.5 + midL * 2.4 + midT * 1.1) * (0.34 + vScatter * 0.59);
+    // kicks/snares give a contained outward pulse - a breathing cloud, not a firehose
+    sm.uScatter.value = Math.pow(lowT, 1.1) * 1.15 * (0.7 + groove * 0.6) * (0.2 + vScatter * 1.0) + midT * 0.32;
+    sm.uPump.value = lowL * 1.35 + lowT * 0.9; // bass swells the whole cloud (very visible)
+    sm.uPull.value = (1.5 + groove * 0.9) * (2.9 - vScatter * 1.6); // stronger pull keeps it cohesive
     wanderRef.current += dt * (0.04 + (1 - groove) * 0.14);
     sm.uWander.value = 0.15 + 1.05 * Math.pow(1 - groove, 1.5);
     sm.uWT.value = wanderRef.current;
@@ -310,16 +311,16 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     // ---- render uniforms (UR-6 mapping) ----
     const pm = res.pointsMat.uniforms;
-    pm.uSize.value = 0.55 + midT * 2.0 + lowT * 1.3;          // kicks fatten the grains
-    pm.uHue.value = highL * 0.35 + lowT * 0.1;
-    pm.uGlowB.value = 0.42 + vGlow * 1.2 + highL * 0.35 + lowT * 0.5; // brighten on hits
-    pm.uSparkle.value = highT * 1.35 + lowT * 0.45 + Math.max(0, vGlow - 0.6) * 1.2;
+    pm.uSize.value = 0.5 + midT * 1.5 + lowT * 1.05;          // kicks fatten the grains
+    pm.uHue.value = highL * 0.07;                             // tiny treble shimmer; keep the set colour faithful
+    pm.uGlowB.value = 0.34 + vGlow * 0.65 + highL * 0.22 + lowT * 0.42; // tamer so colour reads, not white
+    pm.uSparkle.value = highT * 0.7 + lowT * 0.28;
     pm.uTime.value = t;
     pm.uPx.value = Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.75);
     pm.uFocus.value = camDist;
     if (st.colorOverride) {
       pm.uBaseHue.value = st.colorHue / 360;
-      pm.uBaseSat.value = 0.5;
+      pm.uBaseSat.value = 0.72; // vivid recolour (was washing toward white)
     } else {
       pm.uBaseHue.value = SAND3D_PALETTES[config.paletteIndex].hue;
       pm.uBaseSat.value = SAND3D_PALETTES[config.paletteIndex].sat;
@@ -363,7 +364,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     res.pointsObj.geometry.setDrawRange(0, res.count);
     gl.render(res.pointsScene, res.dummyCam);
     // fake-bloom subset (sparse, big and dim) - UR-6's soft halos
-    pm.uPassSize.value = 3.0; pm.uPassAlpha.value = 0.16;
+    pm.uPassSize.value = 2.4; pm.uPassAlpha.value = 0.10;
     res.pointsObj.geometry.setDrawRange(0, Math.floor(res.count / 3));
     gl.render(res.pointsScene, res.dummyCam);
     res.pointsObj.geometry.setDrawRange(0, res.count);
