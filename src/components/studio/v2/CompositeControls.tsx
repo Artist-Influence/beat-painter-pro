@@ -1,5 +1,5 @@
 import React from 'react';
-import { useStudioStore, type CompositeMask, type CompositeBlend, type CompositeState, type AspectRatio } from '@/stores/studioStore';
+import { useStudioStore, selectActiveComposite, type CompositeMask, type CompositeBlend, type CompositeState, type AspectRatio } from '@/stores/studioStore';
 import { useSliderReset } from '@/hooks/useSliderReset';
 import { Switch } from '@/components/ui/switch';
 
@@ -51,20 +51,11 @@ const LAYOUTS: { key: string; label: string; apply: Partial<CompositeState> }[] 
 ];
 
 export function CompositeControls() {
-  const { exportAspectRatio, setExportAspectRatio, background, activeLayerId, layers, composite: primaryComposite, setActiveComposite, setComposite: setPrimaryComposite, timeline, updateClip } = useStudioStore();
-  // Frame target priority: selected TIMELINE viz clip > active extra LAYER > primary.
-  // (The timeline engine mirrors a clip's composite onto the primary while it plays,
-  // so editing the primary live + writing back to the clip keeps them in sync.)
-  const selVizClip = timeline.enabled && timeline.selectedClipId
-    ? timeline.clips.find((c) => c.id === timeline.selectedClipId && c.track === 'viz')
-    : undefined;
-  const composite = selVizClip?.composite ?? (activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.composite ?? primaryComposite) : primaryComposite);
-  const setComposite = (patch: Partial<CompositeState>) => {
-    if (selVizClip) {
-      updateClip(selVizClip.id, { composite: { ...(selVizClip.composite ?? primaryComposite), ...patch } });
-      setPrimaryComposite(patch); // live preview
-    } else setActiveComposite(patch);
-  };
+  const { exportAspectRatio, setExportAspectRatio, background, setActiveComposite } = useStudioStore();
+  // Frame target priority (selected timeline viz clip > active layer > primary) is
+  // centralised in the store so the panel, on-stage handles, and preview all agree.
+  const composite = useStudioStore(selectActiveComposite);
+  const setComposite = setActiveComposite;
   const hasBgMedia = background.type === 'video' || background.type === 'image';
 
   return (

@@ -94,9 +94,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const backgroundRef = useRef<BackgroundMedia | null>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
-  // Phase 3 - timeline bg track: every image/gradient used by a bg clip, preloaded
-  // by URL so the export can follow background scene changes frame-by-frame.
+  // Phase 3 - timeline bg track: every image/gradient (and video) used by a bg clip,
+  // preloaded by URL so the export can follow background scene changes frame-by-frame.
   const bgImageMapRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const bgVideoMapRef = useRef<Map<string, HTMLVideoElement>>(new Map());
   const logoRef = useRef<LogoState | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
@@ -215,18 +216,30 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
       // can switch backgrounds as the playhead moves (videos use the single loaded
       // element below - the common case).
       bgImageMapRef.current = new Map();
+      bgVideoMapRef.current = new Map();
       {
-        const urls = new Set<string>();
+        const imgUrls = new Set<string>();
+        const vidUrls = new Set<string>();
         for (const c of useStudioStore.getState().timeline.clips) {
           if (c.track !== 'bg' || !c.bg) continue;
-          const u = c.bg.type === 'gradient' ? c.bg.gradientUrl : (c.bg.type === 'image' ? c.bg.mediaUrl : null);
-          if (u) urls.add(u);
+          if (c.bg.type === 'gradient' && c.bg.gradientUrl) imgUrls.add(c.bg.gradientUrl);
+          else if (c.bg.type === 'image' && c.bg.mediaUrl) imgUrls.add(c.bg.mediaUrl);
+          else if (c.bg.type === 'video' && c.bg.mediaUrl) vidUrls.add(c.bg.mediaUrl);
         }
-        await Promise.all([...urls].map((u) => new Promise<void>((resolve) => {
-          const im = new Image(); im.crossOrigin = 'anonymous'; im.src = u;
-          im.onload = () => { bgImageMapRef.current.set(u, im); resolve(); };
-          im.onerror = () => resolve();
-        })));
+        const synced = useStudioStore.getState().reactionSync.enabled;
+        await Promise.all([
+          ...[...imgUrls].map((u) => new Promise<void>((resolve) => {
+            const im = new Image(); im.crossOrigin = 'anonymous'; im.src = u;
+            im.onload = () => { bgImageMapRef.current.set(u, im); resolve(); };
+            im.onerror = () => resolve();
+          })),
+          ...[...vidUrls].map((u) => new Promise<void>((resolve) => {
+            const vd = document.createElement('video');
+            vd.crossOrigin = 'anonymous'; vd.src = u; vd.muted = true; vd.loop = !synced; vd.playsInline = true;
+            vd.onloadeddata = () => { bgVideoMapRef.current.set(u, vd); resolve(); };
+            vd.onerror = () => resolve();
+          })),
+        ]);
       }
 
       // Load background video if needed
@@ -457,6 +470,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         const bg = tlOn ? (useStudioStore.getState().background as unknown as BackgroundMedia) : backgroundRef.current;
         const bgImgUrl = bg?.type === 'gradient' ? bg.gradientUrl : (bg?.type === 'image' ? bg.mediaUrl : null);
         const bgImg = (bgImgUrl && bgImageMapRef.current.get(bgImgUrl)) || backgroundImageRef.current;
+        // active video: the timeline clip's video from the preload map, else the base
+        const bgVid = (bg?.type === 'video' && bg.mediaUrl ? bgVideoMapRef.current.get(bg.mediaUrl) : null) || backgroundVideoRef.current;
         const logo = logoRef.current;
 
         // Draw background first (transparent + png-sequence + viz-only keep alpha;
@@ -464,10 +479,11 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         // clean visualizer pass - black in MP4, true alpha in a PNG sequence)
         if (vizOnlyRef.current || exportModeRef.current === 'png-sequence' || bg?.type === 'transparent') {
           ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
-        } else if (bg?.type === 'video' && backgroundVideoRef.current) {
+        } else if (bg?.type === 'video' && bgVid) {
           // Song-master sync: keep the reaction video aligned to the audio playhead
           // (+ offset) so the exported overlay matches the live preview.
-          const vid = backgroundVideoRef.current;
+          const vid = bgVid;
+          if (vid.paused && !useStudioStore.getState().reactionSync.enabled) { try { vid.play(); } catch {} }
           const rs = useStudioStore.getState().reactionSync;
           if (rs.enabled && audioElement) {
             const target = audioElement.currentTime + rs.offset;

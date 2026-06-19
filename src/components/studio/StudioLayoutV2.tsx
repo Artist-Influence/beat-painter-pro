@@ -16,7 +16,7 @@ import { useAutoPilot } from '@/hooks/useAutoPilot';
 import { useTimeline } from '@/hooks/useTimeline';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useReactionAutoSync } from '@/hooks/useReactionAutoSync';
-import { useStudioStore, AspectRatio, type CompositeState } from '@/stores/studioStore';
+import { useStudioStore, selectActiveComposite, AspectRatio, type CompositeState } from '@/stores/studioStore';
 import { vizBox } from '@/lib/compositeLayout';
 
 type LeftPanelType = 'visualizers' | 'styles' | null;
@@ -177,10 +177,8 @@ export function StudioLayoutV2() {
   const { vizStyle, backingStyle } = computeVizStyle(composite);
   // Each extra layer's style + its own canvas, stacked above the primary.
   const layerStyles = layers.map((l) => ({ layer: l, ...computeVizStyle(l.composite) }));
-  // The composite the Frame/controls currently edit: the active layer, else primary.
-  const activeComposite = activeLayerId == null
-    ? composite
-    : (layers.find((l) => l.id === activeLayerId)?.composite ?? composite);
+  // The composite the Frame/controls currently edit: timeline clip > layer > primary.
+  const activeComposite = selectActiveComposite(useStudioStore.getState());
 
   // Reactive background: pulse brightness + shift hue with the music.
   useEffect(() => {

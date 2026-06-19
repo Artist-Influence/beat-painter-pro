@@ -49,6 +49,17 @@ export function useTimeline() {
         if (bgClip?.bg) st.setBackground(bgClip.bg);
       }
 
+      // Edit a bg clip in place: while the SELECTED bg clip is the active one (the
+      // playhead is inside it), auto-save the live background into it - so the
+      // Background controls edit that clip. Skips when values already match.
+      const selId = st.timeline.selectedClipId;
+      if (selId && bgClip && bgClip.id === selId) {
+        const b = st.background, cb = bgClip.bg;
+        if (!cb || cb.type !== b.type || cb.color !== b.color || cb.mediaUrl !== b.mediaUrl || cb.gradientUrl !== b.gradientUrl || cb.positionY !== b.positionY) {
+          st.updateClip(bgClip.id, { bg: { ...b } });
+        }
+      }
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

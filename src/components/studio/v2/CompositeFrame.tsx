@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { RotateCw } from 'lucide-react';
-import { useStudioStore } from '@/stores/studioStore';
+import { useStudioStore, selectActiveComposite } from '@/stores/studioStore';
 import { vizBox } from '@/lib/compositeLayout';
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -13,9 +13,9 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  * the handles always track what you see.
  */
 export function CompositeFrame({ stageRef, onDeselect }: { stageRef: React.RefObject<HTMLDivElement>; onDeselect?: () => void }) {
-  // Edit the ACTIVE layer (primary or an extra layer) so the on-stage handles frame
-  // whichever visualizer is selected in the Layers panel.
-  const composite = useStudioStore((s) => (s.activeLayerId == null ? s.composite : (s.layers.find((l) => l.id === s.activeLayerId)?.composite ?? s.composite)));
+  // Edit the active framing target (selected timeline clip > active layer > primary)
+  // so the on-stage handles frame whatever is currently selected.
+  const composite = useStudioStore(selectActiveComposite);
   const setComposite = useStudioStore((s) => s.setActiveComposite);
   const exportAspect = useStudioStore((s) => s.exportAspectRatio);
   const outerRef = useRef<HTMLDivElement>(null);

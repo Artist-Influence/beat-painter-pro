@@ -254,6 +254,18 @@ const DEFAULT_CUSTOM_STYLE: CustomStyleTexture = {
   name: null,
 };
 
+/** The composite the framing controls + on-stage handles currently edit, by priority:
+ *  selected timeline viz clip > active extra layer > primary. Pairs with
+ *  setActiveComposite, which writes back to the same target. */
+export const selectActiveComposite = (s: StudioState): CompositeState => {
+  if (s.timeline.enabled && s.timeline.selectedClipId) {
+    const clip = s.timeline.clips.find((c) => c.id === s.timeline.selectedClipId && c.track === 'viz');
+    if (clip?.composite) return clip.composite;
+  }
+  if (s.activeLayerId != null) return s.layers.find((l) => l.id === s.activeLayerId)?.composite ?? s.composite;
+  return s.composite;
+};
+
 export const useStudioStore = create<StudioState>((set) => ({
   selected: "FractalMandelbrot",
   background: DEFAULT_BACKGROUND,
@@ -297,6 +309,14 @@ export const useStudioStore = create<StudioState>((set) => ({
     layers: s.layers.map((l) => (l.id === id ? { ...l, selected } : l)),
   })),
   setActiveComposite: (patch) => set((s) => {
+    // Framing target priority: selected timeline viz clip > active extra layer > primary.
+    if (s.timeline.enabled && s.timeline.selectedClipId) {
+      const clip = s.timeline.clips.find((c) => c.id === s.timeline.selectedClipId && c.track === 'viz');
+      if (clip) return {
+        timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.id === clip.id ? { ...c, composite: { ...(c.composite ?? s.composite), ...patch } } : c)) },
+        composite: { ...s.composite, ...patch }, // live: the engine mirrors a clip's composite onto the primary while it plays
+      };
+    }
     if (s.activeLayerId == null) return { composite: { ...s.composite, ...patch } };
     return { layers: s.layers.map((l) => (l.id === s.activeLayerId ? { ...l, composite: { ...l.composite, ...patch } } : l)) };
   }),
