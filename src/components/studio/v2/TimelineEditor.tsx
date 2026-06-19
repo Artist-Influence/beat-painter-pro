@@ -54,6 +54,15 @@ export function TimelineEditor() {
     drag.current = { id: clip.id, mode, x0: e.clientX, start: clip.start, end: clip.end, moved: false };
     setSelectedClip(clip.id);
   };
+  // Snap an edge to nearby magnets (clip edges on either track, the playhead, the
+  // ends) within ~0.3s so clips line up cleanly like a real editor.
+  const snapTime = (t: number, exceptId: string) => {
+    const pts = [0, duration, now];
+    for (const c of timeline.clips) { if (c.id !== exceptId) { pts.push(c.start, c.end); } }
+    let best = t, bestD = 0.3;
+    for (const p of pts) { const dd = Math.abs(t - p); if (dd < bestD) { bestD = dd; best = p; } }
+    return best;
+  };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d) return;
@@ -63,12 +72,15 @@ export function TimelineEditor() {
     const dt = ((e.clientX - d.x0) / r.width) * duration;
     if (d.mode === 'move') {
       const len = d.end - d.start;
-      const start = clamp(d.start + dt, 0, duration - len);
+      let start = clamp(d.start + dt, 0, duration - len);
+      const sS = snapTime(start, d.id), sE = snapTime(start + len, d.id);
+      if (sS !== start) start = clamp(sS, 0, duration - len);            // snap leading edge
+      else if (sE !== start + len) start = clamp(sE - len, 0, duration - len); // else trailing edge
       updateClip(d.id, { start, end: start + len });
     } else if (d.mode === 'l') {
-      updateClip(d.id, { start: clamp(d.start + dt, 0, d.end - 0.5) });
+      updateClip(d.id, { start: clamp(snapTime(clamp(d.start + dt, 0, d.end - 0.5), d.id), 0, d.end - 0.5) });
     } else {
-      updateClip(d.id, { end: clamp(d.end + dt, d.start + 0.5, duration) });
+      updateClip(d.id, { end: clamp(snapTime(clamp(d.end + dt, d.start + 0.5, duration), d.id), d.start + 0.5, duration) });
     }
   };
   const onUp = () => {
@@ -80,10 +92,21 @@ export function TimelineEditor() {
     drag.current = null;
   };
 
+  // Drop a new clip into the next free gap on its track at the playhead, so clips
+  // don't pile up on top of each other.
   const addAt = (track: 'viz' | 'bg') => {
     const st = useStudioStore.getState();
-    const start = clamp(now, 0, Math.max(0, duration - 0.5));
-    const end = clamp(start + 4, start + 0.5, duration);
+    const onTrack = st.timeline.clips.filter((c) => c.track === track).sort((a, b) => a.start - b.start);
+    let start = clamp(now, 0, Math.max(0, duration - 0.5));
+    // jump past any clips we're sitting in (iterate so back-to-back clips tile cleanly)
+    for (let i = 0; i < onTrack.length; i++) {
+      const c = onTrack.find((cl) => start >= cl.start && start < cl.end);
+      if (!c) break;
+      start = c.end;
+    }
+    const next = onTrack.find((c) => c.start >= start);
+    const end = clamp(Math.min(start + 4, next ? next.start : duration), start + 0.5, duration);
+    if (end - start < 0.5) return;                                   // no room here
     if (track === 'viz') addClip({ track, start, end, selected: st.selected as string, composite: st.composite });
     else addClip({ track, start, end, bg: st.background });
   };
