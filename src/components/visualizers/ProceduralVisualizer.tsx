@@ -98,19 +98,22 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     // genuinely different instead of all one flat hue.
     const sr = (n: number) => { const x = Math.sin((config.seed * 0.0001 + n * 1.7) * 12.9898) * 43758.5453; return x - Math.floor(x); };
     const SCHEMES = ['mono', 'analogous', 'complementary', 'triad', 'spread'] as const;
+    // Every mood is saturated with an emissive floor so a procedural 3D shape is
+    // never "colourless" - the old grey metallic-tint / pale-pastel moods read as
+    // boring grey shapes (esp. in Party mode), so they're gone.
     const MOODS = [
-      { s: 0.82, l: 0.55, e: 0.28 }, // vibrant
-      { s: 0.95, l: 0.60, e: 0.95 }, // neon
-      { s: 0.42, l: 0.74, e: 0.12 }, // pastel
-      { s: 0.20, l: 0.62, e: 0.12 }, // metallic-tint
-      { s: 0.72, l: 0.42, e: 0.34 }, // deep
+      { s: 0.85, l: 0.55, e: 0.40 }, // vibrant
+      { s: 0.98, l: 0.60, e: 0.95 }, // neon
+      { s: 0.70, l: 0.66, e: 0.34 }, // bright
+      { s: 0.82, l: 0.50, e: 0.50 }, // jewel
+      { s: 0.74, l: 0.44, e: 0.42 }, // deep
     ];
     const MATS = [
-      { metal: 0.92, rough: 0.24, glass: false }, // chrome
+      { metal: 0.55, rough: 0.28, glass: false }, // satin metal - keeps its colour (not grey chrome)
       { metal: 0.45, rough: 0.14, glass: false }, // gloss
-      { metal: 0.0, rough: 0.85, glass: false },  // matte
-      { metal: 0.25, rough: 0.5, glass: false },  // emissive/neon
-      { metal: 0.0, rough: 0.06, glass: true },   // glass
+      { metal: 0.0, rough: 0.7, glass: false },   // matte
+      { metal: 0.2, rough: 0.45, glass: false },  // emissive/neon
+      { metal: 0.0, rough: 0.1, glass: true },    // glass
     ];
     const scheme = override ? 'mono' : SCHEMES[Math.floor(sr(1) * SCHEMES.length) % SCHEMES.length];
     const mood = override ? MOODS[0] : MOODS[Math.floor(sr(2) * MOODS.length) % MOODS.length];
@@ -140,7 +143,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
             if ('emissiveMap' in m) m.emissiveMap = null;
             m.color.setHSL(hh, mood.s, mood.l);
             if ('metalness' in m) { m.metalness = mat.metal; m.roughness = mat.rough; }
-            if (mat.glass && 'transparent' in m) { m.transparent = true; m.opacity = 0.64; m.depthWrite = false; }
+            if (mat.glass && 'transparent' in m) { m.transparent = true; m.opacity = 0.82; m.depthWrite = false; }
             if (m.emissive) {
               const eh = scheme === 'complementary' ? (hh + 0.5) % 1 : hh;
               m.emissive.setHSL(eh, mood.s * 0.9, Math.min(0.6, mood.l * 0.9));

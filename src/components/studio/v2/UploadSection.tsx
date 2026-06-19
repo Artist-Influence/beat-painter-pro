@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Music, ImageIcon, X, Radio, Maximize2 } from 'lucide-react';
-import { useStudioStore } from '@/stores/studioStore';
+import { useStudioStore, PARTY_TYPE_LABELS, type PartyType } from '@/stores/studioStore';
 import { useTvFullscreen } from '@/hooks/useTvFullscreen';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
@@ -9,7 +9,13 @@ import { Switch } from '@/components/ui/switch';
 export function UploadSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const { setAudioElement, audioElement, audioFileName, logo, setLogo, setLogoSize, setLogoOpacity, setLogoLayer, setLogoColorMode, clearLogo, autoPilot, setAutoPilot } = useStudioStore();
+  const { setAudioElement, audioElement, audioFileName, logo, setLogo, setLogoSize, setLogoOpacity, setLogoLayer, setLogoColorMode, clearLogo, autoPilot, setAutoPilot, partyTypes, setPartyTypes, partyIntervalSec, setPartyIntervalSec } = useStudioStore();
+  const togglePartyType = (key: PartyType) => {
+    const on = partyTypes.includes(key);
+    // keep at least one family enabled so the rotation always has something to show
+    if (on && partyTypes.length === 1) return;
+    setPartyTypes(on ? partyTypes.filter((t) => t !== key) : [...partyTypes, key]);
+  };
   const { isFullscreen, toggle: toggleTvFullscreen } = useTvFullscreen();
   const [duration, setDuration] = useState<number | null>(null);
 
@@ -145,9 +151,44 @@ export function UploadSection() {
           <Switch checked={autoPilot} onCheckedChange={setAutoPilot} />
         </div>
         <p className="text-caption mt-2">
-          Plays your mix and swaps visualizers every 20-60s. Load a long set, hit play, go fullscreen, and
+          Plays your mix and swaps visualizers on a timer. Load a long set, hit play, go fullscreen, and
           screencast it as an ambient background.
         </p>
+
+        {autoPilot && (
+          <div className="mt-3 space-y-3 border-t border-hairline/50 pt-3">
+            {/* Which families are in the rotation */}
+            <div className="space-y-1.5">
+              <p className="text-eyebrow">in the mix</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PARTY_TYPE_LABELS.map(({ key, label }) => {
+                  const on = partyTypes.includes(key);
+                  return (
+                    <button key={key} onClick={() => togglePartyType(key)}
+                      className={`pill text-xs ${on ? 'pill-active' : 'opacity-55'}`}
+                      title={on ? 'In rotation - tap to remove' : 'Tap to add to rotation'}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-caption">Tap to choose which visualizer types Party mode shuffles through.</p>
+            </div>
+
+            {/* How often it swaps */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Switch every</span>
+                <span className="text-xs text-text-tertiary font-mono-num">{partyIntervalSec}s</span>
+              </div>
+              <input type="range" className="ai-range" min={3} max={60} step={1} value={partyIntervalSec}
+                title="Double-click to reset"
+                onChange={(e) => setPartyIntervalSec(parseInt(e.target.value, 10))}
+                onDoubleClick={() => setPartyIntervalSec(15)} />
+              <p className="text-caption">Rapid (3s) for a busy party wall, slow (60s) for an ambient backdrop.</p>
+            </div>
+          </div>
+        )}
         <button
           onClick={toggleTvFullscreen}
           className="btn btn-glass w-full h-10 mt-3 text-sm gap-2"

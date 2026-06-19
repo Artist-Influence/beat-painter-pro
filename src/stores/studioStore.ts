@@ -82,6 +82,17 @@ type LogoColorMode = 'original' | 'invert';
 export type ExportMode = 'video' | 'png-sequence';
 export type ExportQuality = '1080p' | '4k' | '8k';
 
+// Party mode (auto-pilot) visualizer families. The checklist in the UI toggles
+// which of these the rotation can pick from.
+export type PartyType = 'fractal2d' | 'fractal3d' | 'models' | 'shapes' | 'library';
+export const PARTY_TYPE_LABELS: { key: PartyType; label: string }[] = [
+  { key: 'fractal3d', label: '3D Fractals' },
+  { key: 'fractal2d', label: '2D Fractals' },
+  { key: 'models', label: '3D Models' },
+  { key: 'shapes', label: '2D Shapes' },
+  { key: 'library', label: 'Library' },
+];
+
 interface LogoState {
   url: string | null;
   position: { x: number; y: number };
@@ -108,6 +119,10 @@ interface StudioState {
   setBackgroundReactive: (v: boolean) => void;
   autoPilot: boolean;
   setAutoPilot: (v: boolean) => void;
+  partyTypes: PartyType[];          // which visualizer families Party mode rotates through
+  setPartyTypes: (t: PartyType[]) => void;
+  partyIntervalSec: number;         // how often Party mode swaps (seconds)
+  setPartyIntervalSec: (n: number) => void;
   colorOverride: boolean;   // universal colour override across every visualizer
   colorHue: number;         // 0-360
   setColorOverride: (v: boolean) => void;
@@ -217,6 +232,10 @@ export const useStudioStore = create<StudioState>((set) => ({
   setBackgroundReactive: (v) => set({ backgroundReactive: v }),
   autoPilot: false,
   setAutoPilot: (v) => set({ autoPilot: v }),
+  partyTypes: ['fractal3d', 'fractal2d', 'models', 'shapes', 'library'],
+  setPartyTypes: (t) => set({ partyTypes: t }),
+  partyIntervalSec: 15,
+  setPartyIntervalSec: (n) => set({ partyIntervalSec: Math.max(2, Math.min(120, n)) }),
   colorOverride: false,
   colorHue: 200,
   setColorOverride: (v) => { set({ colorOverride: v }); window.dispatchEvent(new CustomEvent('color:override')); },
