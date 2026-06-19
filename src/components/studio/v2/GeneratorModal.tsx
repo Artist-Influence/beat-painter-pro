@@ -40,6 +40,10 @@ export function GeneratorModal({ isOpen, onClose, onSaved }: Props) {
   const setBackgroundColor = useStudioStore((s) => s.setBackgroundColor);
   const setPreview = usePresetStore((s) => s.setPreview);
   const addPreset = usePresetStore((s) => s.addPreset);
+  const colorOverride = useStudioStore((s) => s.colorOverride);
+  const colorHue = useStudioStore((s) => s.colorHue);
+  const setColorOverride = useStudioStore((s) => s.setColorOverride);
+  const setColorHue = useStudioStore((s) => s.setColorHue);
 
   const [kind, setKind] = useState<Kind>('surprise');
   const [item, setItem] = useState<PresetItem | null>(null);
@@ -203,6 +207,23 @@ export function GeneratorModal({ isOpen, onClose, onSaved }: Props) {
               <p className="text-caption">Transparent background to layer over video</p>
             </div>
             <Switch checked={standalone} onCheckedChange={handleStandalone} />
+          </div>
+
+          {/* Recolour - tint the preview to a single colour before saving */}
+          <div className="mb-4 p-3 rounded-md bg-surface-2/40 border border-hairline/50 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-text-primary text-sm">Recolour</p>
+                <p className="text-caption">Tint this visualizer to your own colour</p>
+              </div>
+              <Switch checked={colorOverride} onCheckedChange={setColorOverride} />
+            </div>
+            {colorOverride && (
+              <input type="range" min={0} max={360} step={1} value={colorHue}
+                onChange={(e) => setColorHue(parseInt(e.target.value, 10))}
+                className="ai-range w-full"
+                style={{ background: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)', height: '8px' }} />
+            )}
           </div>
 
           {/* Current roll */}

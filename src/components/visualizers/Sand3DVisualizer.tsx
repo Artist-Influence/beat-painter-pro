@@ -202,7 +202,7 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
     depthTest: false,
     depthWrite: false,
     blending: THREE.NormalBlending,
-    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 1.25 } },
+    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 0.72 } },
   });
 
   const cam = new THREE.PerspectiveCamera(48.7, trailW / trailH, 0.1, 100);
@@ -260,9 +260,10 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     const b = proc(audioData?.frequencyRaw ?? audioData?.frequency ?? [], audioData?.amplitude || 0, audioData?.beatStrength || 0);
     // Hotter mapping so the music clearly drives the cloud: kicks burst/pump,
     // snares scatter, hats sparkle. (Was clamped ~1.25 with gentle coefficients.)
-    const lowL = clamp(b.bass, 0, 1.5), lowT = clamp(b.beat * 1.2, 0, 1.7);
-    const midL = clamp(b.mid, 0, 1.5), midT = clamp(b.mid * 0.6 + b.punch * 0.75, 0, 1.7);
-    const highL = clamp(b.treble, 0, 1.5), highT = clamp(b.treble + b.punch * 0.35, 0, 1.7);
+    // boosted so the cloud clearly reacts despite the (calmer) global reactivity.
+    const lowL = clamp(b.bass * 1.5, 0, 1.8), lowT = clamp(b.beat * 1.9, 0, 2.0);
+    const midL = clamp(b.mid * 1.5, 0, 1.8), midT = clamp((b.mid * 0.6 + b.punch * 0.75) * 1.5, 0, 2.0);
+    const highL = clamp(b.treble * 1.5, 0, 1.8), highT = clamp((b.treble + b.punch * 0.35) * 1.5, 0, 2.0);
 
     // groove: rolling onset density (UR-6's BPM proxy), 0 = flowy, 1 = punchy
     if (lowT > 0.6 && lastBeat.current <= 0.6) onsetTimes.current.push(t);
@@ -275,7 +276,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     // visual character (no console knobs in the studio - autonomous defaults that
     // gently sweep the orb→ring shape and key off the music)
     const vScatter = Math.pow(0.30, 1.45);
-    const vSpeed = 0.50, vGlow = 0.55;
+    const vSpeed = 0.50, vGlow = 0.38;
     const vShape = clamp(0.16 + 0.20 * (0.5 + 0.5 * Math.sin(t * 0.045)) + midL * 0.28, 0, 1);
 
     const st = useStudioStore.getState();
@@ -315,9 +316,11 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     // ---- render uniforms (UR-6 mapping) ----
     const pm = res.pointsMat.uniforms;
-    pm.uSize.value = 0.5 + midT * 1.5 + lowT * 1.05;          // kicks fatten the grains
+    pm.uSize.value = 0.42 + midT * 0.85 + lowT * 0.6;        // kicks fatten the grains (less, so it's not a bright slab)
     pm.uHue.value = highL * 0.07;                             // tiny treble shimmer; keep the set colour faithful
-    pm.uGlowB.value = 0.34 + vGlow * 0.65 + highL * 0.22 + lowT * 0.42; // tamer so colour reads, not white
+    // Brightness DECOUPLED from the beat (was brightening on every hit) - the music
+    // drives MOTION (scatter/pump/swirl below), not glare.
+    pm.uGlowB.value = 0.15 + vGlow * 0.4 + highL * 0.07 + lowT * 0.14;
     pm.uSparkle.value = highT * 0.7 + lowT * 0.28;
     pm.uTime.value = t;
     pm.uPx.value = Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.75);

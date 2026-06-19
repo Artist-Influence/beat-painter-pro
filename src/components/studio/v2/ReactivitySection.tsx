@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStudioStore, FRACTAL_QUICK_MODES, type FractalQuickMode, type FractalReactivity } from '@/stores/studioStore';
+import { useStudioStore, type FractalReactivity } from '@/stores/studioStore';
 import { usePresetStore } from '@/stores/presetStore';
 import { Switch } from '@/components/ui/switch';
 import { useSliderReset } from '@/hooks/useSliderReset';
@@ -40,8 +40,6 @@ const MAPPINGS: { key: keyof FractalReactivity; target: string; source: string; 
   { key: 'warp', target: 'Warp', source: 'Mid', desc: 'Mids ripple the space (2D)' },
   { key: 'kaleido', target: 'Kaleido', source: 'Beat', desc: 'Spins the mirror fold (needs kaleido on)' },
 ];
-const QUICK_ORDER: FractalQuickMode[] = ['bassTunnel', 'beatBloom', 'trebleSpark', 'midrange', 'ambient', 'psychedelic'];
-
 function Slider({ label, source, desc, value, onChange, suffix = '%', defaultValue }: {
   label: string; source?: string; desc?: string; value: number; onChange: (v: number) => void; suffix?: '%' | 'x'; defaultValue?: number;
 }) {
@@ -66,7 +64,7 @@ function Slider({ label, source, desc, value, onChange, suffix = '%', defaultVal
 
 export function ReactivitySection() {
   const {
-    selected, fractalReactivity, setFractalReactivity, applyFractalQuickMode,
+    selected, fractalReactivity, setFractalReactivity,
     audioSensitivity, setAudioSensitivity,
     reactivity, setReactivity, applyReactivityPreset,
   } = useStudioStore();
@@ -136,20 +134,6 @@ export function ReactivitySection() {
           </button>
         ))}
       </div>
-
-      {/* Fractal visual presets - kept simple/visible. */}
-      {isFractal && (
-        <div className="space-y-2">
-          <p className="text-eyebrow">quick looks</p>
-          <div className="grid grid-cols-2 gap-2">
-            {QUICK_ORDER.map((mode) => (
-              <button key={mode} onClick={() => applyFractalQuickMode(mode)} className="pill justify-center">
-                {FRACTAL_QUICK_MODES[mode].label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Fine-tune - the detailed controls, hidden by default so the panel stays calm. */}
       <button onClick={() => setShowAdvanced((v) => !v)} className="btn btn-ghost w-full h-9 text-sm flex items-center justify-between">

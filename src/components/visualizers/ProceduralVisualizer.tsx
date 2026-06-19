@@ -178,6 +178,12 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     if (isIdle) {
       const idle = getIdleAnimation(time);
       bass = idle.bass; mids = idle.mids; highs = idle.highs; beat = 0;
+    } else {
+      // Models want a stronger response than the (calmer) global default so they
+      // clearly PULSE with the beat instead of just spinning. Boost + clamp here.
+      const MR = 1.6;
+      bass = Math.min(2.4, bass * MR); mids = Math.min(2.4, mids * MR);
+      highs = Math.min(2.4, highs * MR); beat = Math.min(2.4, beat * MR);
     }
 
     // Hand the shapes the punchy bands so each shape's own per-element reactivity
@@ -199,14 +205,14 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     const bassEffect = bass * config.audioParams.bassMultiplier * sensitivity;
     const beatPop = beat * sensitivity;
     const baseScale = shapeConfig.defaultScale * config.shapeParams.scale;
-    const gain = audioConfig.bass.target === 'expand' ? 1.1 : audioConfig.bass.target === 'scale' ? 0.85 : 0.6;
-    const pulse = Math.min(2.4, 1 + bassEffect * gain + beatPop * 0.22);
+    const gain = audioConfig.bass.target === 'expand' ? 1.45 : audioConfig.bass.target === 'scale' ? 1.15 : 0.9;
+    const pulse = Math.min(2.8, 1 + bassEffect * gain + beatPop * 0.4);
     groupRef.current.scale.setScalar(baseScale * pulse);
 
     // Motion + a transient rotational kick on every drum hit (decays with the beat
     // envelope) so the model visibly lurches in time with the track.
-    groupRef.current.rotation.x = motionState.groupRotation.x + beat * 0.10;
-    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.14;
+    groupRef.current.rotation.x = motionState.groupRotation.x + beat * 0.16;
+    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.22;
     groupRef.current.rotation.z = motionState.groupRotation.z;
     groupRef.current.position.copy(motionState.groupPosition);
   });
