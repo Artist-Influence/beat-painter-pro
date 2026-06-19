@@ -139,7 +139,11 @@ export function StudioLayoutV2() {
     const vizBlend = blendSel === 'normal' ? undefined : blendSel;
     const rot = comp.rotate ?? 0;
     const op = comp.opacity ?? 1;
-    const feather = comp.feather ?? 0;
+    // Auto-soften the edges when a visualizer is scaled below fullscreen (and not
+    // cropped) so it floats instead of sitting in a hard rectangular "bed". A
+    // user-set feather always wins.
+    const userFeather = comp.feather ?? 0;
+    const feather = userFeather > 0 ? userFeather : (!comp.crop && (comp.scale ?? 1) < 0.92 ? 0.14 : 0);
     const featherMask = feather > 0
       ? `radial-gradient(ellipse 100% 100% at 50% 50%, #000 ${Math.round((1 - feather) * 100)}%, transparent 100%)`
       : undefined;

@@ -543,7 +543,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
           const rot = (comp.rotate ?? 0) * Math.PI / 180;
           const opacity = (comp.opacity ?? 1) * fadeMul;
-          const feather = comp.feather ?? 0;
+          // Match the preview's auto-feather: soften the edges of a scaled-down
+          // visualizer so it doesn't export inside a hard rectangular bed.
+          const userFeather = comp.feather ?? 0;
+          const feather = userFeather > 0 ? userFeather : (!comp.crop && (comp.scale ?? 1) < 0.92 ? 0.14 : 0);
           const cxC = comp.x * exportCanvas.width, cyC = comp.y * exportCanvas.height;
 
           // Draw the framed visualizer (crop/mask/scale) onto a target 2D context.

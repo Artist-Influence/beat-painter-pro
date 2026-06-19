@@ -6,6 +6,7 @@ import { randomFractal, type FractalConfig } from '@/lib/fractal/engine';
 import { FRACTAL_VERT, FRACTAL_FRAG_2D, FRACTAL_FRAG_3D } from '@/lib/fractal/shaders';
 import { useStudioStore } from '@/stores/studioStore';
 import { createBandProcessor } from '@/lib/audioBands';
+import { lerpHueDeg } from '@/lib/hueSmooth';
 
 const _c1 = new THREE.Color();
 const _c2 = new THREE.Color();
@@ -29,6 +30,7 @@ export function FractalVisualizer({ config, audioData, isPlaying }: FractalVisua
   const timeRef = useRef(0);
   const zoomRef = useRef(config.baseZoom);
   const rotRef = useRef(0);
+  const hueRef = useRef(useStudioStore.getState().colorHue); // smoothed recolour hue
 
   const uniforms = useMemo(() => {
     const p = config.palette;
@@ -105,8 +107,9 @@ export function FractalVisualizer({ config, audioData, isPlaying }: FractalVisua
 
     // universal colour override: recolour as a duotone (dark -> bright) of the hue
     const st = useStudioStore.getState();
+    hueRef.current = lerpHueDeg(hueRef.current, st.colorHue, 0.12); // ease recolour, no jump
     if (st.colorOverride) {
-      const h = st.colorHue / 360;
+      const h = hueRef.current / 360;
       _c1.setHSL(h, 0.6, 0.12);
       _c2.setHSL((h + 0.06) % 1, 0.88, 0.66);
       (u.pa.value as THREE.Vector3).set((_c1.r + _c2.r) / 2, (_c1.g + _c2.g) / 2, (_c1.b + _c2.b) / 2);

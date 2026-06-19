@@ -7,12 +7,14 @@ import { CARTOON_FRAG } from '@/lib/cartoon/cartoonShader';
 import { FRACTAL_VERT } from '@/lib/fractal/shaders';
 import { createBandProcessor } from '@/lib/audioBands';
 import { useStudioStore } from '@/stores/studioStore';
+import { lerpHueDeg } from '@/lib/hueSmooth';
 
 export function Cartoon2DVisualizer({ config, audioData }: VisualizerProps & { config: Cartoon2DConfig }) {
   const { gl } = useThree();
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const proc = useMemo(() => createBandProcessor(), []);
   const timeRef = useRef(0);
+  const hueRef = useRef(useStudioStore.getState().colorHue); // smoothed recolour hue
 
   const uniforms = useMemo(() => ({
     iResolution: { value: new THREE.Vector2(1, 1) },
@@ -50,8 +52,9 @@ export function Cartoon2DVisualizer({ config, audioData }: VisualizerProps & { c
     u.uLevel.value = s.level; u.uBeat.value = s.beat;
     const st = useStudioStore.getState();
     u.uZoomFx.value = st.zoomLevel || 1;
+    hueRef.current = lerpHueDeg(hueRef.current, st.colorHue, 0.12); // ease recolour, no jump
     if (st.colorOverride) {
-      const h = st.colorHue / 360;
+      const h = hueRef.current / 360;
       (u.uColA.value as THREE.Color).setHSL(h, 0.82, 0.58);
       (u.uColB.value as THREE.Color).setHSL((h + 0.08) % 1, 0.85, 0.62);
       (u.uColC.value as THREE.Color).setHSL((h + 0.5) % 1, 0.8, 0.6);

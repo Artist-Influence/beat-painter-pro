@@ -284,8 +284,8 @@ export const useStudioStore = create<StudioState>()(persist((set) => ({
   audioElement: null,
   audioFileName: null,
   audioSensitivity: {
-    bassMultiplier: 2.5,
-    midsMultiplier: 1.5,
+    bassMultiplier: 1.6,
+    midsMultiplier: 1.2,
     highsMultiplier: 1.0,
     animationSpeed: 1.0,
     spinSpeed: 0,
@@ -373,7 +373,7 @@ export const useStudioStore = create<StudioState>()(persist((set) => ({
   resetDawOverride: () => set({ dawOverride: {} }),
   fractalReactivity: {
     enabled: true,
-    sensitivity: 1.2,
+    sensitivity: 1.0,
     zoom: 0.8, hue: 0.7, glow: 1.0, morph: 0.7, rotation: 0.6, iterations: 0.6, warp: 0.5, kaleido: 0.0,
   },
   setFractalReactivity: (p) => set((s) => ({ fractalReactivity: { ...s.fractalReactivity, ...p } })),
@@ -469,7 +469,18 @@ export const useStudioStore = create<StudioState>()(persist((set) => ({
   },
 }), {
   name: 'bp_studio_v1',
+  version: 2,
   storage: createJSONStorage(() => localStorage),
+  // v2 retuned the reactivity defaults to be less jarring - drop any persisted
+  // reactivity tuning from older sessions so the calmer defaults take effect
+  // (layers, timeline, framing etc. are kept).
+  migrate: (persisted: unknown, version: number) => {
+    if (version < 2 && persisted && typeof persisted === 'object') {
+      const p = persisted as Record<string, unknown>;
+      delete p.reactivity; delete p.fractalReactivity; delete p.audioSensitivity;
+    }
+    return persisted as never;
+  },
   // Persist only the serializable setup (NOT the audio element, analyser, or
   // ephemeral preview state) so a session survives a reload.
   partialize: (s) => ({

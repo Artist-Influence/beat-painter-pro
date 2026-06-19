@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { VisualizerProps } from '../visualizer';
 import { createBandProcessor } from '@/lib/audioBands';
 import { useStudioStore } from '@/stores/studioStore';
+import { lerpHueDeg } from '@/lib/hueSmooth';
 import {
   type Sand3DConfig,
   SAND3D_PALETTES,
@@ -234,6 +235,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
   const wanderRef = useRef(0);
   const camThetaRef = useRef(0.5);
   const grooveRef = useRef(0);
+  const hueRef = useRef(useStudioStore.getState().colorHue); // smoothed recolour hue
   const onsetTimes = useRef<number[]>([]);
   const lastBeat = useRef(0);
 
@@ -320,8 +322,9 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     pm.uTime.value = t;
     pm.uPx.value = Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.75);
     pm.uFocus.value = camDist;
+    hueRef.current = lerpHueDeg(hueRef.current, st.colorHue, 0.12); // ease recolour, no jump
     if (st.colorOverride) {
-      pm.uBaseHue.value = st.colorHue / 360;
+      pm.uBaseHue.value = hueRef.current / 360;
       pm.uBaseSat.value = 0.72; // vivid recolour (was washing toward white)
     } else {
       pm.uBaseHue.value = SAND3D_PALETTES[config.paletteIndex].hue;

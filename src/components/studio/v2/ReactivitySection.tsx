@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStudioStore, FRACTAL_QUICK_MODES, type FractalQuickMode, type FractalReactivity } from '@/stores/studioStore';
 import { usePresetStore } from '@/stores/presetStore';
 import { Switch } from '@/components/ui/switch';
@@ -70,6 +70,7 @@ export function ReactivitySection() {
     audioSensitivity, setAudioSensitivity,
     reactivity, setReactivity, applyReactivityPreset,
   } = useStudioStore();
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const resetSensitivity = useSliderReset(fractalReactivity.sensitivity, (v) => setFractalReactivity({ sensitivity: v }));
   const resetSpin = useSliderReset(audioSensitivity.spinSpeed, (v) => setAudioSensitivity({ spinSpeed: v }));
   const setR = (p: Partial<ReactivityConfig>) => setReactivity(p);
@@ -123,10 +124,10 @@ export function ReactivitySection() {
 
       <div className="hairline" />
 
-      {/* ===== Global transient engine - applies to EVERY visualizer ===== */}
+      {/* Feel - the simple way to set the motion character (one tap). */}
       <div>
-        <p className="text-eyebrow">transient engine</p>
-        <p className="text-caption -mt-0.5">Locks motion to drums &amp; transients. Sharp attack, punchy decay, per-band.</p>
+        <p className="text-eyebrow">feel</p>
+        <p className="text-caption -mt-0.5">How hard the motion snaps to drums - tap one.</p>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
         {PRESET_LABELS.map((p) => (
@@ -135,67 +136,80 @@ export function ReactivitySection() {
           </button>
         ))}
       </div>
-      <Ctl label="Motion intensity" hint="Overall amount of movement" value={reactivity.motionIntensity}
-        min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ motionIntensity: v })} />
-      <Ctl label="Transient sensitivity" hint="How easily drum onsets fire" value={reactivity.transientSensitivity}
-        min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ transientSensitivity: v })} />
-      <Ctl label="Peak boost" hint="How much transients dominate over sustained energy" value={reactivity.peakBoost}
-        min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ peakBoost: v })} />
-      <div className="grid grid-cols-2 gap-3">
-        <Ctl label="Attack" hint="Envelope rise time (near-instant)" value={reactivity.attackMs}
-          min={0} max={40} step={1} fmt={(v) => `${Math.round(v)}ms`} onChange={(v) => setR({ attackMs: v })} />
-        <Ctl label="Decay" hint="Transient fall time (punchy reset)" value={reactivity.decayMs}
-          min={60} max={400} step={5} fmt={(v) => `${Math.round(v)}ms`} onChange={(v) => setR({ decayMs: v })} />
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Ctl label="Bass" hint="Sub/bass: scale, pulse, shockwaves" value={reactivity.bassResponse}
-          min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ bassResponse: v })} />
-        <Ctl label="Mid" hint="Body, snare/clap, camera push" value={reactivity.midResponse}
-          min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ midResponse: v })} />
-        <Ctl label="High" hint="Hats, sparks, flicker, detail" value={reactivity.highResponse}
-          min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ highResponse: v })} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Ctl label="Smoothing" hint="Lower = sharper, higher = softer motion" value={reactivity.smoothing}
-          min={0} max={1} step={0.02} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setR({ smoothing: v })} />
-        <Ctl label="Dynamics" hint="Adaptive level: quiet still moves, loud doesn't peg" value={reactivity.dynamics}
-          min={0} max={1} step={0.02} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setR({ dynamics: v })} />
-      </div>
 
-      <div className="hairline" />
-
-      {isFractal ? (
-        <>
-          {/* Fractal-specific augmentation */}
-          <p className="text-eyebrow">mappings</p>
-          <p className="text-caption -mt-1">Each control links a sound (the chip) to what it changes. Higher = stronger.</p>
-          {MAPPINGS.map((m) => (
-            <Slider key={m.key} label={m.target} source={m.source} desc={m.desc}
-              value={(fractalReactivity[m.key] as number) ?? 0}
-              onChange={(v) => setFractalReactivity({ [m.key]: v } as Partial<FractalReactivity>)} />
-          ))}
-          <div className="space-y-2 pt-1">
-            <p className="text-eyebrow">quick modes</p>
-            <div className="grid grid-cols-2 gap-2">
-              {QUICK_ORDER.map((mode) => (
-                <button key={mode} onClick={() => applyFractalQuickMode(mode)} className="pill justify-center">
-                  {FRACTAL_QUICK_MODES[mode].label}
-                </button>
-              ))}
-            </div>
+      {/* Fractal visual presets - kept simple/visible. */}
+      {isFractal && (
+        <div className="space-y-2">
+          <p className="text-eyebrow">quick looks</p>
+          <div className="grid grid-cols-2 gap-2">
+            {QUICK_ORDER.map((mode) => (
+              <button key={mode} onClick={() => applyFractalQuickMode(mode)} className="pill justify-center">
+                {FRACTAL_QUICK_MODES[mode].label}
+              </button>
+            ))}
           </div>
-        </>
-      ) : (
-        <>
-          {/* Mesh / 3D-element augmentation: frequency response */}
-          <p className="text-eyebrow">frequency response</p>
-          <Slider label="Bass" source="0-250 Hz" suffix="x" value={audioSensitivity.bassMultiplier}
-            onChange={(v) => setAudioSensitivity({ bassMultiplier: v })} />
-          <Slider label="Mids" source="250-4k Hz" suffix="x" value={audioSensitivity.midsMultiplier}
-            onChange={(v) => setAudioSensitivity({ midsMultiplier: v })} />
-          <Slider label="Highs" source="4k+ Hz" suffix="x" value={audioSensitivity.highsMultiplier}
-            onChange={(v) => setAudioSensitivity({ highsMultiplier: v })} />
-        </>
+        </div>
+      )}
+
+      {/* Fine-tune - the detailed controls, hidden by default so the panel stays calm. */}
+      <button onClick={() => setShowAdvanced((v) => !v)} className="btn btn-ghost w-full h-9 text-sm flex items-center justify-between">
+        <span>Fine-tune</span>
+        <span className="text-text-tertiary text-xs">{showAdvanced ? 'Hide' : 'Show'}</span>
+      </button>
+
+      {showAdvanced && (
+        <div className="space-y-4">
+          <Ctl label="Motion intensity" hint="Overall amount of movement" value={reactivity.motionIntensity}
+            min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ motionIntensity: v })} />
+          <Ctl label="Transient sensitivity" hint="How easily drum onsets fire" value={reactivity.transientSensitivity}
+            min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ transientSensitivity: v })} />
+          <Ctl label="Peak boost" hint="How much transients dominate over sustained energy" value={reactivity.peakBoost}
+            min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setR({ peakBoost: v })} />
+          <div className="grid grid-cols-2 gap-3">
+            <Ctl label="Attack" hint="Envelope rise time (near-instant)" value={reactivity.attackMs}
+              min={0} max={40} step={1} fmt={(v) => `${Math.round(v)}ms`} onChange={(v) => setR({ attackMs: v })} />
+            <Ctl label="Decay" hint="Transient fall time (punchy reset)" value={reactivity.decayMs}
+              min={60} max={400} step={5} fmt={(v) => `${Math.round(v)}ms`} onChange={(v) => setR({ decayMs: v })} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Ctl label="Bass" hint="Sub/bass: scale, pulse, shockwaves" value={reactivity.bassResponse}
+              min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ bassResponse: v })} />
+            <Ctl label="Mid" hint="Body, snare/clap, camera push" value={reactivity.midResponse}
+              min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ midResponse: v })} />
+            <Ctl label="High" hint="Hats, sparks, flicker, detail" value={reactivity.highResponse}
+              min={0} max={2} step={0.05} fmt={(v) => `${v.toFixed(1)}x`} onChange={(v) => setR({ highResponse: v })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Ctl label="Smoothing" hint="Lower = sharper, higher = softer motion" value={reactivity.smoothing}
+              min={0} max={1} step={0.02} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setR({ smoothing: v })} />
+            <Ctl label="Dynamics" hint="Adaptive level: quiet still moves, loud doesn't peg" value={reactivity.dynamics}
+              min={0} max={1} step={0.02} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setR({ dynamics: v })} />
+          </div>
+
+          <div className="hairline" />
+
+          {isFractal ? (
+            <>
+              <p className="text-eyebrow">mappings</p>
+              <p className="text-caption -mt-1">Each control links a sound (the chip) to what it changes. Higher = stronger.</p>
+              {MAPPINGS.map((m) => (
+                <Slider key={m.key} label={m.target} source={m.source} desc={m.desc}
+                  value={(fractalReactivity[m.key] as number) ?? 0}
+                  onChange={(v) => setFractalReactivity({ [m.key]: v } as Partial<FractalReactivity>)} />
+              ))}
+            </>
+          ) : (
+            <>
+              <p className="text-eyebrow">frequency response</p>
+              <Slider label="Bass" source="0-250 Hz" suffix="x" value={audioSensitivity.bassMultiplier}
+                onChange={(v) => setAudioSensitivity({ bassMultiplier: v })} />
+              <Slider label="Mids" source="250-4k Hz" suffix="x" value={audioSensitivity.midsMultiplier}
+                onChange={(v) => setAudioSensitivity({ midsMultiplier: v })} />
+              <Slider label="Highs" source="4k+ Hz" suffix="x" value={audioSensitivity.highsMultiplier}
+                onChange={(v) => setAudioSensitivity({ highsMultiplier: v })} />
+            </>
+          )}
+        </div>
       )}
     </div>
   );
