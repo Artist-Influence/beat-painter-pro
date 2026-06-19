@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { VisualizerKey } from "@/components/visualizers";
 import type { AudioReactivity } from "@/lib/fractal/engine";
 import type { GradientConfig } from "@/lib/gradientEngine";
@@ -164,6 +165,7 @@ interface StudioState {
   updateClip: (id: string, patch: Partial<TimelineClip>) => void;
   removeClip: (id: string) => void;
   setSelectedClip: (id: string | null) => void;
+  resetProject: () => void;        // clear layers + timeline + framing (keeps the song)
   partyTypes: PartyType[];          // which visualizer families Party mode rotates through
   setPartyTypes: (t: PartyType[]) => void;
   partyIntervalSec: number;         // how often Party mode swaps (seconds)
@@ -266,7 +268,15 @@ export const selectActiveComposite = (s: StudioState): CompositeState => {
   return s.composite;
 };
 
-export const useStudioStore = create<StudioState>((set) => ({
+// blob: media URLs (uploaded video/image) don't survive a reload, so on restore we
+// drop them back to a solid colour rather than render a dead reference. Data-URL
+// gradients survive fine.
+const sanitizeBg = (b: BackgroundState): BackgroundState =>
+  ((b.type === 'video' || b.type === 'image') && (b.mediaUrl?.startsWith('blob:') ?? true))
+    ? { ...b, type: 'color', mediaUrl: null, mediaType: null }
+    : b;
+
+export const useStudioStore = create<StudioState>()(persist((set) => ({
   selected: "FractalMandelbrot",
   background: DEFAULT_BACKGROUND,
   filters: { brightness: 100, saturation: 100, contrast: 100 },
@@ -334,6 +344,12 @@ export const useStudioStore = create<StudioState>((set) => ({
     timeline: { ...s.timeline, clips: s.timeline.clips.filter((c) => c.id !== id), selectedClipId: s.timeline.selectedClipId === id ? null : s.timeline.selectedClipId },
   })),
   setSelectedClip: (id) => set((s) => ({ timeline: { ...s.timeline, selectedClipId: id } })),
+  resetProject: () => set({
+    selected: 'FractalMandelbrot',
+    composite: { enabled: false, x: 0.5, y: 0.5, scale: 1, mask: 'none' as CompositeMask, crop: false, cropW: 0.6, cropH: 0.6 },
+    layers: [], activeLayerId: null,
+    timeline: { enabled: false, clips: [], selectedClipId: null },
+  }),
   partyTypes: ['fractal3d', 'fractal2d', 'models', 'shapes', 'library'],
   setPartyTypes: (t) => set({ partyTypes: t }),
   partyIntervalSec: 15,
@@ -450,5 +466,40 @@ export const useStudioStore = create<StudioState>((set) => ({
     set({ customStyleTexture: DEFAULT_CUSTOM_STYLE });
     (window as any).appliedTexture = null;
     window.dispatchEvent(new CustomEvent('texture:cleared'));
+  },
+}), {
+  name: 'bp_studio_v1',
+  storage: createJSONStorage(() => localStorage),
+  // Persist only the serializable setup (NOT the audio element, analyser, or
+  // ephemeral preview state) so a session survives a reload.
+  partialize: (s) => ({
+    selected: s.selected,
+    composite: s.composite,
+    layers: s.layers,
+    activeLayerId: s.activeLayerId,
+    timeline: s.timeline,
+    background: s.background,
+    filters: s.filters,
+    zoomLevel: s.zoomLevel,
+    exportAspectRatio: s.exportAspectRatio,
+    exportQuality: s.exportQuality,
+    exportMode: s.exportMode,
+    colorOverride: s.colorOverride,
+    colorHue: s.colorHue,
+    backgroundReactive: s.backgroundReactive,
+    partyTypes: s.partyTypes,
+    partyIntervalSec: s.partyIntervalSec,
+    fractalReactivity: s.fractalReactivity,
+    audioSensitivity: s.audioSensitivity,
+    reactivity: s.reactivity,
+  }),
+  // Drop dead blob: media URLs (backgrounds + bg clips) on restore.
+  merge: (persisted, current) => {
+    const p = (persisted ?? {}) as Partial<StudioState>;
+    if (p.background) p.background = sanitizeBg(p.background);
+    if (p.timeline?.clips) {
+      p.timeline = { ...p.timeline, enabled: false, clips: p.timeline.clips.map((c) => (c.bg ? { ...c, bg: sanitizeBg(c.bg) } : c)) };
+    }
+    return { ...current, ...p };
   },
 }));

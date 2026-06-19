@@ -21,7 +21,7 @@ const bgLabel = (c: TimelineClip) =>
 export function TimelineEditor() {
   const audioElement = useStudioStore((s) => s.audioElement);
   const timeline = useStudioStore((s) => s.timeline);
-  const { setTimelineEnabled, addClip, updateClip, removeClip, setSelectedClip } = useStudioStore();
+  const { setTimelineEnabled, addClip, updateClip, removeClip, setSelectedClip, resetProject } = useStudioStore();
   const areaRef = useRef<HTMLDivElement>(null);            // the TIMED area (clips + playhead), excludes labels
   const drag = useRef<{ id: string; mode: 'move' | 'l' | 'r'; x0: number; start: number; end: number; moved: boolean } | null>(null);
   const [now, setNow] = useState(0);
@@ -152,6 +152,8 @@ export function TimelineEditor() {
           <button onClick={() => addAt('viz')} className="pill text-xs" title="Add a visualizer clip at the playhead"><Plus className="w-3 h-3" /> Viz</button>
           <button onClick={() => addAt('bg')} className="pill text-xs" title="Add a background clip at the playhead"><Plus className="w-3 h-3" /> BG</button>
           {selClip && <button onClick={() => removeClip(selClip.id)} className="pill text-xs hover:text-ai-red" title="Remove the selected clip"><X className="w-3 h-3" /></button>}
+          <button onClick={() => { if (window.confirm('Reset everything - layers, timeline, and framing? Your loaded song stays.')) resetProject(); }}
+            className="pill text-xs text-text-tertiary hover:text-ai-red" title="Clear layers, timeline & framing (your saved project)">Reset</button>
         </div>
       </div>
 
