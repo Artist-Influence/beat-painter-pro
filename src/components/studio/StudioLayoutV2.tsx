@@ -62,7 +62,13 @@ export function StudioLayoutV2() {
   const bgRef = React.useRef<HTMLDivElement>(null);
   const stageElRef = React.useRef<HTMLDivElement>(null);
   const [showTimeline, setShowTimeline] = React.useState(false);
-  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen, layers, activeLayerId, setActiveComposite, setActiveLayerId, timeline } = useStudioStore();
+  const vizFadeRef = React.useRef<HTMLDivElement>(null);
+  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen, layers, activeLayerId, setActiveComposite, setActiveLayerId, timeline, selected } = useStudioStore();
+  // Fade the visualizer in when it switches (timeline or manual) - hides the brief
+  // mount-flash without remounting the canvas (so the recorder + WebGL context stay).
+  React.useEffect(() => {
+    vizFadeRef.current?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
+  }, [selected]);
   const stage = useStageSize(exportAspectRatio, previewMode);
   const { isAdmin } = useUserRole();
 
@@ -325,9 +331,14 @@ export function StudioLayoutV2() {
               over the clip (bgOpacity) when a blend would otherwise drop it. */}
           {backingStyle && <div className="z-[2] pointer-events-none" style={backingStyle} />}
 
-          {/* Visualizer Canvas (occupies its composite box; blends over the backing/clip) */}
+          {/* Visualizer Canvas (occupies its composite box; blends over the backing/clip).
+              A switch fades the wrapper in (Web Animations) so the new visualizer's
+              mount-flash is hidden - WITHOUT remounting the canvas (which would break
+              the recorder's canvas reference + drop the WebGL context each cut). */}
           <div className="z-[2]" style={vizStyle}>
-            <VisualizerCanvas canvasRef={canvasRef} logoBehind={logo.layer === 'behind'} />
+            <div ref={vizFadeRef} className="w-full h-full">
+              <VisualizerCanvas canvasRef={canvasRef} logoBehind={logo.layer === 'behind'} />
+            </div>
           </div>
 
           {/* Extra visualizer layers (Phase 2): each its own canvas + framing, stacked

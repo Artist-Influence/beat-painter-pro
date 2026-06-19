@@ -98,6 +98,10 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   // preloaded by URL so the export can follow background scene changes frame-by-frame.
   const bgImageMapRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const bgVideoMapRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  // Timeline transitions: fade the primary visualizer in for ~280ms after it switches
+  // (matches the preview's CSS fade), so a clip cut hides the new viz's mount-flash.
+  const lastSelectedRef = useRef<string | null>(null);
+  const vizFadeStartRef = useRef(0);
   const logoRef = useRef<LogoState | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
@@ -526,7 +530,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         // Draw ONE visualizer layer (its WebGL canvas) with its composite framing onto
         // the export canvas - the primary visualizer and then each extra layer
         // (Phase 2), in order, so the export matches the stacked live preview.
-        const drawOneLayer = (layerSrc: HTMLCanvasElement, comp: CompositeState) => {
+        const drawOneLayer = (layerSrc: HTMLCanvasElement, comp: CompositeState, fadeMul = 1) => {
           // Unified framing (matches the live preview): the visualizer occupies its own
           // aspect box (vizAspect, may differ from the export frame); crop mode clips it.
           const box = vizBox(comp, store.exportAspectRatio);
@@ -538,7 +542,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           const blendOp: GlobalCompositeOperation = (!isAlphaExport && blendSel !== 'normal')
             ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
           const rot = (comp.rotate ?? 0) * Math.PI / 180;
-          const opacity = comp.opacity ?? 1;
+          const opacity = (comp.opacity ?? 1) * fadeMul;
           const feather = comp.feather ?? 0;
           const cxC = comp.x * exportCanvas.width, cyC = comp.y * exportCanvas.height;
 
@@ -638,7 +642,11 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         };
 
         // Primary visualizer first, then each extra layer stacked above it (Phase 2).
-        drawOneLayer(srcCanvas, store.composite);
+        // Timeline transition fade for the primary visualizer (fade-from-background
+        // that hides the new viz's mount-flash); only while the timeline drives it.
+        if (store.selected !== lastSelectedRef.current) { lastSelectedRef.current = store.selected as string; vizFadeStartRef.current = performance.now(); }
+        const vizFade = store.timeline.enabled ? Math.min(1, Math.max(0, (performance.now() - vizFadeStartRef.current) / 280)) : 1;
+        drawOneLayer(srcCanvas, store.composite, vizFade);
         for (const lyr of store.layers) {
           const lc = document.querySelector(`canvas[data-layer-id="${lyr.id}"]`) as HTMLCanvasElement | null;
           if (lc && lc.width > 0 && lc.height > 0) drawOneLayer(lc, lyr.composite);
