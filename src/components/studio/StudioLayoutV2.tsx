@@ -57,7 +57,7 @@ export function StudioLayoutV2() {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const bgRef = React.useRef<HTMLDivElement>(null);
   const stageElRef = React.useRef<HTMLDivElement>(null);
-  const { logo, background, exportAspectRatio, backgroundReactive, composite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen } = useStudioStore();
+  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen } = useStudioStore();
   const stage = useStageSize(exportAspectRatio, previewMode);
   const { isAdmin } = useUserRole();
 
@@ -115,7 +115,10 @@ export function StudioLayoutV2() {
   // when overlaying a reactive visualizer on their own video). Auto unless the user
   // explicitly picked a blend. Over a solid colour we keep normal compositing.
   const overlayingClip = background.type === 'video' || background.type === 'image';
-  const blendSel = composite.blend ?? (overlayingClip ? 'screen' : 'normal');
+  // Default to NORMAL — the visualizer renders solid/opaque as drawn. Users opt into
+  // 'screen' (Glow) in Frame → Blend to drop the dark background over a clip. (Auto-
+  // screening over any video made every visualizer look washed/semi-transparent.)
+  const blendSel = composite.blend ?? 'normal';
   const vizBlend = blendSel === 'normal' ? undefined : blendSel;
 
   // Rotate / opacity / feather. Feather softens the visualizer's rectangular edge
@@ -266,6 +269,7 @@ export function StudioLayoutV2() {
             height: stage.h || undefined,
             boxShadow: previewMode ? 'none' : '0 24px 80px hsl(225 18% 2% / 0.6)',
           }}
+          onDoubleClick={() => { if (!previewMode) setComposite({ enabled: true }); }}
         >
           {/* hairline frame */}
           <div className="absolute inset-0 rounded-xl border border-hairline/60 pointer-events-none z-[20]" />
@@ -329,10 +333,11 @@ export function StudioLayoutV2() {
             <VisualizerCanvas canvasRef={canvasRef} logoBehind={logo.layer === 'behind'} />
           </div>
 
-          {/* Direct manipulation: drag the visualizer to move, corners to resize/crop,
-              top knob to rotate. Auto-on when overlaying a clip so DJs get handles
-              immediately; the "Move on stage" toggle forces it on otherwise. */}
-          {(composite.enabled || overlayingClip) && !previewMode && <CompositeFrame stageRef={stageElRef} />}
+          {/* Direct manipulation: double-click the visualizer to select it (show the
+              move/resize/rotate handles); click empty space to deselect. */}
+          {composite.enabled && !previewMode && (
+            <CompositeFrame stageRef={stageElRef} onDeselect={() => setComposite({ enabled: false })} />
+          )}
 
           {/* First-run empty state — shown once per session, and never to the admin.
               No song yet → guide into the Reaction Reel flow. */}

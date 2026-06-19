@@ -481,8 +481,7 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         // visualizer's opaque black background ('screen') so the footage shows
         // through. Never blend on alpha exports (png-sequence / transparent bg).
         const isAlphaExport = exportModeRef.current === 'png-sequence' || bg?.type === 'transparent';
-        const overlayingClip = bg?.type === 'video' || bg?.type === 'image';
-        const blendSel = comp.blend ?? (overlayingClip ? 'screen' : 'normal');
+        const blendSel = comp.blend ?? 'normal'; // match preview: normal unless user picks Glow/Lighten
         const blendOp: GlobalCompositeOperation = (!isAlphaExport && blendSel !== 'normal')
           ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
         const rot = (comp.rotate ?? 0) * Math.PI / 180;

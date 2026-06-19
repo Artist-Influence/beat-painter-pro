@@ -12,7 +12,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  * drag the top knob to rotate. The dashed frame rotates with the visualizer so
  * the handles always track what you see.
  */
-export function CompositeFrame({ stageRef }: { stageRef: React.RefObject<HTMLDivElement> }) {
+export function CompositeFrame({ stageRef, onDeselect }: { stageRef: React.RefObject<HTMLDivElement>; onDeselect?: () => void }) {
   const composite = useStudioStore((s) => s.composite);
   const setComposite = useStudioStore((s) => s.setComposite);
   const exportAspect = useStudioStore((s) => s.exportAspectRatio);
@@ -77,7 +77,9 @@ export function CompositeFrame({ stageRef }: { stageRef: React.RefObject<HTMLDiv
   );
 
   return (
-    <div ref={outerRef} className="absolute inset-0 z-[15]" onPointerMove={onMove} onPointerUp={onUp} style={{ touchAction: 'none' }}>
+    <div ref={outerRef} className="absolute inset-0 z-[15]" onPointerMove={onMove} onPointerUp={onUp}
+      onPointerDown={(e) => { if (e.target === outerRef.current) onDeselect?.(); }}
+      style={{ touchAction: 'none' }}>
       <div
         className="absolute border-2 border-dashed border-ai-red/90 rounded-sm cursor-move"
         style={{ left: `${left * 100}%`, top: `${top * 100}%`, width: `${w * 100}%`, height: `${h * 100}%`, transform: `rotate(${rot}deg)`, transformOrigin: 'center', touchAction: 'none' }}

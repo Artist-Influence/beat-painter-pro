@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Film, Image, Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
+import { Square, RectangleVertical, RectangleHorizontal, Clapperboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useStudioStore, AspectRatio, ExportQuality } from '@/stores/studioStore';
@@ -128,18 +128,6 @@ export function TopBar({ canvasRef }: TopBarProps) {
             <option value="4k">4K</option>
             <option value="8k">8K</option>
           </select>
-
-          {/* Mode indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 glass-panel !rounded-full">
-            {exportMode === 'video' ? (
-              <Film className="w-4 h-4 text-text-tertiary" />
-            ) : (
-              <Image className="w-4 h-4 text-text-tertiary" />
-            )}
-            <span className="text-text-tertiary text-xs font-mono-num">
-              {exportMode === 'video' ? 'WEBM' : 'PNG'}
-            </span>
-          </div>
 
           {/* Record button — disabled until audio is loaded so you set up and TEST the
               composition first; export only becomes available once there's a song.
