@@ -278,8 +278,10 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     const st = useStudioStore.getState();
     const zoom = (zoomLevel || st.zoomLevel || 1);
-    // Pull back so the whole morphing cloud sits in frame as a field (not in your face).
-    const camDist = clamp(7.6 / zoom, 3.2, 13);
+    // Pull back so the whole morphing cloud sits in frame as a field (not in your
+    // face). Upper bound is generous so zoom-out (low zoom) actually pulls the
+    // camera way back instead of capping at ~1.7x.
+    const camDist = clamp(7.6 / zoom, 2.6, 70);
 
     // ---- simulation uniforms (UR-6 mapping) ----
     const sm = res.simMat.uniforms;

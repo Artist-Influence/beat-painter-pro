@@ -231,8 +231,8 @@ export const AudioResponseControls: React.FC = () => {
             </div>
             <ResettableSlider
               value={[zoomLevel]}
-              min={0.2}
-              max={5}
+              min={0.15}
+              max={6}
               step={0.05}
               defaultValue={1.0}
               onValueChange={([v]) => setZoom(v)}

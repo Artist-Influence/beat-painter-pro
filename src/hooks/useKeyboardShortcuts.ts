@@ -41,7 +41,7 @@ export const useKeyboardShortcuts = () => {
         case "NumpadAdd":
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();
-            setZoom(Math.min(3, zoomLevel + 0.1));
+            setZoom(zoomLevel * 1.2); // multiplicative; store clamps to [0.15, 6]
           }
           break;
 
@@ -49,7 +49,7 @@ export const useKeyboardShortcuts = () => {
         case "NumpadSubtract":
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();
-            setZoom(Math.max(0.5, zoomLevel - 0.1));
+            setZoom(zoomLevel / 1.2); // zoom way out; store clamps to [0.15, 6]
           }
           break;
       }

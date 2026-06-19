@@ -292,7 +292,9 @@ export const useStudioStore = create<StudioState>((set) => ({
     return { background: { ...state.background, type: 'color', mediaUrl: null, mediaType: null } };
   }),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
-  setZoom: (z) => set({ zoomLevel: z }),
+  // Central zoom clamp so every entry point (slider, keyboard, buttons) gets the
+  // same range: 0.15x (zoom way out, ~6.7x further) .. 6x (zoom in).
+  setZoom: (z) => set({ zoomLevel: Math.max(0.15, Math.min(6, z)) }),
   setAudioElement: (el, fileName = null) => set((state) => {
     // Re-uploading mid-playback: stop and release the previous element before
     // swapping. Without this the old <audio> keeps decoding/playing in the
