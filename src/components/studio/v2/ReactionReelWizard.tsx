@@ -200,8 +200,9 @@ export function ReactionReelWizard() {
                     <span className="text-sm text-text-secondary">Video offset</span>
                     <span className="text-xs text-text-tertiary font-mono-num">{reactionSync.offset >= 0 ? '+' : ''}{reactionSync.offset.toFixed(2)}s</span>
                   </div>
-                  <input type="range" className="ai-range" min={-15} max={15} step={0.01}
-                    value={reactionSync.offset} onChange={(e) => setReactionSync({ offset: parseFloat(e.target.value) })} />
+                  <input type="range" className="ai-range" min={-15} max={15} step={0.01} title="Double-click to reset"
+                    value={reactionSync.offset} onChange={(e) => setReactionSync({ offset: parseFloat(e.target.value) })}
+                    onDoubleClick={() => setReactionSync({ offset: 0 })} />
                 </div>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
@@ -229,8 +230,9 @@ export function ReactionReelWizard() {
                   <span className="text-sm text-text-secondary">Size</span>
                   <span className="text-xs text-text-tertiary font-mono-num">{composite.scale.toFixed(2)}x</span>
                 </div>
-                <input type="range" className="ai-range" min={0.2} max={2} step={0.01}
-                  value={composite.scale} onChange={(e) => setComposite({ scale: parseFloat(e.target.value) })} />
+                <input type="range" className="ai-range" min={0.2} max={2} step={0.01} title="Double-click to reset"
+                  value={composite.scale} onChange={(e) => setComposite({ scale: parseFloat(e.target.value) })}
+                  onDoubleClick={() => setComposite({ scale: 1 })} />
               </div>
               <p className="text-caption">Tip: turn on <span className="text-text-secondary">Move on stage</span> and drag the visualizer anywhere over your clip.</p>
             </div>

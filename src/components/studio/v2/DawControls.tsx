@@ -2,21 +2,24 @@ import React from 'react';
 import { useStudioStore } from '@/stores/studioStore';
 import { usePresetStore } from '@/stores/presetStore';
 import { Switch } from '@/components/ui/switch';
+import { useSliderReset } from '@/hooks/useSliderReset';
 import {
   DAW_PRESETS, SPECTRO_PALETTES, DAW_BASE,
   type DawConfig, type DawLayout, type WaveMode, type SpectroPlacement, type PlayMode,
 } from '@/lib/daw/dawEngine';
 
-function Slider({ label, value, min, max, step, fmt, onChange }: {
-  label: string; value: number; min: number; max: number; step: number; fmt?: (v: number) => string; onChange: (v: number) => void;
+function Slider({ label, value, min, max, step, fmt, onChange, defaultValue }: {
+  label: string; value: number; min: number; max: number; step: number; fmt?: (v: number) => string; onChange: (v: number) => void; defaultValue?: number;
 }) {
+  const reset = useSliderReset(value, onChange, defaultValue);
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <span className="text-sm text-text-secondary">{label}</span>
         <span className="text-xs text-text-tertiary font-mono-num">{fmt ? fmt(value) : value.toFixed(2)}</span>
       </div>
-      <input type="range" className="ai-range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+      <input type="range" className="ai-range" min={min} max={max} step={step} value={value} title="Double-click to reset"
+        onChange={(e) => onChange(parseFloat(e.target.value))} onDoubleClick={reset} />
     </div>
   );
 }

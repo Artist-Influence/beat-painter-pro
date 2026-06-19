@@ -86,6 +86,8 @@ export const AudioResponseControls: React.FC = () => {
             <input
               type="range" min={0} max={360} step={1} value={colorHue}
               onChange={(e) => setColorHue(parseInt(e.target.value))}
+              onDoubleClick={() => setColorHue(200)}
+              title="Double-click to reset"
               className="ai-range w-full"
               style={{ background: 'linear-gradient(90deg, hsl(0 80% 55%), hsl(60 80% 55%), hsl(120 80% 55%), hsl(180 80% 55%), hsl(240 80% 55%), hsl(300 80% 55%), hsl(360 80% 55%))' }}
             />

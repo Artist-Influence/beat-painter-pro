@@ -184,6 +184,8 @@ export function BackgroundControls() {
                 type="range" className="ai-range" min={0} max={100} step={1}
                 value={background.positionY}
                 onChange={(e) => setBackgroundPositionY(parseInt(e.target.value))}
+                onDoubleClick={() => setBackgroundPositionY(50)}
+                title="Double-click to reset"
               />
             </div>
           )}

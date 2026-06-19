@@ -1,10 +1,12 @@
 import React from 'react';
 import { useStudioStore, type CompositeMask, type CompositeBlend, type CompositeState, type AspectRatio } from '@/stores/studioStore';
+import { useSliderReset } from '@/hooks/useSliderReset';
 import { Switch } from '@/components/ui/switch';
 
-function Slider({ label, value, min, max, step, fmt, onChange }: {
-  label: string; value: number; min: number; max: number; step: number; fmt: (v: number) => string; onChange: (v: number) => void;
+function Slider({ label, value, min, max, step, fmt, onChange, defaultValue }: {
+  label: string; value: number; min: number; max: number; step: number; fmt: (v: number) => string; onChange: (v: number) => void; defaultValue?: number;
 }) {
+  const reset = useSliderReset(value, onChange, defaultValue);
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -12,7 +14,9 @@ function Slider({ label, value, min, max, step, fmt, onChange }: {
         <span className="text-xs text-text-tertiary font-mono-num">{fmt(value)}</span>
       </div>
       <input type="range" className="ai-range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))} />
+        title="Double-click to reset"
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        onDoubleClick={reset} />
     </div>
   );
 }
@@ -121,7 +125,7 @@ export function CompositeControls() {
           {(composite.blend ?? 'screen') !== 'normal' && (
             <div className="pt-1">
               <Slider label="Background" value={composite.bgOpacity ?? 0} min={0} max={1} step={0.01}
-                fmt={(v) => v === 0 ? 'clear' : `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ bgOpacity: v })} />
+                fmt={(v) => v === 0 ? 'clear' : `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ bgOpacity: v })} defaultValue={0} />
               <p className="text-caption">Bring back the visualizer's dark background over your clip — clear (just the glow) → solid.</p>
             </div>
           )}
@@ -141,9 +145,9 @@ export function CompositeControls() {
         {composite.crop && (
           <div className="space-y-2 pt-1">
             <Slider label="Width" value={composite.cropW} min={0.1} max={1} step={0.01}
-              fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ cropW: v })} />
+              fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ cropW: v })} defaultValue={0.6} />
             <Slider label="Height" value={composite.cropH} min={0.1} max={1} step={0.01}
-              fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ cropH: v })} />
+              fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ cropH: v })} defaultValue={0.6} />
             <p className="text-caption">Use Position X/Y below to move the window. Zoom the content with Size.</p>
           </div>
         )}
@@ -159,20 +163,20 @@ export function CompositeControls() {
       </div>
 
       <Slider label={composite.crop ? 'Size (zoom content)' : 'Size'} value={composite.scale} min={0.2} max={2} step={0.01}
-        fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setComposite({ scale: v })} />
+        fmt={(v) => `${v.toFixed(2)}x`} onChange={(v) => setComposite({ scale: v })} defaultValue={1} />
       <Slider label="Position X" value={composite.x} min={0} max={1} step={0.01}
-        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ x: v })} />
+        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ x: v })} defaultValue={0.5} />
       <Slider label="Position Y" value={composite.y} min={0} max={1} step={0.01}
-        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ y: v })} />
+        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ y: v })} defaultValue={0.5} />
 
       {/* Rotate / Opacity / Feather — frame the visualizer however the clip needs. */}
       <Slider label="Rotate" value={composite.rotate ?? 0} min={-180} max={180} step={1}
-        fmt={(v) => `${Math.round(v)}°`} onChange={(v) => setComposite({ rotate: v })} />
+        fmt={(v) => `${Math.round(v)}°`} onChange={(v) => setComposite({ rotate: v })} defaultValue={0} />
       <Slider label="Opacity" value={composite.opacity ?? 1} min={0.1} max={1} step={0.01}
-        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ opacity: v })} />
+        fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ opacity: v })} defaultValue={1} />
       <div className="space-y-1.5">
         <Slider label="Soft edges" value={composite.feather ?? 0} min={0} max={1} step={0.01}
-          fmt={(v) => v === 0 ? 'off' : `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ feather: v })} />
+          fmt={(v) => v === 0 ? 'off' : `${Math.round(v * 100)}%`} onChange={(v) => setComposite({ feather: v })} defaultValue={0} />
         <p className="text-caption">Fades the edges so transparent visualizers (sand, particles) don't cut off in a hard rectangle.</p>
       </div>
 

@@ -2,21 +2,23 @@ import React from 'react';
 import { useStudioStore, FRACTAL_QUICK_MODES, type FractalQuickMode, type FractalReactivity } from '@/stores/studioStore';
 import { usePresetStore } from '@/stores/presetStore';
 import { Switch } from '@/components/ui/switch';
+import { useSliderReset } from '@/hooks/useSliderReset';
 import { REACTIVITY_PRESETS, type ReactivityConfig } from '@/lib/reactiveEngine';
 
 // Compact control for the global transient engine (raw numeric values, custom format).
-function Ctl({ label, hint, value, min, max, step, fmt, onChange }: {
+function Ctl({ label, hint, value, min, max, step, fmt, onChange, defaultValue }: {
   label: string; hint?: string; value: number; min: number; max: number; step: number;
-  fmt: (v: number) => string; onChange: (v: number) => void;
+  fmt: (v: number) => string; onChange: (v: number) => void; defaultValue?: number;
 }) {
+  const reset = useSliderReset(value, onChange, defaultValue);
   return (
     <div className="space-y-1" title={hint}>
       <div className="flex items-center justify-between">
         <span className="text-sm text-text-secondary">{label}</span>
         <span className="text-xs text-text-tertiary font-mono-num">{fmt(value)}</span>
       </div>
-      <input type="range" className="ai-range" min={min} max={max} step={step}
-        value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+      <input type="range" className="ai-range" min={min} max={max} step={step} title="Double-click to reset"
+        value={value} onChange={(e) => onChange(parseFloat(e.target.value))} onDoubleClick={reset} />
     </div>
   );
 }
@@ -40,11 +42,12 @@ const MAPPINGS: { key: keyof FractalReactivity; target: string; source: string; 
 ];
 const QUICK_ORDER: FractalQuickMode[] = ['bassTunnel', 'beatBloom', 'trebleSpark', 'midrange', 'ambient', 'psychedelic'];
 
-function Slider({ label, source, desc, value, onChange, suffix = '%' }: {
-  label: string; source?: string; desc?: string; value: number; onChange: (v: number) => void; suffix?: '%' | 'x';
+function Slider({ label, source, desc, value, onChange, suffix = '%', defaultValue }: {
+  label: string; source?: string; desc?: string; value: number; onChange: (v: number) => void; suffix?: '%' | 'x'; defaultValue?: number;
 }) {
   const pct = suffix === '%';
   const display = pct ? `${Math.round(value * 100)}%` : `${value.toFixed(1)}x`;
+  const reset = useSliderReset(value, onChange, defaultValue);
   return (
     <div className="space-y-1" title={desc}>
       <div className="flex items-center justify-between">
@@ -55,7 +58,8 @@ function Slider({ label, source, desc, value, onChange, suffix = '%' }: {
         <span className="text-xs text-text-tertiary font-mono-num">{display}</span>
       </div>
       {desc && <p className="text-[0.7rem] text-text-tertiary leading-tight">{desc}</p>}
-      <input type="range" className="ai-range" min={0} max={pct ? 1 : 8} step={pct ? 0.01 : 0.1} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+      <input type="range" className="ai-range" min={0} max={pct ? 1 : 8} step={pct ? 0.01 : 0.1} value={value} title="Double-click to reset"
+        onChange={(e) => onChange(parseFloat(e.target.value))} onDoubleClick={reset} />
     </div>
   );
 }
@@ -66,6 +70,8 @@ export function ReactivitySection() {
     audioSensitivity, setAudioSensitivity,
     reactivity, setReactivity, applyReactivityPreset,
   } = useStudioStore();
+  const resetSensitivity = useSliderReset(fractalReactivity.sensitivity, (v) => setFractalReactivity({ sensitivity: v }));
+  const resetSpin = useSliderReset(audioSensitivity.spinSpeed, (v) => setAudioSensitivity({ spinSpeed: v }));
   const setR = (p: Partial<ReactivityConfig>) => setReactivity(p);
   const presets = usePresetStore((s) => s.presets);
   const preview = usePresetStore((s) => s.preview);
@@ -98,9 +104,10 @@ export function ReactivitySection() {
           <span className="text-sm text-text-secondary">Sensitivity</span>
           <span className="text-xs text-text-tertiary font-mono-num">{fractalReactivity.sensitivity.toFixed(2)}x</span>
         </div>
-        <input type="range" className="ai-range" min={0} max={2} step={0.05}
+        <input type="range" className="ai-range" min={0} max={2} step={0.05} title="Double-click to reset"
           value={fractalReactivity.sensitivity}
-          onChange={(e) => setFractalReactivity({ sensitivity: parseFloat(e.target.value) })} />
+          onChange={(e) => setFractalReactivity({ sensitivity: parseFloat(e.target.value) })}
+          onDoubleClick={resetSensitivity} />
       </div>
       {/* Universal spin — works for fractals and 3D models alike */}
       <div className="space-y-1.5">
@@ -108,9 +115,10 @@ export function ReactivitySection() {
           <span className="text-sm text-text-secondary">Spin</span>
           <span className="text-xs text-text-tertiary font-mono-num">{audioSensitivity.spinSpeed.toFixed(1)}x</span>
         </div>
-        <input type="range" className="ai-range" min={0} max={5} step={0.1}
+        <input type="range" className="ai-range" min={0} max={5} step={0.1} title="Double-click to reset"
           value={audioSensitivity.spinSpeed}
-          onChange={(e) => setAudioSensitivity({ spinSpeed: parseFloat(e.target.value) })} />
+          onChange={(e) => setAudioSensitivity({ spinSpeed: parseFloat(e.target.value) })}
+          onDoubleClick={resetSpin} />
       </div>
 
       <div className="hairline" />
