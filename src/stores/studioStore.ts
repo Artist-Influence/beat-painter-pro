@@ -50,6 +50,16 @@ export interface CompositeState {
   vizAspect?: 'match' | AspectRatio; // visualizer's own shape, independent of the export frame (e.g. a 1:1 viz inside a 9:16 video). 'match'/undefined = follow the export aspect
   bgOpacity?: number; // 0..1 - when a blend drops the visualizer's dark background, how much of it to bring back over the clip (0 = fully transparent, 1 = solid)
 }
+
+// Phase 2 - multiple visualizers on one background. The PRIMARY visualizer is the
+// existing `selected` + `composite`; these are the EXTRA layers stacked on top, each
+// its own visualizer with its own framing (reuses CompositeState). The active layer
+// (activeLayerId; null = primary) is the one the Composite controls + Frame edit.
+export interface VizLayer {
+  id: string;
+  selected: string;             // a registry key / preset_xxx / custom_xxx
+  composite: CompositeState;
+}
 type BackgroundType = 'color' | 'gradient' | 'image' | 'video' | 'transparent';
 type BackgroundMediaType = 'image' | 'gif' | 'video' | null;
 
@@ -119,6 +129,14 @@ interface StudioState {
   setBackgroundReactive: (v: boolean) => void;
   autoPilot: boolean;
   setAutoPilot: (v: boolean) => void;
+  // Phase 2 - extra visualizer layers + which layer the composite controls target.
+  layers: VizLayer[];
+  activeLayerId: string | null;     // null = primary (the existing `selected`/`composite`)
+  addLayer: (selected: string) => void;
+  removeLayer: (id: string) => void;
+  setActiveLayerId: (id: string | null) => void;
+  setLayerSelected: (id: string, selected: string) => void;
+  setActiveComposite: (patch: Partial<CompositeState>) => void; // edits primary or active layer
   partyTypes: PartyType[];          // which visualizer families Party mode rotates through
   setPartyTypes: (t: PartyType[]) => void;
   partyIntervalSec: number;         // how often Party mode swaps (seconds)
@@ -233,6 +251,28 @@ export const useStudioStore = create<StudioState>((set) => ({
   setBackgroundReactive: (v) => set({ backgroundReactive: v }),
   autoPilot: false,
   setAutoPilot: (v) => set({ autoPilot: v }),
+  layers: [],
+  activeLayerId: null,
+  addLayer: (selected) => set((s) => {
+    if (s.layers.length >= 3) return {}; // cap extra layers for performance (4 viz total)
+    const id = `layer_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+    // new layers start as a centred, half-size, framed box so they don't hide the
+    // primary; the user repositions them with the same Frame/controls.
+    const composite: CompositeState = { enabled: true, x: 0.5, y: 0.5, scale: 0.5, mask: 'none', crop: false, cropW: 0.6, cropH: 0.6, blend: 'normal', opacity: 1, vizAspect: 'match' };
+    return { layers: [...s.layers, { id, selected, composite }], activeLayerId: id };
+  }),
+  removeLayer: (id) => set((s) => ({
+    layers: s.layers.filter((l) => l.id !== id),
+    activeLayerId: s.activeLayerId === id ? null : s.activeLayerId,
+  })),
+  setActiveLayerId: (id) => set({ activeLayerId: id }),
+  setLayerSelected: (id, selected) => set((s) => ({
+    layers: s.layers.map((l) => (l.id === id ? { ...l, selected } : l)),
+  })),
+  setActiveComposite: (patch) => set((s) => {
+    if (s.activeLayerId == null) return { composite: { ...s.composite, ...patch } };
+    return { layers: s.layers.map((l) => (l.id === s.activeLayerId ? { ...l, composite: { ...l.composite, ...patch } } : l)) };
+  }),
   partyTypes: ['fractal3d', 'fractal2d', 'models', 'shapes', 'library'],
   setPartyTypes: (t) => set({ partyTypes: t }),
   partyIntervalSec: 15,

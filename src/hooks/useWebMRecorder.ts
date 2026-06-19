@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
 import { renderGate } from "@/lib/renderReadyGate";
-import { useStudioStore } from "@/stores/studioStore";
+import { useStudioStore, type CompositeState } from "@/stores/studioStore";
 import { vizBox } from "@/lib/compositeLayout";
 
 export type ExportQuality = '1080p' | '4k' | '8k';
@@ -473,129 +473,132 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
         // Effects (zoom + brightness/saturation/contrast) and composite transform,
         // applied universally so they affect every visualizer type in the export.
         const store = useStudioStore.getState();
-        const comp = store.composite;
         const f = store.filters;
-        // Unified framing (matches the live preview): the visualizer occupies its own
-        // aspect box (vizAspect, may differ from the export frame) within the export
-        // canvas; crop mode just clips that box to a rectangular window.
-        const box = vizBox(comp, store.exportAspectRatio);
-        const dw = box.w * exportCanvas.width;
-        const dh = box.h * exportCanvas.height;
-        const dx = box.left * exportCanvas.width;
-        const dy = box.top * exportCanvas.height;
-
         const filterStr = `brightness(${f.brightness}%) saturate(${f.saturation}%) contrast(${f.contrast}%)`;
         // Match the live preview's blend: over a video/image clip, drop the
         // visualizer's opaque black background ('screen') so the footage shows
         // through. Never blend on alpha exports (png-sequence / transparent bg).
         const isAlphaExport = exportModeRef.current === 'png-sequence' || bg?.type === 'transparent';
-        const blendSel = comp.blend ?? 'normal'; // match preview: normal unless user picks Glow/Lighten
-        const blendOp: GlobalCompositeOperation = (!isAlphaExport && blendSel !== 'normal')
-          ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
-        const rot = (comp.rotate ?? 0) * Math.PI / 180;
-        const opacity = comp.opacity ?? 1;
-        const feather = comp.feather ?? 0;
-        const cxC = comp.x * exportCanvas.width, cyC = comp.y * exportCanvas.height;
 
-        // Draw the framed visualizer (crop/mask/scale) onto a target 2D context.
-        const drawViz = (tctx: CanvasRenderingContext2D) => {
-          if (comp.crop) {
-            // CROP MODE: draw the aspect-correct visualizer box, clipped to the
-            // rectangular window. `scale` (baked into the box) zooms the content;
-            // the window stays fixed - so the crop honours the visualizer's aspect.
-            const W = exportCanvas.width, H = exportCanvas.height;
-            const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
-            const wx = cxC - ww / 2, wy = cyC - wh / 2;
-            const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5
-              : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
-            tctx.save();
-            tctx.beginPath();
-            roundRectPath(tctx, wx, wy, ww, wh, round);
-            tctx.clip();
-            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
-            tctx.restore();
-          } else if (comp.mask !== 'none') {
-            // box aspect == visualizer canvas aspect, so draw the FULL canvas (no
-            // stage-aspect source crop - that would clip a non-matching vizAspect).
-            tctx.save();
-            tctx.beginPath();
-            if (comp.mask === 'circle') tctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
-            else roundRectPath(tctx, dx, dy, dw, dh, Math.min(dw, dh) * 0.08);
-            tctx.clip();
-            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
-            tctx.restore();
+        // Draw ONE visualizer layer (its WebGL canvas) with its composite framing onto
+        // the export canvas - the primary visualizer and then each extra layer
+        // (Phase 2), in order, so the export matches the stacked live preview.
+        const drawOneLayer = (layerSrc: HTMLCanvasElement, comp: CompositeState) => {
+          // Unified framing (matches the live preview): the visualizer occupies its own
+          // aspect box (vizAspect, may differ from the export frame); crop mode clips it.
+          const box = vizBox(comp, store.exportAspectRatio);
+          const dw = box.w * exportCanvas.width;
+          const dh = box.h * exportCanvas.height;
+          const dx = box.left * exportCanvas.width;
+          const dy = box.top * exportCanvas.height;
+          const blendSel = comp.blend ?? 'normal'; // normal unless user picks Glow/Lighten
+          const blendOp: GlobalCompositeOperation = (!isAlphaExport && blendSel !== 'normal')
+            ? (blendSel === 'lighten' ? 'lighten' : 'screen') : 'source-over';
+          const rot = (comp.rotate ?? 0) * Math.PI / 180;
+          const opacity = comp.opacity ?? 1;
+          const feather = comp.feather ?? 0;
+          const cxC = comp.x * exportCanvas.width, cyC = comp.y * exportCanvas.height;
+
+          // Draw the framed visualizer (crop/mask/scale) onto a target 2D context.
+          const drawViz = (tctx: CanvasRenderingContext2D) => {
+            if (comp.crop) {
+              const W = exportCanvas.width, H = exportCanvas.height;
+              const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
+              const wx = cxC - ww / 2, wy = cyC - wh / 2;
+              const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5
+                : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
+              tctx.save();
+              tctx.beginPath();
+              roundRectPath(tctx, wx, wy, ww, wh, round);
+              tctx.clip();
+              tctx.drawImage(layerSrc, 0, 0, layerSrc.width, layerSrc.height, dx, dy, dw, dh);
+              tctx.restore();
+            } else if (comp.mask !== 'none') {
+              tctx.save();
+              tctx.beginPath();
+              if (comp.mask === 'circle') tctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
+              else roundRectPath(tctx, dx, dy, dw, dh, Math.min(dw, dh) * 0.08);
+              tctx.clip();
+              tctx.drawImage(layerSrc, 0, 0, layerSrc.width, layerSrc.height, dx, dy, dw, dh);
+              tctx.restore();
+            } else {
+              tctx.drawImage(layerSrc, 0, 0, layerSrc.width, layerSrc.height, dx, dy, dw, dh);
+            }
+          };
+
+          // Background fill: when the blend drops the visualizer's dark background, draw a
+          // black backing (at bgOpacity) under it, clipped to the same region.
+          const bgOpacity = comp.bgOpacity ?? 0;
+          if (bgOpacity > 0 && blendOp !== 'source-over') {
+            ctx.save();
+            if (rot !== 0) { ctx.translate(cxC, cyC); ctx.rotate(rot); ctx.translate(-cxC, -cyC); }
+            ctx.beginPath();
+            if (comp.crop) {
+              const W = exportCanvas.width, H = exportCanvas.height;
+              const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
+              const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5 : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
+              roundRectPath(ctx, cxC - ww / 2, cyC - wh / 2, ww, wh, round);
+            } else if (comp.mask === 'circle') {
+              ctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
+            } else {
+              roundRectPath(ctx, dx, dy, dw, dh, comp.mask === 'rounded' ? Math.min(dw, dh) * 0.08 : 0);
+            }
+            ctx.clip();
+            ctx.globalAlpha = bgOpacity;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            ctx.globalAlpha = 1;
+            ctx.restore();
+          }
+
+          // Rotate / feather / opacity composite as a UNIT (matching the CSS preview),
+          // so route through an offscreen layer when any are active; else draw direct.
+          if (feather > 0 || rot !== 0 || opacity < 1) {
+            let layer = layerCanvasRef.current;
+            if (!layer) { layer = document.createElement('canvas'); layerCanvasRef.current = layer; }
+            if (layer.width !== exportCanvas.width || layer.height !== exportCanvas.height) {
+              layer.width = exportCanvas.width; layer.height = exportCanvas.height;
+            }
+            const lctx = layer.getContext('2d')!;
+            lctx.setTransform(1, 0, 0, 1, 0, 0);
+            lctx.globalCompositeOperation = 'source-over';
+            lctx.globalAlpha = 1;
+            lctx.clearRect(0, 0, layer.width, layer.height);
+            lctx.filter = filterStr;
+            if (rot !== 0) { lctx.save(); lctx.translate(cxC, cyC); lctx.rotate(rot); lctx.translate(-cxC, -cyC); drawViz(lctx); lctx.restore(); }
+            else drawViz(lctx);
+            lctx.filter = 'none';
+            if (feather > 0) {
+              const W = exportCanvas.width, H = exportCanvas.height;
+              const rw = (comp.crop ? comp.cropW : comp.scale) * W * 0.5;
+              const rh = (comp.crop ? comp.cropH : comp.scale) * H * 0.5;
+              const rr = Math.max(rw, rh, 1);
+              const g = lctx.createRadialGradient(cxC, cyC, rr * (1 - feather), cxC, cyC, rr);
+              g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+              lctx.globalCompositeOperation = 'destination-in';
+              lctx.save(); lctx.translate(cxC, cyC); lctx.scale(rw / rr, rh / rr); lctx.translate(-cxC, -cyC);
+              lctx.fillStyle = g; lctx.fillRect(0, 0, W, H); lctx.restore();
+              lctx.globalCompositeOperation = 'source-over';
+            }
+            ctx.globalCompositeOperation = blendOp;
+            ctx.globalAlpha = opacity;
+            ctx.drawImage(layer, 0, 0);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = 'source-over';
           } else {
-            tctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, dx, dy, dw, dh);
+            ctx.filter = filterStr;
+            ctx.globalCompositeOperation = blendOp;
+            drawViz(ctx);
+            ctx.filter = 'none';
+            ctx.globalCompositeOperation = 'source-over'; // reset so logo/overlays draw normally
           }
         };
 
-        // Background fill: when the blend drops the visualizer's dark background, draw a
-        // black backing (at bgOpacity) under it, clipped to the same region - bringing
-        // that background back over the clip. Matches the CSS backing in the preview.
-        const bgOpacity = comp.bgOpacity ?? 0;
-        if (bgOpacity > 0 && blendOp !== 'source-over') {
-          ctx.save();
-          if (rot !== 0) { ctx.translate(cxC, cyC); ctx.rotate(rot); ctx.translate(-cxC, -cyC); }
-          ctx.beginPath();
-          if (comp.crop) {
-            const W = exportCanvas.width, H = exportCanvas.height;
-            const ww = Math.min(W, comp.cropW * W), wh = Math.min(H, comp.cropH * H);
-            const round = comp.mask === 'circle' ? Math.min(ww, wh) * 0.5 : comp.mask === 'rounded' ? Math.min(ww, wh) * 0.08 : 0;
-            roundRectPath(ctx, cxC - ww / 2, cyC - wh / 2, ww, wh, round);
-          } else if (comp.mask === 'circle') {
-            ctx.arc(dx + dw / 2, dy + dh / 2, Math.min(dw, dh) / 2, 0, Math.PI * 2);
-          } else {
-            roundRectPath(ctx, dx, dy, dw, dh, comp.mask === 'rounded' ? Math.min(dw, dh) * 0.08 : 0);
-          }
-          ctx.clip();
-          ctx.globalAlpha = bgOpacity;
-          ctx.fillStyle = '#000';
-          ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-          ctx.globalAlpha = 1;
-          ctx.restore();
-        }
-
-        // Rotate / feather / opacity composite as a UNIT (matching the CSS preview),
-        // so route through an offscreen layer when any are active; else draw direct.
-        if (feather > 0 || rot !== 0 || opacity < 1) {
-          let layer = layerCanvasRef.current;
-          if (!layer) { layer = document.createElement('canvas'); layerCanvasRef.current = layer; }
-          if (layer.width !== exportCanvas.width || layer.height !== exportCanvas.height) {
-            layer.width = exportCanvas.width; layer.height = exportCanvas.height;
-          }
-          const lctx = layer.getContext('2d')!;
-          lctx.setTransform(1, 0, 0, 1, 0, 0);
-          lctx.globalCompositeOperation = 'source-over';
-          lctx.globalAlpha = 1;
-          lctx.clearRect(0, 0, layer.width, layer.height);
-          lctx.filter = filterStr;
-          if (rot !== 0) { lctx.save(); lctx.translate(cxC, cyC); lctx.rotate(rot); lctx.translate(-cxC, -cyC); drawViz(lctx); lctx.restore(); }
-          else drawViz(lctx);
-          lctx.filter = 'none';
-          if (feather > 0) {
-            // multiply a soft elliptical alpha so edges fade (no hard rectangle)
-            const W = exportCanvas.width, H = exportCanvas.height;
-            const rw = (comp.crop ? comp.cropW : comp.scale) * W * 0.5;
-            const rh = (comp.crop ? comp.cropH : comp.scale) * H * 0.5;
-            const rr = Math.max(rw, rh, 1);
-            const g = lctx.createRadialGradient(cxC, cyC, rr * (1 - feather), cxC, cyC, rr);
-            g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-            lctx.globalCompositeOperation = 'destination-in';
-            lctx.save(); lctx.translate(cxC, cyC); lctx.scale(rw / rr, rh / rr); lctx.translate(-cxC, -cyC);
-            lctx.fillStyle = g; lctx.fillRect(0, 0, W, H); lctx.restore();
-            lctx.globalCompositeOperation = 'source-over';
-          }
-          ctx.globalCompositeOperation = blendOp;
-          ctx.globalAlpha = opacity;
-          ctx.drawImage(layer, 0, 0);
-          ctx.globalAlpha = 1;
-          ctx.globalCompositeOperation = 'source-over';
-        } else {
-          ctx.filter = filterStr;
-          ctx.globalCompositeOperation = blendOp;
-          drawViz(ctx);
-          ctx.filter = 'none';
-          ctx.globalCompositeOperation = 'source-over'; // reset so logo/overlays draw normally
+        // Primary visualizer first, then each extra layer stacked above it (Phase 2).
+        drawOneLayer(srcCanvas, store.composite);
+        for (const lyr of store.layers) {
+          const lc = document.querySelector(`canvas[data-layer-id="${lyr.id}"]`) as HTMLCanvasElement | null;
+          if (lc && lc.width > 0 && lc.height > 0) drawOneLayer(lc, lyr.composite);
         }
 
         // Draw logo IN FRONT of visualizer if layer is 'front'

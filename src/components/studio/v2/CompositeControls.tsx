@@ -51,7 +51,11 @@ const LAYOUTS: { key: string; label: string; apply: Partial<CompositeState> }[] 
 ];
 
 export function CompositeControls() {
-  const { composite, setComposite, exportAspectRatio, setExportAspectRatio, background } = useStudioStore();
+  const { exportAspectRatio, setExportAspectRatio, background, activeLayerId, layers, composite: primaryComposite, setActiveComposite } = useStudioStore();
+  // Frame the ACTIVE layer (primary or an extra layer) so this panel edits whatever
+  // is selected in the Layers bar.
+  const composite = activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.composite ?? primaryComposite) : primaryComposite;
+  const setComposite = setActiveComposite;
   const hasBgMedia = background.type === 'video' || background.type === 'image';
 
   return (

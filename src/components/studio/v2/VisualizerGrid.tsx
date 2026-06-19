@@ -8,7 +8,15 @@ import { usePresetStore } from '@/stores/presetStore';
 import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark } from 'lucide-react';
 
 export function VisualizerGrid() {
-  const { selected, setSelected, setBackgroundTransparent } = useStudioStore();
+  const { selected, setSelected, setBackgroundTransparent, activeLayerId, layers, setLayerSelected, addLayer, removeLayer, setActiveLayerId } = useStudioStore();
+  // When a layer is active, the library picks that LAYER's visualizer (so the same
+  // grid fills each layer); otherwise it sets the primary. The highlight + active
+  // dot follow whichever target is selected.
+  const targetSelected = activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.selected ?? selected) : selected;
+  const pickViz = (id: string) => {
+    if (activeLayerId) setLayerSelected(activeLayerId, id);
+    else setSelected(id as VisualizerKey);
+  };
   const {
     customVisualizers,
     deleteVisualizer,
@@ -116,6 +124,43 @@ export function VisualizerGrid() {
             <Wand2 className="w-4 h-4" />
             Generate New Visualizer
           </button>
+
+          {/* Layers (Phase 2): choose which visualizer you're editing - the Primary or
+              an extra layer stacked on top. The library below fills the selected
+              target; frame each one in the Composite panel. */}
+          <div className="space-y-2 rounded-md p-2.5 border border-hairline/50 bg-surface-2/40">
+            <div className="flex items-center justify-between">
+              <p className="text-eyebrow">layers</p>
+              {layers.length < 3 && (
+                <button onClick={() => addLayer(selected as string)} className="pill text-xs" title="Stack another visualizer on top">
+                  + Layer
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setActiveLayerId(null)}
+                className={`pill text-xs ${activeLayerId === null ? 'pill-active' : ''}`}>
+                Primary
+              </button>
+              {layers.map((l, i) => (
+                <span key={l.id} className="inline-flex items-center">
+                  <button onClick={() => setActiveLayerId(l.id)}
+                    className={`pill text-xs !rounded-r-none ${activeLayerId === l.id ? 'pill-active' : ''}`}>
+                    Layer {i + 1}
+                  </button>
+                  <button onClick={() => removeLayer(l.id)} title="Remove this layer"
+                    className={`pill text-xs !rounded-l-none !px-1.5 ${activeLayerId === l.id ? 'pill-active' : ''} hover:text-ai-red`}>
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <p className="text-caption">
+              {activeLayerId
+                ? 'Editing a layer - pick its visualizer below, then position it in the Composite panel.'
+                : 'Editing the main visualizer. Add a layer to stack another on top of the same background.'}
+            </p>
+          </div>
         </div>
 
         {/* All Visualizers Section (Standard + User's Saved) */}
@@ -141,18 +186,18 @@ export function VisualizerGrid() {
               >
                 <motion.button
                   onClick={() => {
-                    if (viz.id === 'FractalRandom' && selected === 'FractalRandom') {
+                    if (viz.id === 'FractalRandom' && targetSelected === 'FractalRandom') {
                       window.dispatchEvent(new CustomEvent('fractal:reroll'));
                     } else {
-                      setSelected(viz.id as VisualizerKey);
-                      if (viz.isPreset) {
+                      pickViz(viz.id);
+                      if (!activeLayerId && viz.isPreset) {
                         const p = savedPresets.find((x) => x.id === viz.id);
                         if (p?.item.standalone) setBackgroundTransparent();
                       }
                     }
                   }}
                   className={`w-full aspect-square rounded-xl border transition-all overflow-hidden ${
-                    selected === viz.id
+                    targetSelected === viz.id
                       ? 'bg-ai-red/[0.10] border-ai-red shadow-glow'
                       : 'bg-surface-2/40 border-hairline/50 hover:border-ai-red/40 hover:bg-ai-red/[0.06]'
                   }`}
@@ -171,7 +216,7 @@ export function VisualizerGrid() {
                   </div>
 
                   {/* Active indicator */}
-                  {selected === viz.id && (
+                  {targetSelected === viz.id && (
                     <div className="absolute top-2 right-2 w-2 h-2 bg-ai-red rounded-full shadow-glow"></div>
                   )}
 

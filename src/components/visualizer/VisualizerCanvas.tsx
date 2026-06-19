@@ -25,8 +25,14 @@ const makeDawLazy = (preset: DawConfig) =>
   lazy(async () => ({ default: (await import("@/components/visualizers/DawWaveformVisualizer")).makeDawVisualizer(preset) }));
 
 interface VisualizerCanvasProps {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef?: React.RefObject<HTMLCanvasElement>;
   logoBehind?: boolean;
+  // Phase 2 - extra layer mode: render `overrideSelected` instead of the store's
+  // selected, always on a transparent background, and tag the canvas with
+  // data-layer-id (NOT id="visualizer-canvas") so each layer stays distinct and the
+  // recorder can find it. Undefined = the normal primary canvas.
+  overrideSelected?: string;
+  layerId?: string;
 }
 
 // Declare global for render ready flag
@@ -85,10 +91,13 @@ function RecordingController() {
   return null;
 }
 
-const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false }) => {
+const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehind = false, overrideSelected, layerId }) => {
   // Selector subscriptions (not the whole store) so the canvas only re-renders on
   // changes it actually cares about - not on every per-frame store write.
-  const selected = useStudioStore((s) => s.selected);
+  const storeSelected = useStudioStore((s) => s.selected);
+  const selected = overrideSelected ?? storeSelected;
+  // Extra layers always render transparent so the layers/background below show through.
+  const isLayer = !!layerId;
   const background = useStudioStore((s) => s.background);
   const zoomLevel = useStudioStore((s) => s.zoomLevel);
   const audioElement = useStudioStore((s) => s.audioElement);
@@ -205,20 +214,25 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
     analyserNode.fftSize = 2048;
     // Note: smoothingTimeConstant is set in useAudioAnalysis hook for centralized control
 
-    // Create a GainNode for volume control (after analyser so visualizer stays reactive when muted)
-    const gainNode = ctx.createGain();
-    gainNode.gain.value = W.__GAIN_VALUE__ ?? 0.75; // Restore previous volume or default
-    W.__GAIN_NODE__ = gainNode;
-
-    // Connect our analyser and gain node; we only disconnect these in cleanup
+    // Connect our analyser (a tap on the source for reactivity).
     source.connect(analyserNode);
-    analyserNode.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    // Tee the post-gain signal into a persistent MediaStream for the recorder, so
-    // export never calls captureStream() on the <audio> element (doing so stole its
-    // output and dropped the song mid-record). One stream dest per context.
-    if (!W.__STREAM_DEST__) { W.__STREAM_DEST__ = ctx.createMediaStreamDestination(); }
-    try { gainNode.connect(W.__STREAM_DEST__); } catch {}
+
+    // Only the PRIMARY canvas drives audio output. Extra layers tap the source for
+    // their own reactivity but must NOT add a second gain->destination path - that
+    // would double the audio and the recorder's capture stream.
+    let gainNode: GainNode | null = null;
+    if (!isLayer) {
+      gainNode = ctx.createGain();
+      gainNode.gain.value = W.__GAIN_VALUE__ ?? 0.75; // Restore previous volume or default
+      W.__GAIN_NODE__ = gainNode;
+      analyserNode.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      // Tee the post-gain signal into a persistent MediaStream for the recorder, so
+      // export never calls captureStream() on the <audio> element (doing so stole its
+      // output and dropped the song mid-record). One stream dest per context.
+      if (!W.__STREAM_DEST__) { W.__STREAM_DEST__ = ctx.createMediaStreamDestination(); }
+      try { gainNode.connect(W.__STREAM_DEST__); } catch {}
+    }
     setAnalyser(analyserNode);
 
     // Keep the context alive - browsers auto-suspend it without a gesture and when
@@ -239,10 +253,10 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       // Fully tear down this session's graph so a re-upload doesn't leave the old
       // gain node feeding ctx.destination / the recorder stream (double audio).
       // Persist the volume so the freshly-built graph restores it.
-      try { W.__GAIN_VALUE__ = gainNode.gain.value; } catch {}
+      try { if (gainNode) W.__GAIN_VALUE__ = gainNode.gain.value; } catch {}
       try { source.disconnect(analyserNode); } catch {}
       try { analyserNode.disconnect(); } catch {}
-      try { gainNode.disconnect(); } catch {}
+      try { if (gainNode) gainNode.disconnect(); } catch {}
     };
   }, [audioElement]);
 
@@ -273,7 +287,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
   // Update renderer clear color when logo is behind or custom background
   useEffect(() => {
     if (rendererRef.current) {
-      if (logoBehind || background.type !== 'color') {
+      if (isLayer || logoBehind || background.type !== 'color') {
         rendererRef.current.setClearColor(0x000000, 0); // Fully transparent
       } else {
         const color = new THREE.Color(background.color);
@@ -284,18 +298,23 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
 
   const handleCreated = useCallback(({ gl }: any) => {
     const canvas = gl.domElement as HTMLCanvasElement;
-    
-    // TAG THE CANVAS FOR IDENTIFICATION (CRITICAL FOR EXPORT)
-    canvas.id = "visualizer-canvas";
-    canvas.dataset.visualizerCanvas = "true";
-    
+
+    // TAG THE CANVAS FOR IDENTIFICATION (CRITICAL FOR EXPORT). Extra layers get a
+    // data-layer-id instead of the shared #visualizer-canvas id (no duplicate ids).
+    if (isLayer) {
+      canvas.dataset.layerId = layerId as string;
+    } else {
+      canvas.id = "visualizer-canvas";
+      canvas.dataset.visualizerCanvas = "true";
+    }
+
     if (canvasRef) {
       (canvasRef as any).current = canvas;
     }
     // Store renderer reference for transparency control
     rendererRef.current = gl;
     // Set initial clear color - transparent if logo is behind or custom background
-    if (logoBehind || background.type !== 'color') {
+    if (isLayer || logoBehind || background.type !== 'color') {
       gl.setClearColor(0x000000, 0);
     } else {
       const color = new THREE.Color(background.color);
@@ -310,7 +329,7 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       <div 
         className="w-full h-full" 
         style={{ 
-          backgroundColor: (logoBehind || background.type !== 'color') ? 'transparent' : background.color 
+          backgroundColor: (isLayer || logoBehind || background.type !== 'color') ? 'transparent' : background.color 
         }}
       >
         <Canvas

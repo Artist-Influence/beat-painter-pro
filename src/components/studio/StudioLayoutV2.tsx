@@ -14,7 +14,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAutoPilot } from '@/hooks/useAutoPilot';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useReactionAutoSync } from '@/hooks/useReactionAutoSync';
-import { useStudioStore, AspectRatio } from '@/stores/studioStore';
+import { useStudioStore, AspectRatio, type CompositeState } from '@/stores/studioStore';
 import { vizBox } from '@/lib/compositeLayout';
 
 type LeftPanelType = 'visualizers' | 'styles' | null;
@@ -59,7 +59,7 @@ export function StudioLayoutV2() {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const bgRef = React.useRef<HTMLDivElement>(null);
   const stageElRef = React.useRef<HTMLDivElement>(null);
-  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen } = useStudioStore();
+  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen, layers, activeLayerId, setActiveComposite, setActiveLayerId } = useStudioStore();
   const stage = useStageSize(exportAspectRatio, previewMode);
   const { isAdmin } = useUserRole();
 
@@ -121,56 +121,33 @@ export function StudioLayoutV2() {
   // EVERY visualizer type (fractal shader, mesh, procedural model, 2D).
   const effectFilter = `brightness(${filters.brightness}%) saturate(${filters.saturation}%) contrast(${filters.contrast}%)`;
   // Framing (size/crop/position) always applies - default scale 1 / centered / no
-  // mask = fullscreen. The visualizer starts fullscreen and is edited from there.
-  // Mask shapes also control the corner rounding of the crop window.
-  const maskRound = composite.mask === 'circle' ? '50%' : composite.mask === 'rounded' ? '8%' : '0';
-
-  // Blend the visualizer over the background. Full-screen shader visualizers paint
-  // an opaque black background; over a video/image clip we default to 'screen' so
-  // that black drops out and the reaction footage shows through (the look DJs want
-  // when overlaying a reactive visualizer on their own video). Auto unless the user
-  // explicitly picked a blend. Over a solid colour we keep normal compositing.
-  const overlayingClip = background.type === 'video' || background.type === 'image';
-  // Default to NORMAL - the visualizer renders solid/opaque as drawn. Users opt into
-  // 'screen' (Glow) in Frame → Blend to drop the dark background over a clip. (Auto-
-  // screening over any video made every visualizer look washed/semi-transparent.)
-  const blendSel = composite.blend ?? 'normal';
-  const vizBlend = blendSel === 'normal' ? undefined : blendSel;
-
-  // Rotate / opacity / feather. Feather softens the visualizer's rectangular edge
-  // (a radial alpha mask) so transparent visualizers like sand fade out instead of
-  // hard-cutting at the frame; opacity lets opaque types cover fully or go sheer.
-  const rot = composite.rotate ?? 0;
-  const op = composite.opacity ?? 1;
-  const feather = composite.feather ?? 0;
-  const featherMask = feather > 0
-    ? `radial-gradient(ellipse 100% 100% at 50% 50%, #000 ${Math.round((1 - feather) * 100)}%, transparent 100%)`
-    : undefined;
-  const rotStr = rot ? ` rotate(${rot}deg)` : '';
-
-  // Unified geometry: the visualizer always occupies its own aspect-ratio box
-  // (vizAspect - may differ from the export frame), positioned/sized by x/y/scale and
-  // rotated. The clip is either the crop WINDOW (a rectangle mapped into the box's
-  // local space, so the crop honours the visualizer's aspect) or the mask shape.
-  let vizStyle: React.CSSProperties;
-  let backingStyle: React.CSSProperties | null = null;
-  {
-    const box = vizBox(composite, exportAspectRatio);
+  // mask = fullscreen. Computed per composite so it works for the primary visualizer
+  // AND each extra layer (Phase 2). Returns the CSS box for the visualizer plus an
+  // optional black backing behind it (for the blend-drops-background case).
+  const computeVizStyle = (comp: CompositeState): { vizStyle: React.CSSProperties; backingStyle: React.CSSProperties | null } => {
+    const maskRound = comp.mask === 'circle' ? '50%' : comp.mask === 'rounded' ? '8%' : '0';
+    const blendSel = comp.blend ?? 'normal';
+    const vizBlend = blendSel === 'normal' ? undefined : blendSel;
+    const rot = comp.rotate ?? 0;
+    const op = comp.opacity ?? 1;
+    const feather = comp.feather ?? 0;
+    const featherMask = feather > 0
+      ? `radial-gradient(ellipse 100% 100% at 50% 50%, #000 ${Math.round((1 - feather) * 100)}%, transparent 100%)`
+      : undefined;
+    const rotStr = rot ? ` rotate(${rot}deg)` : '';
+    const box = vizBox(comp, exportAspectRatio);
     let clip: string | undefined;
-    if (composite.crop) {
-      // window rect (stage fractions) → box-local fractions → inset()
-      const winL = composite.x - composite.cropW / 2, winR = composite.x + composite.cropW / 2;
-      const winT = composite.y - composite.cropH / 2, winB = composite.y + composite.cropH / 2;
+    if (comp.crop) {
+      const winL = comp.x - comp.cropW / 2, winR = comp.x + comp.cropW / 2;
+      const winT = comp.y - comp.cropH / 2, winB = comp.y + comp.cropH / 2;
       const lL = clamp01((winL - box.left) / box.w), lR = clamp01((winR - box.left) / box.w);
       const lT = clamp01((winT - box.top) / box.h), lB = clamp01((winB - box.top) / box.h);
       const ins = (v: number) => (v * 100).toFixed(2);
       clip = `inset(${ins(lT)}% ${ins(1 - lR)}% ${ins(1 - lB)}% ${ins(lL)}% round ${maskRound})`;
     } else {
-      clip = composite.mask === 'circle' ? 'circle(50% at 50% 50%)'
-        : composite.mask === 'rounded' ? 'inset(0 round 8%)' : undefined;
+      clip = comp.mask === 'circle' ? 'circle(50% at 50% 50%)'
+        : comp.mask === 'rounded' ? 'inset(0 round 8%)' : undefined;
     }
-    // Shared box geometry (position/size/rotation/clip/feather), reused by the
-    // visualizer and an optional black backing behind it.
     const boxGeom: React.CSSProperties = {
       position: 'absolute',
       left: `${(box.left * 100).toFixed(3)}%`,
@@ -186,19 +163,21 @@ export function StudioLayoutV2() {
       maskImage: featherMask,
       WebkitMaskImage: featherMask,
     };
-    vizStyle = {
-      ...boxGeom,
-      filter: effectFilter,
-      mixBlendMode: vizBlend,
-      opacity: op,
-    } as React.CSSProperties;
-    // When a blend drops the visualizer's dark background, a black fill behind it
-    // (at bgOpacity) brings that background back over the clip - solid → transparent.
-    const bgOpacity = composite.bgOpacity ?? 0;
-    if (vizBlend && bgOpacity > 0) {
-      backingStyle = { ...boxGeom, backgroundColor: '#000', opacity: bgOpacity } as React.CSSProperties;
-    }
-  }
+    const vizStyle = { ...boxGeom, filter: effectFilter, mixBlendMode: vizBlend, opacity: op } as React.CSSProperties;
+    const bgOpacity = comp.bgOpacity ?? 0;
+    const backingStyle = (vizBlend && bgOpacity > 0)
+      ? ({ ...boxGeom, backgroundColor: '#000', opacity: bgOpacity } as React.CSSProperties)
+      : null;
+    return { vizStyle, backingStyle };
+  };
+
+  const { vizStyle, backingStyle } = computeVizStyle(composite);
+  // Each extra layer's style + its own canvas, stacked above the primary.
+  const layerStyles = layers.map((l) => ({ layer: l, ...computeVizStyle(l.composite) }));
+  // The composite the Frame/controls currently edit: the active layer, else primary.
+  const activeComposite = activeLayerId == null
+    ? composite
+    : (layers.find((l) => l.id === activeLayerId)?.composite ?? composite);
 
   // Reactive background: pulse brightness + shift hue with the music.
   useEffect(() => {
@@ -285,7 +264,7 @@ export function StudioLayoutV2() {
             height: stage.h || undefined,
             boxShadow: previewMode ? 'none' : '0 24px 80px hsl(225 18% 2% / 0.6)',
           }}
-          onDoubleClick={() => { if (!previewMode) setComposite({ enabled: true }); }}
+          onDoubleClick={() => { if (!previewMode) setActiveComposite({ enabled: true }); }}
         >
           {/* hairline frame */}
           <div className="absolute inset-0 rounded-xl border border-hairline/60 pointer-events-none z-[20]" />
@@ -349,10 +328,22 @@ export function StudioLayoutV2() {
             <VisualizerCanvas canvasRef={canvasRef} logoBehind={logo.layer === 'behind'} />
           </div>
 
+          {/* Extra visualizer layers (Phase 2): each its own canvas + framing, stacked
+              above the primary over the shared background. */}
+          {layerStyles.map(({ layer, vizStyle: lStyle, backingStyle: lBacking }) => (
+            <React.Fragment key={layer.id}>
+              {lBacking && <div className="z-[3] pointer-events-none" style={lBacking} />}
+              <div className="z-[3]" style={lStyle}>
+                <VisualizerCanvas overrideSelected={layer.selected} layerId={layer.id} />
+              </div>
+            </React.Fragment>
+          ))}
+
           {/* Direct manipulation: double-click the visualizer to select it (show the
-              move/resize/rotate handles); click empty space to deselect. */}
-          {composite.enabled && !previewMode && (
-            <CompositeFrame stageRef={stageElRef} onDeselect={() => setComposite({ enabled: false })} />
+              move/resize/rotate handles); click empty space to deselect. The frame
+              targets the ACTIVE layer (primary or an extra layer). */}
+          {activeComposite.enabled && !previewMode && (
+            <CompositeFrame stageRef={stageElRef} onDeselect={() => setActiveComposite({ enabled: false })} />
           )}
 
           {/* First-run empty state - shown once per session, and never to the admin.
