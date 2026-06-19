@@ -9,9 +9,11 @@ import { FloatingActions } from './v2/FloatingActions';
 import { LogoOverlay } from './v2/LogoOverlay';
 import { ReactionReelWizard } from './v2/ReactionReelWizard';
 import { CompositeFrame } from './v2/CompositeFrame';
+import { TimelineEditor } from './v2/TimelineEditor';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAutoPilot } from '@/hooks/useAutoPilot';
+import { useTimeline } from '@/hooks/useTimeline';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useReactionAutoSync } from '@/hooks/useReactionAutoSync';
 import { useStudioStore, AspectRatio, type CompositeState } from '@/stores/studioStore';
@@ -59,7 +61,8 @@ export function StudioLayoutV2() {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const bgRef = React.useRef<HTMLDivElement>(null);
   const stageElRef = React.useRef<HTMLDivElement>(null);
-  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen, layers, activeLayerId, setActiveComposite, setActiveLayerId } = useStudioStore();
+  const [showTimeline, setShowTimeline] = React.useState(false);
+  const { logo, background, exportAspectRatio, backgroundReactive, composite, setComposite, filters, zoomLevel, audioElement, reactionSync, reactionWizardOpen, previewMode, setPreviewMode, setReactionWizardOpen, layers, activeLayerId, setActiveComposite, setActiveLayerId, timeline } = useStudioStore();
   const stage = useStageSize(exportAspectRatio, previewMode);
   const { isAdmin } = useUserRole();
 
@@ -239,6 +242,7 @@ export function StudioLayoutV2() {
 
   useKeyboardShortcuts();
   useAutoPilot();
+  useTimeline();
 
   // Let the Reaction Reel wizard open the relevant side panel for each step.
   useEffect(() => {
@@ -418,6 +422,24 @@ export function StudioLayoutV2() {
         >
           <Eye className="w-5 h-5 text-text-tertiary" />
         </button>
+      )}
+
+      {/* Timeline toggle - sequence visualizers/backgrounds over the song (Phase 3) */}
+      {!previewMode && !reactionWizardOpen && (
+        <button
+          onClick={() => setShowTimeline((v) => !v)}
+          title="Timeline - sequence visualizers & backgrounds over the song"
+          className={`absolute bottom-32 sm:bottom-24 left-[4.5rem] z-50 h-11 px-4 glass-panel glass-panel-interactive !rounded-full transition-colors text-sm font-semibold ${showTimeline || timeline.enabled ? 'text-ai-red' : 'text-text-tertiary'}`}
+        >
+          Timeline{timeline.enabled ? ' · on' : ''}
+        </button>
+      )}
+
+      {/* Timeline panel above the transport */}
+      {!previewMode && !reactionWizardOpen && showTimeline && (
+        <div className="absolute bottom-24 sm:bottom-[5.5rem] left-2 right-2 sm:left-4 sm:right-4 z-40 glass-panel !rounded-xl p-3 max-w-5xl mx-auto">
+          <TimelineEditor />
+        </div>
       )}
 
       {previewMode && (

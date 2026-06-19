@@ -51,11 +51,20 @@ const LAYOUTS: { key: string; label: string; apply: Partial<CompositeState> }[] 
 ];
 
 export function CompositeControls() {
-  const { exportAspectRatio, setExportAspectRatio, background, activeLayerId, layers, composite: primaryComposite, setActiveComposite } = useStudioStore();
-  // Frame the ACTIVE layer (primary or an extra layer) so this panel edits whatever
-  // is selected in the Layers bar.
-  const composite = activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.composite ?? primaryComposite) : primaryComposite;
-  const setComposite = setActiveComposite;
+  const { exportAspectRatio, setExportAspectRatio, background, activeLayerId, layers, composite: primaryComposite, setActiveComposite, setComposite: setPrimaryComposite, timeline, updateClip } = useStudioStore();
+  // Frame target priority: selected TIMELINE viz clip > active extra LAYER > primary.
+  // (The timeline engine mirrors a clip's composite onto the primary while it plays,
+  // so editing the primary live + writing back to the clip keeps them in sync.)
+  const selVizClip = timeline.enabled && timeline.selectedClipId
+    ? timeline.clips.find((c) => c.id === timeline.selectedClipId && c.track === 'viz')
+    : undefined;
+  const composite = selVizClip?.composite ?? (activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.composite ?? primaryComposite) : primaryComposite);
+  const setComposite = (patch: Partial<CompositeState>) => {
+    if (selVizClip) {
+      updateClip(selVizClip.id, { composite: { ...(selVizClip.composite ?? primaryComposite), ...patch } });
+      setPrimaryComposite(patch); // live preview
+    } else setActiveComposite(patch);
+  };
   const hasBgMedia = background.type === 'video' || background.type === 'image';
 
   return (

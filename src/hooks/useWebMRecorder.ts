@@ -94,6 +94,9 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
   const backgroundRef = useRef<BackgroundMedia | null>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
+  // Phase 3 - timeline bg track: every image/gradient used by a bg clip, preloaded
+  // by URL so the export can follow background scene changes frame-by-frame.
+  const bgImageMapRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const logoRef = useRef<LogoState | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const exportModeRef = useRef<ExportMode>('video');
@@ -206,6 +209,24 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           };
           bgImg.onerror = () => resolve();
         });
+      }
+
+      // Timeline bg track: preload every image/gradient a bg clip uses, so the export
+      // can switch backgrounds as the playhead moves (videos use the single loaded
+      // element below - the common case).
+      bgImageMapRef.current = new Map();
+      {
+        const urls = new Set<string>();
+        for (const c of useStudioStore.getState().timeline.clips) {
+          if (c.track !== 'bg' || !c.bg) continue;
+          const u = c.bg.type === 'gradient' ? c.bg.gradientUrl : (c.bg.type === 'image' ? c.bg.mediaUrl : null);
+          if (u) urls.add(u);
+        }
+        await Promise.all([...urls].map((u) => new Promise<void>((resolve) => {
+          const im = new Image(); im.crossOrigin = 'anonymous'; im.src = u;
+          im.onload = () => { bgImageMapRef.current.set(u, im); resolve(); };
+          im.onerror = () => resolve();
+        })));
       }
 
       // Load background video if needed
@@ -429,7 +450,13 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
           return;
         }
 
-        const bg = backgroundRef.current;
+        // When the timeline is on, follow the LIVE background each frame (the bg-track
+        // engine writes it), sourcing images/gradients from the preload map; otherwise
+        // use the background captured at export start.
+        const tlOn = useStudioStore.getState().timeline.enabled;
+        const bg = tlOn ? (useStudioStore.getState().background as unknown as BackgroundMedia) : backgroundRef.current;
+        const bgImgUrl = bg?.type === 'gradient' ? bg.gradientUrl : (bg?.type === 'image' ? bg.mediaUrl : null);
+        const bgImg = (bgImgUrl && bgImageMapRef.current.get(bgImgUrl)) || backgroundImageRef.current;
         const logo = logoRef.current;
 
         // Draw background first (transparent + png-sequence + viz-only keep alpha;
@@ -458,8 +485,8 @@ export const useWebMRecorder = ({ canvasRef, audioElement }: UseRecorderProps) =
             }
           }
           drawBackgroundMedia(ctx, vid, exportCanvas.width, exportCanvas.height, bg.positionY);
-        } else if ((bg?.type === 'image' || bg?.type === 'gradient') && backgroundImageRef.current) {
-          drawBackgroundMedia(ctx, backgroundImageRef.current, exportCanvas.width, exportCanvas.height, bg.positionY);
+        } else if ((bg?.type === 'image' || bg?.type === 'gradient') && bgImg) {
+          drawBackgroundMedia(ctx, bgImg, exportCanvas.width, exportCanvas.height, bg.positionY);
         } else {
           ctx.fillStyle = bg?.color || '#000000';
           ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);

@@ -60,10 +60,30 @@ export interface VizLayer {
   selected: string;             // a registry key / preset_xxx / custom_xxx
   composite: CompositeState;
 }
+
+// Phase 3 - CapCut-style 2-track timeline. Each clip occupies a time range on one
+// track. While the timeline is enabled, the playhead engine writes the active viz
+// clip's visualizer+framing and the active bg clip's background into the live store,
+// so all existing rendering AND the export follow the timeline automatically.
+export interface TimelineClip {
+  id: string;
+  track: 'viz' | 'bg';
+  start: number;                 // seconds
+  end: number;                   // seconds
+  selected?: string;             // viz track: which visualizer
+  composite?: CompositeState;    // viz track: its framing
+  bg?: BackgroundState;          // bg track: the background for this span
+  label?: string;
+}
+export interface TimelineState {
+  enabled: boolean;
+  clips: TimelineClip[];
+  selectedClipId: string | null; // the clip currently open for editing
+}
 type BackgroundType = 'color' | 'gradient' | 'image' | 'video' | 'transparent';
 type BackgroundMediaType = 'image' | 'gif' | 'video' | null;
 
-interface BackgroundState {
+export interface BackgroundState {
   type: BackgroundType;
   color: string;            // any hex
   gradientConfig: GradientConfig | null;
@@ -137,6 +157,13 @@ interface StudioState {
   setActiveLayerId: (id: string | null) => void;
   setLayerSelected: (id: string, selected: string) => void;
   setActiveComposite: (patch: Partial<CompositeState>) => void; // edits primary or active layer
+  // Phase 3 - 2-track timeline.
+  timeline: TimelineState;
+  setTimelineEnabled: (v: boolean) => void;
+  addClip: (clip: Omit<TimelineClip, 'id'>) => string;
+  updateClip: (id: string, patch: Partial<TimelineClip>) => void;
+  removeClip: (id: string) => void;
+  setSelectedClip: (id: string | null) => void;
   partyTypes: PartyType[];          // which visualizer families Party mode rotates through
   setPartyTypes: (t: PartyType[]) => void;
   partyIntervalSec: number;         // how often Party mode swaps (seconds)
@@ -273,6 +300,20 @@ export const useStudioStore = create<StudioState>((set) => ({
     if (s.activeLayerId == null) return { composite: { ...s.composite, ...patch } };
     return { layers: s.layers.map((l) => (l.id === s.activeLayerId ? { ...l, composite: { ...l.composite, ...patch } } : l)) };
   }),
+  timeline: { enabled: false, clips: [], selectedClipId: null },
+  setTimelineEnabled: (v) => set((s) => ({ timeline: { ...s.timeline, enabled: v } })),
+  addClip: (clip) => {
+    const id = `clip_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+    set((s) => ({ timeline: { ...s.timeline, clips: [...s.timeline.clips, { ...clip, id }], selectedClipId: id } }));
+    return id;
+  },
+  updateClip: (id, patch) => set((s) => ({
+    timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.id === id ? { ...c, ...patch } : c)) },
+  })),
+  removeClip: (id) => set((s) => ({
+    timeline: { ...s.timeline, clips: s.timeline.clips.filter((c) => c.id !== id), selectedClipId: s.timeline.selectedClipId === id ? null : s.timeline.selectedClipId },
+  })),
+  setSelectedClip: (id) => set((s) => ({ timeline: { ...s.timeline, selectedClipId: id } })),
   partyTypes: ['fractal3d', 'fractal2d', 'models', 'shapes', 'library'],
   setPartyTypes: (t) => set({ partyTypes: t }),
   partyIntervalSec: 15,

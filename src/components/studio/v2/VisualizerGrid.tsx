@@ -8,13 +8,21 @@ import { usePresetStore } from '@/stores/presetStore';
 import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark } from 'lucide-react';
 
 export function VisualizerGrid() {
-  const { selected, setSelected, setBackgroundTransparent, activeLayerId, layers, setLayerSelected, addLayer, removeLayer, setActiveLayerId } = useStudioStore();
-  // When a layer is active, the library picks that LAYER's visualizer (so the same
-  // grid fills each layer); otherwise it sets the primary. The highlight + active
-  // dot follow whichever target is selected.
-  const targetSelected = activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.selected ?? selected) : selected;
+  const { selected, setSelected, setBackgroundTransparent, activeLayerId, layers, setLayerSelected, addLayer, removeLayer, setActiveLayerId, timeline, updateClip } = useStudioStore();
+  // Routing priority for what the library fills:
+  //   1. the selected TIMELINE viz clip (when the timeline is on)
+  //   2. the active extra LAYER
+  //   3. the PRIMARY visualizer
+  // The highlight + active dot follow whichever target is selected.
+  const selVizClip = timeline.enabled && timeline.selectedClipId
+    ? timeline.clips.find((c) => c.id === timeline.selectedClipId && c.track === 'viz')
+    : undefined;
+  const targetSelected = selVizClip ? (selVizClip.selected ?? selected)
+    : activeLayerId ? (layers.find((l) => l.id === activeLayerId)?.selected ?? selected)
+    : selected;
   const pickViz = (id: string) => {
-    if (activeLayerId) setLayerSelected(activeLayerId, id);
+    if (selVizClip) { updateClip(selVizClip.id, { selected: id }); setSelected(id as VisualizerKey); } // edit clip + live preview
+    else if (activeLayerId) setLayerSelected(activeLayerId, id);
     else setSelected(id as VisualizerKey);
   };
   const {
