@@ -98,7 +98,10 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
 
   // Per-particle seed texture: r = hash seed, g/b = spawn angles.
   const sdata = new Float32Array(count * 4);
-  const r = rng(0x9e37 ^ (config.paletteIndex + 1) * 2654435761);
+  // Seed the spawn cloud from the palette AND the per-seed form params so two
+  // rolls with the same palette still start from a different particle field.
+  const formSeed = Math.floor(((config.shapeBias ?? 0.5) * 131 + (config.scatter ?? 0.3) * 977 + (config.speed ?? 0.5) * 613) * 4096);
+  const r = rng((0x9e37 ^ (config.paletteIndex + 1) * 2654435761) ^ formSeed);
   for (let i = 0; i < count; i++) {
     sdata[i * 4] = r() * 100;
     sdata[i * 4 + 1] = r();
@@ -182,7 +185,7 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
       uVP: { value: new THREE.Matrix4() },
       uSize: { value: 1 }, uHue: { value: 0 }, uGlowB: { value: 1 }, uPx: { value: 1 },
       uSparkle: { value: 0 }, uTime: { value: 0 },
-      uBaseHue: { value: SAND3D_PALETTES[config.paletteIndex].hue },
+      uBaseHue: { value: (SAND3D_PALETTES[config.paletteIndex].hue + (config.hueShift ?? 0) + 1) % 1 },
       uBaseSat: { value: SAND3D_PALETTES[config.paletteIndex].sat },
       uPassSize: { value: 1 }, uPassAlpha: { value: 1 }, uFocus: { value: 6 },
     },
@@ -275,9 +278,12 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     // visual character (no console knobs in the studio - autonomous defaults that
     // gently sweep the orb→ring shape and key off the music)
-    const vScatter = Math.pow(0.30, 1.45);
-    const vSpeed = 0.50, vGlow = 0.38;
-    const vShape = clamp(0.16 + 0.20 * (0.5 + 0.5 * Math.sin(t * 0.045)) + midL * 0.28, 0, 1);
+    // Per-seed form character (was hardcoded, which made every roll identical).
+    const vScatter = Math.pow(config.scatter ?? 0.30, 1.45);
+    const vSpeed = config.speed ?? 0.50, vGlow = config.glow ?? 0.38;
+    const sBias = (config.shapeBias ?? 0.5) / 2;            // 0..1 resting form (orb..wave)
+    const sMorph = config.shapeMorph ?? 0.20;
+    const vShape = clamp(sBias + sMorph * Math.sin(t * 0.045) + midL * 0.22, 0, 1);
 
     const st = useStudioStore.getState();
     const zoom = (zoomLevel || st.zoomLevel || 1);
@@ -292,7 +298,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     sm.uVel.value = res.simRT[res.cur].textures[1];
     sm.uDt.value = dt; sm.uTime.value = t;
     sm.uSpeed.value = (0.1 + vSpeed * 1.1 + lowL * 1.0 + lowT * 0.6) * (0.8 + groove * 0.5);
-    sm.uSwirl.value = (0.5 + vSpeed * 0.5 + midL * 2.4 + midT * 1.1) * (0.34 + vScatter * 0.59);
+    sm.uSwirl.value = (0.5 + vSpeed * 0.5 + midL * 2.4 + midT * 1.1) * (0.34 + vScatter * 0.59) * (config.swirl ?? 1);
     // kicks/snares give a contained outward pulse - a breathing cloud, not a firehose
     sm.uScatter.value = Math.pow(lowT, 1.1) * 1.15 * (0.7 + groove * 0.6) * (0.2 + vScatter * 1.0) + midT * 0.32;
     sm.uPump.value = lowL * 1.35 + lowT * 0.9; // bass swells the whole cloud (very visible)
@@ -316,7 +322,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
 
     // ---- render uniforms (UR-6 mapping) ----
     const pm = res.pointsMat.uniforms;
-    pm.uSize.value = 0.42 + midT * 0.85 + lowT * 0.6;        // kicks fatten the grains (less, so it's not a bright slab)
+    pm.uSize.value = (config.size ?? 0.42) + midT * 0.85 + lowT * 0.6;   // kicks fatten the grains (less, so it's not a bright slab)
     pm.uHue.value = highL * 0.07;                             // tiny treble shimmer; keep the set colour faithful
     // Brightness DECOUPLED from the beat (was brightening on every hit) - the music
     // drives MOTION (scatter/pump/swirl below), not glare.
@@ -330,7 +336,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
       pm.uBaseHue.value = hueRef.current / 360;
       pm.uBaseSat.value = 0.72; // vivid recolour (was washing toward white)
     } else {
-      pm.uBaseHue.value = SAND3D_PALETTES[config.paletteIndex].hue;
+      pm.uBaseHue.value = (SAND3D_PALETTES[config.paletteIndex].hue + (config.hueShift ?? 0) + 1) % 1;
       pm.uBaseSat.value = SAND3D_PALETTES[config.paletteIndex].sat;
     }
 

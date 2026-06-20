@@ -231,6 +231,17 @@ export interface Sand3DConfig {
   name: string;
   emoji: string;
   paletteIndex: number;
+  // Per-seed form character. These drive the GPGPU flow uniforms so every roll is
+  // a genuinely different sand (tight orb vs loose dispersal, slow drift vs fast
+  // churn, orb/ring/wave bias) instead of the same cloud in one of 5 colours.
+  scatter: number;    // 0.05..0.65  tight & cohesive -> loose & dispersed
+  speed: number;      // 0.34..0.70  base flow speed
+  glow: number;       // 0.30..0.46  trail persistence (kept near the tuned 0.38)
+  shapeBias: number;  // 0..2        resting form: orb(0) -> ring(1) -> wave(2)
+  shapeMorph: number; // 0.06..0.34  how far it sweeps around shapeBias over time
+  swirl: number;      // 0.7..1.4    curl-noise strength multiplier
+  size: number;       // 0.34..0.46  base grain size (kept tight for brightness)
+  hueShift: number;   // -0.08..0.08 optional hue offset on top of the palette
 }
 
 function rng(seed: number) {
@@ -242,6 +253,7 @@ function rng(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+const slerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export function randomSand3D(seed: number, opts: { paletteIndex?: number; label?: string } = {}): Sand3DConfig {
   const r = rng(seed * 13 + 7);
@@ -251,6 +263,14 @@ export function randomSand3D(seed: number, opts: { paletteIndex?: number; label?
     name: opts.label ?? `3D Sand · ${SAND3D_PALETTES[paletteIndex].name}`,
     emoji: '🦄',
     paletteIndex,
+    scatter: slerp(0.05, 0.65, r()),
+    speed: slerp(0.34, 0.70, r()),
+    glow: slerp(0.30, 0.46, r()),
+    shapeBias: r() * 2,
+    shapeMorph: slerp(0.06, 0.34, r()),
+    swirl: slerp(0.7, 1.4, r()),
+    size: slerp(0.34, 0.46, r()),
+    hueShift: r() < 0.6 ? 0 : (r() - 0.5) * 0.16,
   };
 }
 

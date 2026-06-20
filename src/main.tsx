@@ -18,7 +18,8 @@ if (typeof window !== 'undefined') {
     Promise.all([
       import('./lib/modelGenerator'), import('./lib/fractal/engine'),
       import('./lib/cartoon/cartoonEngine'), import('./stores/presetStore'),
-    ]).then(([m, f, c, p]) => {
+      import('./lib/sand3d/unicornEngine'),
+    ]).then(([m, f, c, p, u]) => {
       const setSel = (id: string) => (useStudioStore.getState() as unknown as { setSelected: (id: string) => void }).setSelected(id);
       const setPrev = (i: unknown) => (p.usePresetStore.getState() as unknown as { setPreview: (i: unknown) => void }).setPreview(i);
       (window as unknown as { __previewModel?: unknown }).__previewModel = (seed: number, shapes?: string[]) => {
@@ -35,6 +36,11 @@ if (typeof window !== 'undefined') {
         const cartoon = c.randomCartoon(seed, shape !== undefined ? { shape } : {});
         setPrev({ kind: 'cartoon', cartoon, standalone: false }); setSel('__preview__');
         return cartoon.shape;
+      };
+      (window as unknown as { __previewSand3D?: unknown }).__previewSand3D = (seed: number) => {
+        const sand3d = u.randomSand3D(seed);
+        setPrev({ kind: 'sand3d', sand3d, standalone: false }); setSel('__preview__');
+        return { palette: sand3d.paletteIndex, shapeBias: +sand3d.shapeBias.toFixed(2), scatter: +sand3d.scatter.toFixed(2), speed: +sand3d.speed.toFixed(2) };
       };
     });
   }
