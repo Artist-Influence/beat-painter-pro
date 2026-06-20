@@ -202,7 +202,7 @@ function buildResources(gl: THREE.WebGLRenderer, config: Sand3DConfig): Resource
     depthTest: false,
     depthWrite: false,
     blending: THREE.NormalBlending,
-    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 0.72 } },
+    uniforms: { uTrail: { value: trailRT.texture }, uExposure: { value: 0.5 } },
   });
 
   const cam = new THREE.PerspectiveCamera(48.7, trailW / trailH, 0.1, 100);
@@ -321,7 +321,7 @@ export function Sand3DVisualizer({ config, audioData, zoomLevel }: VisualizerPro
     // Brightness DECOUPLED from the beat (was brightening on every hit) - the music
     // drives MOTION (scatter/pump/swirl below), not glare.
     pm.uGlowB.value = 0.15 + vGlow * 0.4 + highL * 0.07 + lowT * 0.14;
-    pm.uSparkle.value = highT * 0.7 + lowT * 0.28;
+    pm.uSparkle.value = highT * 0.4 + lowT * 0.16; // less sparkle so cores don't glare white
     pm.uTime.value = t;
     pm.uPx.value = Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.75);
     pm.uFocus.value = camDist;

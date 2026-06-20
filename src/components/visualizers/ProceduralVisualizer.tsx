@@ -205,16 +205,19 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     const bassEffect = bass * config.audioParams.bassMultiplier * sensitivity;
     const beatPop = beat * sensitivity;
     const baseScale = shapeConfig.defaultScale * config.shapeParams.scale;
-    const gain = audioConfig.bass.target === 'expand' ? 1.45 : audioConfig.bass.target === 'scale' ? 1.15 : 0.9;
-    const pulse = Math.min(2.8, 1 + bassEffect * gain + beatPop * 0.4);
+    // Pump primarily on the BEAT (the kick/snare you hear) with a little continuous
+    // bass swell underneath, so it visibly hits in time with the uploaded track.
+    const gain = audioConfig.bass.target === 'expand' ? 0.7 : audioConfig.bass.target === 'scale' ? 0.55 : 0.45;
+    const pulse = Math.min(2.6, 1 + beatPop * 0.7 + bassEffect * gain);
     groupRef.current.scale.setScalar(baseScale * pulse);
 
-    // Motion + a transient rotational kick on every drum hit (decays with the beat
-    // envelope) so the model visibly lurches in time with the track.
-    groupRef.current.rotation.x = motionState.groupRotation.x + beat * 0.16;
-    groupRef.current.rotation.y = motionState.groupRotation.y + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.22;
-    groupRef.current.rotation.z = motionState.groupRotation.z;
-    groupRef.current.position.copy(motionState.groupPosition);
+    // Keep the model nearly centred with only a gentle drift + slow spin, plus a
+    // sharp rotational kick on each hit. The old full time-based wander made the
+    // motion look random and drowned the audio reaction.
+    groupRef.current.rotation.x = motionState.groupRotation.x * 0.5 + beat * 0.18;
+    groupRef.current.rotation.y = motionState.groupRotation.y * 0.6 + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.24;
+    groupRef.current.rotation.z = motionState.groupRotation.z * 0.5;
+    groupRef.current.position.set(motionState.groupPosition.x * 0.25, motionState.groupPosition.y * 0.25, motionState.groupPosition.z * 0.25);
   });
   
   // Get the shape component for this family

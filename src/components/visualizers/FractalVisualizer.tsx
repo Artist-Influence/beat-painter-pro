@@ -127,6 +127,10 @@ export function FractalVisualizer({ config, audioData, isPlaying }: FractalVisua
     (u.iResolution.value as THREE.Vector2).set(size.x || 1, size.y || 1);
   });
 
+  // Over a video/transparent stage, blend on the shader's luminance alpha so the dark
+  // background drops out (no black box). On a solid colour, stay opaque (full bright).
+  const bgType = useStudioStore((s) => s.background.type);
+  const overlay = bgType !== 'color';
   return (
     <mesh frustumCulled={false} renderOrder={-1}>
       <planeGeometry args={[2, 2]} />
@@ -135,6 +139,7 @@ export function FractalVisualizer({ config, audioData, isPlaying }: FractalVisua
         uniforms={uniforms}
         vertexShader={FRACTAL_VERT}
         fragmentShader={fragmentShader}
+        transparent={overlay}
         depthTest={false}
         depthWrite={false}
       />

@@ -126,20 +126,15 @@ const BOX_FOLD = new Set<string>([
 const SPACE_FILLING = new Set<string>([
   'apollonian', 'pseudoKleinian', 'kleinianGroup', 'coral', 'mengerCross', 'jerusalemCube',
 ]);
-// A broad, VISUALLY-DISTINCT pool that rolls favour (so a random 3D fractal feels
-// genuinely varied, not the same 4-6 looks) while still framing reasonably. The full
-// 22-type set is still drawn from a good fraction of the time for max variety.
+// Bounded, framable types only - these render as a WHOLE form the camera can fit, so
+// rolls never come out oversized/space-filling. Variety comes from heavy parameter
+// variation (power, julia, rotation, iterations, palette) per roll - the same type
+// looks wildly different each time. The space-filling types (apollonian, kleinian,
+// box-fold variants) still appear rarely from the full set, for the occasional wild one.
 const WELL_FRAMED_3D: string[] = [
-  // bulbs / quaternion
   'mandelbulb', 'juliaBulb', 'quaternion', 'quaternionCubic',
-  // tetrahedral / octahedral
   'sierpinski', 'sierpinskiOctahedron', 'octahedralIFS',
-  // lattices / cubes
-  'menger', 'mengerCross', 'jerusalemCube', 'mandelbrotCylinder',
-  // box folds (ornate, distinct from bulbs)
-  'mandelbox', 'amazingBox', 'kaliBox', 'tgladBox', 'aboxMod',
-  // organic / bubbly (very distinct)
-  'apollonian', 'coral', 'pseudoKleinian',
+  'menger', 'mandelbrotCylinder', 'mandelbox',
 ];
 
 export type Fractal2DType = keyof typeof TYPE_2D;
@@ -437,7 +432,7 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
   // random roll is rarely a space-filling wall.
   const pool3 = (theme?.types3d?.length
     ? theme.types3d
-    : (r() < 0.6 ? WELL_FRAMED_3D : Object.keys(TYPE_3D))) as Fractal3DType[];
+    : (r() < 0.85 ? WELL_FRAMED_3D : Object.keys(TYPE_3D))) as Fractal3DType[];
   const typeName = pick(r, pool3);
   const type = TYPE_3D[typeName];
 
@@ -452,8 +447,8 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
     : isBox
       ? (r() < 0.6 ? range(r, 0.04, 0.26) : 0)
       : (r() < 0.78 ? range(r, 0.04, 0.55) : 0);
-  const julia = isFill ? false : isBox ? r() < 0.3 : r() < 0.55; // box: occasional offset for variety
-  const boxScale = range(r, 1.7, 2.6); // wider scale band = more distinct box forms
+  const julia = isFill ? false : isBox ? r() < 0.35 : r() < 0.7; // more julia offsets = more distinct forms
+  const boxScale = range(r, 1.7, 2.7); // wider scale band = more distinct box forms
   return {
     id: `fr_${seed}`,
     name: themeName ?? 'Random Fractal',
@@ -473,9 +468,9 @@ export function randomFractal(seed: number, forceFamily?: FractalFamily, theme?:
     kaleido: 0,
     rotationSpeed: range(r, -0.1, 0.1) * speed,
     warpAmount: 0,
-    power: typeName === 'mandelbulb' || typeName === 'juliaBulb' ? range(r, 3, 12)
+    power: typeName === 'mandelbulb' || typeName === 'juliaBulb' ? range(r, 2, 18) // wide: blobby (low) -> spiky (high)
       : isBox ? boxScale
-      : range(r, 1.8, 2.6),
+      : range(r, 1.6, 3.2),
     // Per-type fit baseline (now calibrated to frame the whole form with the
     // wider ~47deg FOV) with a small random pull-back for variety. Zoom-out still
     // doubles it, so the form is always fully in frame.

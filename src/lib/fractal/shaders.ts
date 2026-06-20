@@ -35,6 +35,15 @@ uniform float uBass, uMid, uTreble, uLevel, uBeat;
 // Audio reactivity weights
 uniform float uRZoom, uRHue, uRGlow, uRMorph, uRRot, uRIter, uRWarp, uRKaleido;
 
+// Final colour -> RGBA with luminance-based alpha, so the fractal's dark background
+// is TRANSPARENT (over a video/transparent stage the dark areas drop out instead of
+// showing a black box). On a solid-colour background the canvas clears to that colour
+// so the look is unchanged.
+vec4 vizFrag(vec3 c) {
+  float a = clamp(dot(c, vec3(0.30, 0.59, 0.11)) * 2.4 + 0.02, 0.0, 1.0);
+  return vec4(c, a);
+}
+
 vec3 pal(float t) {
   return pa + pb * cos(6.28318530718 * (pc * t + pd));
 }
@@ -119,7 +128,7 @@ void main() {
     col6 += pal(hue6 + 0.5) * shade * uBeat * uRGlow * 0.6;
     col6 *= 0.46 + uLevel * 0.4;
     col6 = pow(clamp(col6, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col6, 1.0);
+    gl_FragColor = vizFrag(col6);
     return;
   }
 
@@ -146,7 +155,7 @@ void main() {
     c16 *= smoothstep(0.0, 6.0, sn16);
     c16 *= 0.46 + uLevel * 0.4;
     c16 = pow(clamp(c16, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(c16, 1.0);
+    gl_FragColor = vizFrag(c16);
     return;
   }
 
@@ -177,7 +186,7 @@ void main() {
     col17 *= smoothstep(0.0, 4.0, sn17);
     col17 *= 0.46 + uLevel * 0.4;
     col17 = pow(clamp(col17, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col17, 1.0);
+    gl_FragColor = vizFrag(col17);
     return;
   }
 
@@ -210,7 +219,7 @@ void main() {
     col18 *= smoothstep(0.0, 4.0, n18);
     col18 *= 0.46 + uLevel * 0.4;
     col18 = pow(clamp(col18, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col18, 1.0);
+    gl_FragColor = vizFrag(col18);
     return;
   }
 
@@ -236,7 +245,7 @@ void main() {
     col19 *= smoothstep(0.0, 6.0, sn19);
     col19 *= 0.46 + uLevel * 0.4;
     col19 = pow(clamp(col19, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col19, 1.0);
+    gl_FragColor = vizFrag(col19);
     return;
   }
 
@@ -262,7 +271,7 @@ void main() {
     col20 *= smoothstep(0.0, 6.0, sn20);
     col20 *= 0.46 + uLevel * 0.4;
     col20 = pow(clamp(col20, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col20, 1.0);
+    gl_FragColor = vizFrag(col20);
     return;
   }
 
@@ -293,7 +302,7 @@ void main() {
     col21 *= 0.4 + 0.6 * conv21;
     col21 *= 0.46 + uLevel * 0.4;
     col21 = pow(clamp(col21, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col21, 1.0);
+    gl_FragColor = vizFrag(col21);
     return;
   }
 
@@ -320,7 +329,7 @@ void main() {
     col22 *= smoothstep(0.0, 4.0, n22);
     col22 *= 0.46 + uLevel * 0.4;
     col22 = pow(clamp(col22, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col22, 1.0);
+    gl_FragColor = vizFrag(col22);
     return;
   }
 
@@ -347,7 +356,7 @@ void main() {
     col23 *= smoothstep(0.0, 4.0, n23);
     col23 *= 0.46 + uLevel * 0.4;
     col23 = pow(clamp(col23, 0.0, 1.0), vec3(1.05)) * 0.9;
-    gl_FragColor = vec4(col23, 1.0);
+    gl_FragColor = vizFrag(col23);
     return;
   }
 
@@ -444,7 +453,7 @@ void main() {
   col *= 0.46 + uLevel * 0.4;
 
   col = pow(clamp(col, 0.0, 1.0), vec3(1.05)) * 0.9; // gentle gamma for punch
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vizFrag(col);
 }
 `;
 
@@ -936,6 +945,11 @@ void main() {
 
   // keep blacks black so the silhouette reads (no midtone lift / wash-out)
   col = pow(clamp(col, 0.0, 1.0), vec3(1.02));
-  gl_FragColor = vec4(col, 1.0);
+  // Alpha from the RAYMARCH HIT, not luminance: the fractal surface stays fully
+  // opaque even where it's dark-shaded, while the empty background drops out (the
+  // glow halo fades via its own brightness). Fixes the black box AND the dark 3D
+  // fractal going invisible over a video/transparent stage.
+  float oa = max(hit, clamp(dot(col, vec3(0.30, 0.59, 0.11)) * 3.5, 0.0, 1.0));
+  gl_FragColor = vec4(col, oa);
 }
 `;
