@@ -204,12 +204,17 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     const sensitivity = audioSensitivity.animationSpeed * config.audioParams.globalSensitivity;
     const bassEffect = bass * config.audioParams.bassMultiplier * sensitivity;
     const beatPop = beat * sensitivity;
+    // The resting footprint is normalised in generateModelConfig so a roll never
+    // loads oversized; the Zoom slider (0.15..6, 1 = 100%) then scales it live so
+    // the user can zoom an object out/in. ProceduralVisualizer previously ignored
+    // zoom entirely, which is why models stayed huge even at 15% zoom.
+    const zoomFx = useStudioStore.getState().zoomLevel || 1;
     const baseScale = shapeConfig.defaultScale * config.shapeParams.scale;
     // Pump primarily on the BEAT (the kick/snare you hear) with a little continuous
     // bass swell underneath, so it visibly hits in time with the uploaded track.
     const gain = audioConfig.bass.target === 'expand' ? 0.7 : audioConfig.bass.target === 'scale' ? 0.55 : 0.45;
     const pulse = Math.min(2.6, 1 + beatPop * 0.7 + bassEffect * gain);
-    groupRef.current.scale.setScalar(baseScale * pulse);
+    groupRef.current.scale.setScalar(baseScale * pulse * zoomFx);
 
     // Keep the model nearly centred with only a gentle drift + slow spin, plus a
     // sharp rotational kick on each hit. The old full time-based wander made the

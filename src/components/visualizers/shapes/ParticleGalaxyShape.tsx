@@ -79,10 +79,10 @@ export function ParticleGalaxyShape({ config, audioData, time, audioSensitivity 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.07}
+        size={0.24}
         sizeAttenuation
         transparent
-        opacity={0.8}
+        opacity={0.95}
       />
     </points>
   );

@@ -104,10 +104,10 @@ export function ParticleSphereShape({ config, audioData, time, audioSensitivity 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.08}
+        size={0.26}
         sizeAttenuation
         transparent
-        opacity={0.8}
+        opacity={0.95}
       />
     </points>
   );

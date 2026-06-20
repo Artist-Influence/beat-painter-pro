@@ -105,10 +105,10 @@ export function ParticleRingShape({ config, audioData, time, audioSensitivity = 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.06}
+        size={0.24}
         sizeAttenuation
         transparent
-        opacity={0.8}
+        opacity={0.95}
       />
     </points>
   );
