@@ -59,7 +59,7 @@ export function FibonacciSphereShape({ config, audioData, time, audioSensitivity
     pointsRef.current.rotation.x = Math.sin(time * 0.2) * 0.15;
 
     if (materialRef.current) {
-      materialRef.current.size = clamp(0.06 + bass * 0.05, 0.04, 0.16);
+      materialRef.current.size = clamp(6 + bass * 3, 5, 10); // pixels (sizeAttenuation off)
       materialRef.current.opacity = clamp(0.6 + highs * 0.35, 0.5, 1);
     }
   });
@@ -77,8 +77,8 @@ export function FibonacciSphereShape({ config, audioData, time, audioSensitivity
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.26}
-        sizeAttenuation
+        size={5.0}
+        sizeAttenuation={false}
         transparent
         opacity={0.95}
       />

@@ -87,7 +87,7 @@ export function ParticleRingShape({ config, audioData, time, audioSensitivity = 
     pointsRef.current.rotation.x = Math.sin(time * 0.2) * 0.1;
     
     if (materialRef.current) {
-      materialRef.current.size = clamp(0.05 + bass * 0.05, 0.03, 0.15);
+      materialRef.current.size = clamp(6 + bass * 3, 5, 10); // pixels (sizeAttenuation off)
       materialRef.current.opacity = clamp(0.7 + highs * 0.25, 0.6, 1);
     }
   });
@@ -105,8 +105,8 @@ export function ParticleRingShape({ config, audioData, time, audioSensitivity = 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.24}
-        sizeAttenuation
+        size={5.0}
+        sizeAttenuation={false}
         transparent
         opacity={0.95}
       />

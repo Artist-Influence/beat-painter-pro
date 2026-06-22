@@ -86,7 +86,7 @@ export function ParticleSphereShape({ config, audioData, time, audioSensitivity 
     
     // Update particle size with bass
     if (materialRef.current) {
-      materialRef.current.size = clamp(0.06 + bass * 0.08, 0.04, 0.2);
+      materialRef.current.size = clamp(6 + bass * 4, 5, 11); // pixels (sizeAttenuation off)
       materialRef.current.opacity = clamp(0.6 + highs * 0.3, 0.5, 1);
     }
   });
@@ -104,8 +104,8 @@ export function ParticleSphereShape({ config, audioData, time, audioSensitivity 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.26}
-        sizeAttenuation
+        size={5.0}
+        sizeAttenuation={false}
         transparent
         opacity={0.95}
       />

@@ -21,18 +21,15 @@ const ALL_SHAPES: ShapeFamily[] = [
 
 const KNOWN_SHAPES = new Set<string>(ALL_SHAPES);
 
-// Shapes that read badly as a lone hero object, measured across many seeds:
-// either they fill/clip the frame (>90% coverage: organic, ribbons, mobius_strip,
-// cylinder_stack, honeycomb) or they render near-invisible because their tiny
-// attenuated GL points stay sub-pixel (the pure point-clouds). When the caller
-// asks for a "complex" look we re-roll ONLY these into the ornate pool and leave
-// every other shape exactly as the factory picked it, so a roll keeps the
-// factory's full shape variety (26 healthy families) instead of collapsing to a
-// handful of templates. The particle aesthetic still appears via sphere_swarm /
-// gyroid_surface, which render at solid coverage.
+// Shapes that fill/clip the frame as a lone hero object (>90% coverage, measured
+// across many seeds). When the caller asks for a "complex" look we re-roll ONLY
+// these into the ornate pool and leave every other shape exactly as the factory
+// picked it, so a roll keeps the factory's full shape variety instead of
+// collapsing to a handful of templates. (The pure point-clouds used to be here
+// too because their GL points rendered sub-pixel; fixed via fixed-pixel point
+// size, so they're back in the pool.)
 const RESWAP_SHAPES = new Set<ShapeFamily>([
   'organic', 'ribbons', 'mobius_strip', 'cylinder_stack', 'honeycomb',
-  'particle_sphere', 'particle_ring', 'particle_galaxy', 'fibonacci_sphere',
 ]);
 
 // Rich, dimensional shapes used to replace a flat/sparse pick.

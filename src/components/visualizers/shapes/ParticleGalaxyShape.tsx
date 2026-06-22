@@ -61,7 +61,7 @@ export function ParticleGalaxyShape({ config, audioData, time, audioSensitivity 
     pointsRef.current.rotation.x = 0.5 + Math.sin(time * 0.2) * 0.1;
 
     if (materialRef.current) {
-      materialRef.current.size = clamp(0.05 + bass * 0.05, 0.03, 0.16);
+      materialRef.current.size = clamp(5 + bass * 3, 4, 9); // pixels (sizeAttenuation off)
       materialRef.current.opacity = clamp(0.55 + highs * 0.4, 0.4, 1);
     }
   });
@@ -79,8 +79,8 @@ export function ParticleGalaxyShape({ config, audioData, time, audioSensitivity 
       <pointsMaterial
         ref={materialRef}
         color={0xffffff}
-        size={0.24}
-        sizeAttenuation
+        size={5.0}
+        sizeAttenuation={false}
         transparent
         opacity={0.95}
       />
