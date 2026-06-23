@@ -218,7 +218,7 @@ const BASE: DawConfig = {
   grain: 0.05, glitch: 0, playhead: true, progressBar: true,
 };
 
-export const DAW_PRESETS: DawConfig[] = [
+const DAW_CURATED: DawConfig[] = [
   { ...BASE, id: 'DawSeratoBlue', name: 'Serato Blue', emoji: '🟦',
     layout: 'full', waveMode: 'filled', waveColor: '#1fd0ff', waveColor2: '#1f8bff',
     glow: 6, beatPulse: 0.1, spectro: false, playhead: true, progressBar: false, grain: 0.03 },
@@ -243,6 +243,29 @@ export const DAW_PRESETS: DawConfig[] = [
     waveHeight: 0.9, glow: 34, beatPulse: 0.34, peakSensitivity: 1.4, transientSensitivity: 1.7,
     bassResponse: 1.4, highResponse: 1.4, spectro: true, spectroPlacement: 'background',
     spectroIntensity: 0.7, spectroPalette: 0, grain: 0.07, scanlines: 0.12 },
+];
+
+// 80 browsable bases: 6 curated + 74 deterministic layout x mode x palette combos.
+const DAW_GEN_MODES: WaveMode[] = ['filled', 'mirrored', 'line', 'bars', 'pixel', 'smoothed', 'clipped', 'glitch', 'stereo', 'freqsep', 'granular', 'peakhold'];
+const DAW_GEN_LAYOUTS: DawLayout[] = ['full', 'split', 'stacked', 'minimal'];
+const DAW_GEN_COLORS: [string, string][] = [
+  ['#1fd0ff', '#1f8bff'], ['#22f0ff', '#6a3bff'], ['#19e6ff', '#ff1493'], ['#00f0ff', '#ff8a00'],
+  ['#a4f573', '#19e6ff'], ['#ff73b7', '#7a3bff'], ['#15d8ff', '#15d8ff'], ['#ffd23f', '#ff5e3a'],
+];
+const DAW_GEN_PLACE = ['left', 'right', 'top', 'background'] as const;
+export const DAW_PRESETS: DawConfig[] = [
+  ...DAW_CURATED,
+  ...Array.from({ length: 74 }, (_, i): DawConfig => {
+    const col = DAW_GEN_COLORS[i % DAW_GEN_COLORS.length];
+    return {
+      ...BASE, id: `DawGen${i}`, name: `DAW ${i + 7}`, emoji: '🎛️',
+      layout: DAW_GEN_LAYOUTS[i % DAW_GEN_LAYOUTS.length], waveMode: DAW_GEN_MODES[(i + 1) % DAW_GEN_MODES.length],
+      waveColor: col[0], waveColor2: col[1], waveHeight: 0.5 + (i % 5) * 0.1, waveThickness: 2 + (i % 3),
+      glow: 5 + (i % 6) * 5, beatPulse: 0.08 + (i % 5) * 0.05,
+      spectro: i % 3 === 0, spectroPlacement: DAW_GEN_PLACE[i % DAW_GEN_PLACE.length], spectroPalette: i % 5,
+      spectroIntensity: 0.7 + (i % 4) * 0.2, grain: (i % 4) * 0.03,
+    };
+  }),
 ];
 
 export const DAW_BASE = BASE;

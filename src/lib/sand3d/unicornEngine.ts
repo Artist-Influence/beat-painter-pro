@@ -274,6 +274,10 @@ export function randomSand3D(seed: number, opts: { paletteIndex?: number; label?
   };
 }
 
-export const SAND3D_PRESETS: Sand3DConfig[] = SAND3D_PALETTES.map((p, i) =>
-  randomSand3D(8100 + i, { paletteIndex: i, label: i === 0 ? '3D Sand' : `3D Sand · ${p.name}` }),
-).map((c, i) => ({ ...c, id: `Sand3D${i}` }));
+// 80 browsable bases: the 5 palette-named ones first, then 75 form-varied rolls.
+export const SAND3D_PRESETS: Sand3DConfig[] = [
+  ...SAND3D_PALETTES.map((p, i) =>
+    randomSand3D(8100 + i, { paletteIndex: i, label: i === 0 ? '3D Sand' : `3D Sand · ${p.name}` })),
+  ...Array.from({ length: 75 }, (_, i) =>
+    randomSand3D(8200 + i * 53 + i * i * 7, { label: `3D Sand ${i + 6}` })),
+].map((c, i) => ({ ...c, id: `Sand3D${i}` }));

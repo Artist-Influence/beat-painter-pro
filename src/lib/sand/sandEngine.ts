@@ -182,4 +182,6 @@ export const SAND_PRESETS: SandConfig[] = [
   randomSand(708, { shape: base('butterfly'), hueBase: 100, label: 'Sand Butterfly' }),
   randomSand(709, { shape: base('spiral', { k: 4, p: 1, a: 0.4 }), hueBase: 180, label: 'Sand Spiral' }),
   randomSand(710, { shape: base('lissajous', { k: 3, q: 4, p: Math.PI / 2 }), hueBase: 50, label: 'Sand Lissajous' }),
+  // 70 more form-varied rolls -> 80 browsable bases
+  ...Array.from({ length: 70 }, (_, i) => randomSand(720 + i * 37 + i * i * 3, { label: `Sand Flow ${i + 11}` })),
 ].map((c, i) => ({ ...c, id: `SandFlow${i}` }));
