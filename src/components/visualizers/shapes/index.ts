@@ -88,6 +88,11 @@ import { TetraClusterShape, OctaRingShape, IcosaOrbitShape, DodecaScatterShape }
 import { TorusStackShape, GyroRingsShape, CubeSpiralShape, ConeCrownShape } from './extra/RingSpiralShapes';
 import { PillarArrayShape, SpikeUrchinShape, DiamondTotemShape, RingRippleShape } from './extra/BarSpikeShapes';
 import { AtomShape, BlobClusterShape, StarGridShape, PrismTowerShape } from './extra/OrganicMiscShapes';
+// Expansion pack II
+import { TetraRingShape, PyramidRingShape, CapsuleRingShape, TorusChainShape, SpikeDiskShape } from './extra/RingFamily2';
+import { ConeSpiralShape, BoxTowerShape, SphereHelixShape, HelixDoubleShape, CrystalSpireShape } from './extra/TowerFamily2';
+import { DiamondGridShape, CubeCrossShape, NestedShellsShape, RingTunnelShape, FanBladesShape } from './extra/GridFamily2';
+import { StarTetraShape, BloomConesShape, OrbitSwarmShape, GemClusterShape, CylinderFanShape } from './extra/ClusterFamily2';
 
 export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   lattice: LatticeShape,
@@ -142,4 +147,25 @@ export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   blob_cluster: BlobClusterShape,
   star_grid: StarGridShape,
   prism_tower: PrismTowerShape,
+  // expansion pack II
+  tetra_ring: TetraRingShape,
+  pyramid_ring: PyramidRingShape,
+  capsule_ring: CapsuleRingShape,
+  torus_chain: TorusChainShape,
+  spike_disk: SpikeDiskShape,
+  cone_spiral: ConeSpiralShape,
+  box_tower: BoxTowerShape,
+  sphere_helix: SphereHelixShape,
+  helix_double: HelixDoubleShape,
+  crystal_spire: CrystalSpireShape,
+  diamond_grid: DiamondGridShape,
+  cube_cross: CubeCrossShape,
+  nested_shells: NestedShellsShape,
+  ring_tunnel: RingTunnelShape,
+  fan_blades: FanBladesShape,
+  star_tetra: StarTetraShape,
+  bloom_cones: BloomConesShape,
+  orbit_swarm: OrbitSwarmShape,
+  gem_cluster: GemClusterShape,
+  cylinder_fan: CylinderFanShape,
 };

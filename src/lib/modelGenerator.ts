@@ -21,6 +21,11 @@ const ALL_SHAPES: ShapeFamily[] = [
   'tetra_cluster', 'octa_ring', 'icosa_orbit', 'dodeca_scatter', 'torus_stack', 'gyro_rings',
   'cube_spiral', 'cone_crown', 'pillar_array', 'spike_urchin', 'diamond_totem', 'ring_ripple',
   'atom', 'blob_cluster', 'star_grid', 'prism_tower',
+  // expansion pack II
+  'tetra_ring', 'pyramid_ring', 'capsule_ring', 'torus_chain', 'spike_disk', 'cone_spiral',
+  'box_tower', 'sphere_helix', 'helix_double', 'crystal_spire', 'diamond_grid', 'cube_cross',
+  'nested_shells', 'ring_tunnel', 'fan_blades', 'star_tetra', 'bloom_cones', 'orbit_swarm',
+  'gem_cluster', 'cylinder_fan',
 ];
 
 const KNOWN_SHAPES = new Set<string>(ALL_SHAPES);

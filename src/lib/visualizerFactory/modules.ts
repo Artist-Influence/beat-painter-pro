@@ -59,7 +59,27 @@ export type ShapeFamily =
   | 'atom'              // Nucleus with orbiting electrons
   | 'blob_cluster'      // Merging sphere cluster
   | 'star_grid'         // 3D lattice of pulsing stars
-  | 'prism_tower';      // Twisting hexagonal-prism tower
+  | 'prism_tower'       // Twisting hexagonal-prism tower
+  | 'tetra_ring'        // Tetrahedra on a ring
+  | 'pyramid_ring'      // Pyramids pointing inward on a ring
+  | 'capsule_ring'      // Capsules tumbling on a ring
+  | 'torus_chain'       // Interlocked tori in a loop
+  | 'spike_disk'        // Spikes radiating flat in a disk
+  | 'cone_spiral'       // Cones climbing a spiral
+  | 'box_tower'         // Twisting stacked-cube tower
+  | 'sphere_helix'      // Beads along a single helix
+  | 'helix_double'      // Two intertwined bead strands
+  | 'crystal_spire'     // Clustered quartz bipyramids
+  | 'diamond_grid'      // Octahedra rippling on a plane
+  | 'cube_cross'        // Cubes in a 3D plus
+  | 'nested_shells'     // Concentric wireframe shells
+  | 'ring_tunnel'       // Tori receding into a tunnel
+  | 'fan_blades'        // Turbine of flat blades
+  | 'star_tetra'        // Two interpenetrating tetrahedra
+  | 'bloom_cones'       // Cones opening like a bloom
+  | 'orbit_swarm'       // Cubes whirling on tilted orbits
+  | 'gem_cluster'       // Faceted icosahedra gemstone
+  | 'cylinder_fan';     // Cylinders fanning from a hub
 
 export interface ShapeConfig {
   id: ShapeFamily;
@@ -123,6 +143,27 @@ export const SHAPE_FAMILIES: ShapeConfig[] = [
   { id: 'blob_cluster', name: 'Blob Cluster', elementRange: [7, 16], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.0 },
   { id: 'star_grid', name: 'Star Grid', elementRange: [27, 64], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
   { id: 'prism_tower', name: 'Prism Tower', elementRange: [6, 12], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  // expansion pack II - all internally bounded to ~1.2r
+  { id: 'tetra_ring', name: 'Tetra Ring', elementRange: [8, 16], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'pyramid_ring', name: 'Pyramid Ring', elementRange: [8, 16], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'capsule_ring', name: 'Capsule Ring', elementRange: [7, 14], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'torus_chain', name: 'Torus Chain', elementRange: [8, 14], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'spike_disk', name: 'Spike Disk', elementRange: [14, 30], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cone_spiral', name: 'Cone Spiral', elementRange: [14, 30], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'box_tower', name: 'Box Tower', elementRange: [7, 13], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'sphere_helix', name: 'Sphere Helix', elementRange: [16, 34], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'helix_double', name: 'Double Helix', elementRange: [20, 40], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'crystal_spire', name: 'Crystal Spire', elementRange: [5, 9], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'diamond_grid', name: 'Diamond Grid', elementRange: [9, 36], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cube_cross', name: 'Cube Cross', elementRange: [13, 13], polyBudget: 10000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'nested_shells', name: 'Nested Shells', elementRange: [18, 30], polyBudget: 16000, supportsWireframe: true, defaultScale: 2.0 },
+  { id: 'ring_tunnel', name: 'Ring Tunnel', elementRange: [8, 16], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'fan_blades', name: 'Fan Blades', elementRange: [6, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'star_tetra', name: 'Star Tetra', elementRange: [2, 2], polyBudget: 10000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'bloom_cones', name: 'Bloom Cones', elementRange: [8, 18], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'orbit_swarm', name: 'Orbit Swarm', elementRange: [24, 80], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'gem_cluster', name: 'Gem Cluster', elementRange: [8, 18], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cylinder_fan', name: 'Cylinder Fan', elementRange: [6, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
 ];
 
 // =============================================================================

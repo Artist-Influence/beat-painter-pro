@@ -307,6 +307,101 @@ float sdEyeShape(vec2 p){
   return min(sdVesica(p.yx, 0.62, 0.34), sdCircle(p, 0.15));
 }
 
+// ---- single-shape SDFs (ids 142+) ----
+float sdKite(vec2 p){
+  float u = sdEquiTriangle(vec2(p.x, p.y - 0.06) * 1.5, 0.4);
+  float d = sdEquiTriangle(vec2(p.x, -(p.y + 0.12)) * 1.0, 0.5);
+  return min(u, d);
+}
+float sdHouse(vec2 p){
+  return min(sdBox(p - vec2(0.0,-0.16), vec2(0.36,0.26)), sdEquiTriangle((p - vec2(0.0,0.26)) * 1.5, 0.4));
+}
+float sdTree(vec2 p){
+  float trunk = sdBox(p - vec2(0.0,-0.36), vec2(0.07,0.16));
+  return min(trunk, min(sdEquiTriangle((p - vec2(0.0,0.12)) * 1.3, 0.42), sdEquiTriangle((p - vec2(0.0,-0.06)) * 1.1, 0.42)));
+}
+float sdMountain(vec2 p){
+  return min(sdEquiTriangle((p - vec2(-0.18,-0.1)) * 1.3, 0.42), sdEquiTriangle((p - vec2(0.2,-0.16)) * 1.0, 0.5));
+}
+float sdLightbulb(vec2 p){
+  return min(sdCircle(p - vec2(0.0,0.1), 0.32), sdBox(p - vec2(0.0,-0.28), vec2(0.12,0.14)));
+}
+float sdRocket(vec2 p){
+  float body = sdVesica(p, 0.66, 0.32);
+  float nose = sdEquiTriangle((p - vec2(0.0,0.3)) * 1.6, 0.3);
+  vec2 q = vec2(abs(p.x), p.y);
+  float fin = sdEquiTriangle(vec2(q.x - 0.22, -(q.y + 0.34)) * 1.4, 0.3);
+  return min(min(body, nose), fin);
+}
+float sdIceCream(vec2 p){
+  return min(sdEquiTriangle(vec2(p.x, -(p.y + 0.1)) * 1.1, 0.46), sdCircle(p - vec2(0.0,0.2), 0.26));
+}
+float sdPizza(vec2 p){
+  return sdEquiTriangle(vec2(p.x, -(p.y + 0.05)) * 0.95, 0.5);
+}
+float sdUmbrella(vec2 p){
+  float dome = max(sdCircle(p - vec2(0.0,0.05), 0.42), -(p.y - 0.05));
+  float handle = sdBox(p - vec2(0.0,-0.24), vec2(0.04,0.3));
+  float hook = abs(length(p - vec2(-0.1,-0.5)) - 0.09) - 0.04;
+  hook = max(hook, -(p.y + 0.5));
+  return min(dome, min(handle, hook));
+}
+float sdSnowman(vec2 p){
+  float d = sdCircle(p - vec2(0.0,0.32), 0.18);
+  d = min(d, sdCircle(p - vec2(0.0,0.02), 0.26));
+  return min(d, sdCircle(p - vec2(0.0,-0.32), 0.32));
+}
+float sdCrescentStar(vec2 p){
+  float moon = sdMoon(rot(-0.4) * (p - vec2(-0.05,0.0)), 0.34, 0.42, 0.34);
+  float star = sdStarN(p - vec2(0.24,0.18), 0.15, 5.0, 2.4);
+  return min(moon, star);
+}
+float sdDiamondRing(vec2 p){
+  float band = abs(length(p - vec2(0.0,-0.14)) - 0.3) - 0.05;
+  return min(band, sdRhombus(p - vec2(0.0,0.32), vec2(0.22,0.28)));
+}
+float sdAnchor(vec2 p){
+  float ring = abs(length(p - vec2(0.0,0.4)) - 0.11) - 0.04;
+  float shaft = sdBox(p, vec2(0.045,0.42));
+  float cross = sdBox(p - vec2(0.0,0.2), vec2(0.22,0.045));
+  float arc = max(abs(length(p - vec2(0.0,-0.06)) - 0.34) - 0.05, p.y + 0.06);
+  return min(min(ring, shaft), min(cross, arc));
+}
+float sdBone(vec2 p){
+  vec2 q = vec2(abs(p.x), abs(p.y));
+  return min(sdBox(p, vec2(0.32,0.07)), sdCircle(q - vec2(0.32,0.1), 0.12));
+}
+float sdTooth(vec2 p){
+  float top = min(sdBox(p - vec2(0.0,0.12), vec2(0.28,0.18)), sdCircle(p - vec2(0.0,0.18), 0.28));
+  vec2 q = vec2(abs(p.x), p.y);
+  float root = sdEquiTriangle(vec2(q.x - 0.15, -(q.y + 0.18)) * 1.2, 0.3);
+  return min(top, root);
+}
+float sdFish(vec2 p){
+  float body = sdVesica(p.yx, 0.58, 0.28);
+  float tail = sdEquiTriangle(rot(1.5708) * (p - vec2(-0.5,0.0)) * 1.4, 0.28);
+  return min(body, tail);
+}
+float sdBird(vec2 p){
+  float body = sdCircle(p - vec2(-0.04,-0.04), 0.3);
+  float head = sdCircle(p - vec2(0.22,0.2), 0.16);
+  float beak = sdEquiTriangle(rot(-1.5708) * (p - vec2(0.44,0.18)) * 1.8, 0.2);
+  float wing = sdEquiTriangle((p - vec2(-0.08,0.02)) * 1.5, 0.28);
+  return min(min(body, head), min(beak, wing));
+}
+float sdTrophy(vec2 p){
+  float bowl = min(sdBox(p - vec2(0.0,0.24), vec2(0.27,0.16)), sdCircle(p - vec2(0.0,0.14), 0.27));
+  float stem = sdBox(p - vec2(0.0,-0.16), vec2(0.06,0.16));
+  float base = sdBox(p - vec2(0.0,-0.34), vec2(0.2,0.07));
+  return min(min(bowl, stem), base);
+}
+float sdLatinCross(vec2 p){
+  return min(sdBox(p - vec2(0.0,-0.05), vec2(0.1,0.45)), sdBox(p - vec2(0.0,0.18), vec2(0.3,0.1)));
+}
+float sdLollipop(vec2 p){
+  return min(sdCircle(p - vec2(0.0,0.18), 0.3), sdBox(p - vec2(0.0,-0.3), vec2(0.04,0.26)));
+}
+
 float shapeSDF(vec2 p, float t){
   if (uShape==0){ float a=atan(p.y,p.x); return length(p) - 0.5*(1.0+0.13*sin(a*6.0+t*1.5)); }
   if (uShape==1) return sdStar5(p, 0.5, 0.42);
@@ -361,6 +456,26 @@ float shapeSDF(vec2 p, float t){
   if (uShape==139) return sdInfinity(p);                      // infinity
   if (uShape==140) return sdEyeShape(p);                      // eye
   if (uShape==141) return sdStarN(p, 0.5, 12.0, 2.6);         // starburst
+  if (uShape==142) return sdKite(p);                          // kite
+  if (uShape==143) return sdHouse(p);                         // house
+  if (uShape==144) return sdTree(p);                          // tree
+  if (uShape==145) return sdMountain(p);                      // mountains
+  if (uShape==146) return sdLightbulb(p);                     // lightbulb
+  if (uShape==147) return sdRocket(p);                        // rocket
+  if (uShape==148) return sdIceCream(p);                      // ice cream
+  if (uShape==149) return sdPizza(p);                         // pizza slice
+  if (uShape==150) return sdUmbrella(p);                      // umbrella
+  if (uShape==151) return sdSnowman(p);                       // snowman
+  if (uShape==152) return sdCrescentStar(p);                  // crescent + star
+  if (uShape==153) return sdDiamondRing(p);                   // diamond ring
+  if (uShape==154) return sdAnchor(p);                        // anchor
+  if (uShape==155) return sdBone(p);                          // bone
+  if (uShape==156) return sdTooth(p);                         // tooth
+  if (uShape==157) return sdFish(p);                          // fish
+  if (uShape==158) return sdBird(p);                          // bird
+  if (uShape==159) return sdTrophy(p);                        // trophy
+  if (uShape==160) return sdLatinCross(p);                    // cross
+  if (uShape==161) return sdLollipop(p);                      // lollipop
   return sdCircle(p, 0.5);
 }
 
