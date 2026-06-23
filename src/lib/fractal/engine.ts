@@ -61,6 +61,15 @@ export const TYPE_2D = {
   tricornPower4: 37,
   mandelbarPower5: 38,
   perpBurningPower3: 39,
+  // --- batch to 80 (power sweeps across the fold families) ---
+  multibrot9: 40, multibrot10: 41, multibrot11: 42, multibrot12: 43, multibrot13: 44,
+  burningShip6: 45, burningShip7: 46, burningShip8: 47, burningShip9: 48, burningShip10: 49,
+  celtic5: 50, celtic6: 51, celtic7: 52, celtic8: 53, celtic9: 54,
+  heart4: 55, heart5: 56, heart6: 57, heart7: 58, heart8: 59,
+  buffalo4: 60, buffalo5: 61, buffalo6: 62, buffalo7: 63, buffalo8: 64,
+  tricorn6: 65, tricorn7: 66, tricorn8: 67, tricorn9: 68, tricorn10: 69,
+  perpBurning4: 70, perpBurning5: 71, perpBurning6: 72, perpBurning7: 73,
+  multibrot14: 74, multibrot16: 75, multibrot20: 76, celtic10: 77, celtic11: 78, celtic12: 79,
 } as const;
 export const TYPE_3D = {
   mandelbulb: 0,
@@ -105,6 +114,17 @@ export const TYPE_3D = {
   kifs: 37,
   mengerRound: 38,
   octaFlake: 39,
+  // --- batch to 80: more baked-param variants ---
+  mandelbulbP5: 40, mandelbulbP7: 41, mandelbulbP9: 42, mandelbulbP10: 43, mandelbulbP12: 44,
+  juliaBulbP3: 45, juliaBulbP4: 46, juliaBulbP6: 47, juliaBulbP8: 48, juliaBulbP9: 49,
+  amazingBoxA: 50, amazingBoxB: 51, amazingBoxC: 52, amazingBoxD: 53, amazingBoxE: 54,
+  tgladA: 55, tgladB: 56, tgladC: 57, tgladD: 58,
+  aboxModC: 59, aboxModD: 60, aboxModE: 61,
+  kaliBoxC: 62, kaliBoxD: 63,
+  mausoleumC: 64, mausoleumD: 65, mausoleumE: 66,
+  hybridBulbBoxC: 67, hybridBulbBoxD: 68, hybridBulbBoxE: 69, hybridBulbBoxF: 70,
+  quaternionC: 71, quaternionD: 72, quaternionE: 73,
+  sierpinskiTetB: 74, sierpinskiTetC: 75, octaFlakeB: 76, octaFlakeC: 77, kifsB: 78, kifsC: 79,
 } as const;
 
 /* --------------------------------------------------------------------------
@@ -149,6 +169,16 @@ export const FIT_3D: Record<string, number> = {
   amazingBoxHi: 3.4, amazingBoxLo: 3.4, tgladHi: 3.6, aboxModB: 3.4,
   kaliBoxB: 3.4, mausoleumB: 3.8, hybridBulbBoxB: 3.8,
   sierpinskiTet: 4.8, kifs: 5.0, mengerRound: 5.6, octaFlake: 5.0,
+  // batch-to-80 variants
+  mandelbulbP5: 4.6, mandelbulbP7: 4.6, mandelbulbP9: 4.6, mandelbulbP10: 4.6, mandelbulbP12: 4.6,
+  juliaBulbP3: 4.6, juliaBulbP4: 4.6, juliaBulbP6: 4.6, juliaBulbP8: 4.6, juliaBulbP9: 4.6,
+  amazingBoxA: 3.4, amazingBoxB: 3.4, amazingBoxC: 3.4, amazingBoxD: 3.4, amazingBoxE: 3.4,
+  tgladA: 3.6, tgladB: 3.6, tgladC: 3.6, tgladD: 3.6,
+  aboxModC: 3.4, aboxModD: 3.4, aboxModE: 3.4, kaliBoxC: 3.4, kaliBoxD: 3.4,
+  mausoleumC: 3.8, mausoleumD: 3.8, mausoleumE: 3.8,
+  hybridBulbBoxC: 3.8, hybridBulbBoxD: 3.8, hybridBulbBoxE: 3.8, hybridBulbBoxF: 3.8,
+  quaternionC: 4.4, quaternionD: 4.4, quaternionE: 4.4,
+  sierpinskiTetB: 4.8, sierpinskiTetC: 4.8, octaFlakeB: 5.0, octaFlakeC: 5.0, kifsB: 5.0, kifsC: 5.0,
 };
 const fit3d = (typeName: string): number => FIT_3D[typeName] ?? 5.0;
 
@@ -160,6 +190,10 @@ const fit3d = (typeName: string): number => FIT_3D[typeName] ?? 5.0;
 const BOX_FOLD = new Set<string>([
   'mandelbox', 'amazingBox', 'aboxMod', 'tgladBox', 'kaliBox', 'mausoleumBox', 'hybridBulbBox',
   'amazingBoxHi', 'amazingBoxLo', 'tgladHi', 'aboxModB', 'kaliBoxB', 'mausoleumB', 'hybridBulbBoxB',
+  'amazingBoxA', 'amazingBoxB', 'amazingBoxC', 'amazingBoxD', 'amazingBoxE',
+  'tgladA', 'tgladB', 'tgladC', 'tgladD', 'aboxModC', 'aboxModD', 'aboxModE',
+  'kaliBoxC', 'kaliBoxD', 'mausoleumC', 'mausoleumD', 'mausoleumE',
+  'hybridBulbBoxC', 'hybridBulbBoxD', 'hybridBulbBoxE', 'hybridBulbBoxF',
 ]);
 // Genuinely space-filling tilings (use fract()/inversion to repeat forever). There
 // is no "whole form" to frame - they are immersive detail views by nature.
@@ -179,6 +213,11 @@ const WELL_FRAMED_3D: string[] = [
   'mandelbulbP4', 'mandelbulbP8', 'mandelbulbP3', 'mandelbulbP6',
   'juliaBulbP5', 'juliaBulbP7', 'quaternionB',
   'sierpinskiTet', 'mengerRound', 'octaFlake', 'kifs',
+  // batch-to-80 framable variants
+  'mandelbulbP5', 'mandelbulbP7', 'mandelbulbP9', 'mandelbulbP10', 'mandelbulbP12',
+  'juliaBulbP3', 'juliaBulbP4', 'juliaBulbP6', 'juliaBulbP8', 'juliaBulbP9',
+  'quaternionC', 'quaternionD', 'quaternionE',
+  'sierpinskiTetB', 'sierpinskiTetC', 'octaFlakeB', 'octaFlakeC', 'kifsB', 'kifsC',
 ];
 
 export type Fractal2DType = keyof typeof TYPE_2D;

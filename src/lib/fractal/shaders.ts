@@ -451,6 +451,46 @@ void main() {
       vec2 zc = vec2(z.x, -z.y); z = cpow(zc, 5.0) + c;
     } else if (uType == 39) {              // perpendicular burning ship power 3
       z = cpow(vec2(abs(z.x), -abs(z.y)), 3.0) + c;
+    } else if (uType == 40) { z = cpow(z, 9.0) + c;
+    } else if (uType == 41) { z = cpow(z, 10.0) + c;
+    } else if (uType == 42) { z = cpow(z, 11.0) + c;
+    } else if (uType == 43) { z = cpow(z, 12.0) + c;
+    } else if (uType == 44) { z = cpow(z, 13.0) + c;
+    } else if (uType == 45) { z = cpow(abs(z), 6.0) + c;
+    } else if (uType == 46) { z = cpow(abs(z), 7.0) + c;
+    } else if (uType == 47) { z = cpow(abs(z), 8.0) + c;
+    } else if (uType == 48) { z = cpow(abs(z), 9.0) + c;
+    } else if (uType == 49) { z = cpow(abs(z), 10.0) + c;
+    } else if (uType == 50) { vec2 zp = cpow(z, 5.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 51) { vec2 zp = cpow(z, 6.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 52) { vec2 zp = cpow(z, 7.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 53) { vec2 zp = cpow(z, 8.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 54) { vec2 zp = cpow(z, 9.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 55) { vec2 zp = cpow(z, 4.0); z = vec2(zp.x, abs(zp.y)) + c;
+    } else if (uType == 56) { vec2 zp = cpow(z, 5.0); z = vec2(zp.x, abs(zp.y)) + c;
+    } else if (uType == 57) { vec2 zp = cpow(z, 6.0); z = vec2(zp.x, abs(zp.y)) + c;
+    } else if (uType == 58) { vec2 zp = cpow(z, 7.0); z = vec2(zp.x, abs(zp.y)) + c;
+    } else if (uType == 59) { vec2 zp = cpow(z, 8.0); z = vec2(zp.x, abs(zp.y)) + c;
+    } else if (uType == 60) { vec2 zp = cpow(z, 4.0); z = vec2(abs(zp.x), abs(zp.y)) + c;
+    } else if (uType == 61) { vec2 zp = cpow(z, 5.0); z = vec2(abs(zp.x), abs(zp.y)) + c;
+    } else if (uType == 62) { vec2 zp = cpow(z, 6.0); z = vec2(abs(zp.x), abs(zp.y)) + c;
+    } else if (uType == 63) { vec2 zp = cpow(z, 7.0); z = vec2(abs(zp.x), abs(zp.y)) + c;
+    } else if (uType == 64) { vec2 zp = cpow(z, 8.0); z = vec2(abs(zp.x), abs(zp.y)) + c;
+    } else if (uType == 65) { z = cpow(vec2(z.x, -z.y), 6.0) + c;
+    } else if (uType == 66) { z = cpow(vec2(z.x, -z.y), 7.0) + c;
+    } else if (uType == 67) { z = cpow(vec2(z.x, -z.y), 8.0) + c;
+    } else if (uType == 68) { z = cpow(vec2(z.x, -z.y), 9.0) + c;
+    } else if (uType == 69) { z = cpow(vec2(z.x, -z.y), 10.0) + c;
+    } else if (uType == 70) { z = cpow(vec2(abs(z.x), -abs(z.y)), 4.0) + c;
+    } else if (uType == 71) { z = cpow(vec2(abs(z.x), -abs(z.y)), 5.0) + c;
+    } else if (uType == 72) { z = cpow(vec2(abs(z.x), -abs(z.y)), 6.0) + c;
+    } else if (uType == 73) { z = cpow(vec2(abs(z.x), -abs(z.y)), 7.0) + c;
+    } else if (uType == 74) { z = cpow(z, 14.0) + c;
+    } else if (uType == 75) { z = cpow(z, 16.0) + c;
+    } else if (uType == 76) { z = cpow(z, 20.0) + c;
+    } else if (uType == 77) { vec2 zp = cpow(z, 10.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 78) { vec2 zp = cpow(z, 11.0); z = vec2(abs(zp.x), zp.y) + c;
+    } else if (uType == 79) { vec2 zp = cpow(z, 12.0); z = vec2(abs(zp.x), zp.y) + c;
     } else {                               // mandelbrot / julia
       z = cmul(z, z) + c;
     }
@@ -878,8 +918,7 @@ float deCoral(vec3 p) {
 }
 
 // Sierpinski tetrahedron IFS (classic 4-vertex fold) - distinct from the octa.
-float deSierpinskiTet(vec3 z) {
-  float scale = 2.0;
+float deSierpinskiTet(vec3 z, float scale) {
   vec3 a1 = vec3(1.0, 1.0, 1.0), a2 = vec3(-1.0, -1.0, 1.0), a3 = vec3(1.0, -1.0, -1.0), a4 = vec3(-1.0, 1.0, -1.0);
   for (int i = 0; i < 12; i++) {
     z = uRotMat * z;
@@ -892,9 +931,8 @@ float deSierpinskiTet(vec3 z) {
   return length(z) * pow(scale, -float(12));
 }
 // Kaleidoscopic IFS - abs fold + sort + rotate + scale toward an offset.
-float deKIFS(vec3 z) {
-  float scale = 1.8; float dr = 1.0;
-  vec3 off = vec3(0.92, 0.18, 0.55);
+float deKIFS(vec3 z, float scale, vec3 off) {
+  float dr = 1.0;
   for (int i = 0; i < 14; i++) {
     z = abs(z);
     if (z.x < z.y) z.xy = z.yx;
@@ -923,8 +961,8 @@ float deMengerR(vec3 p) {
   return d;
 }
 // Octahedron flake - octahedral fold at a larger scale (sparser than octa IFS).
-float deOctaFlake(vec3 z) {
-  float scale = 2.2; vec3 v = normalize(vec3(1.0, 1.0, 1.0));
+float deOctaFlake(vec3 z, float scale) {
+  vec3 v = normalize(vec3(1.0, 1.0, 1.0));
   for (int i = 0; i < 10; i++) {
     z = uRotMat * z;
     z = abs(z);
@@ -973,10 +1011,51 @@ float map(vec3 p) {
   if (uType == 33) return deMausoleum(p, 2.4 + uMid * uRMorph * 0.4);
   if (uType == 34) return deHybridBulbBox(p, 4.0 + uBeat * uRMorph * 1.5);
   if (uType == 35) return deQuaternion(p, vec2(-0.2, 0.65) + uBeat * uRMorph * 0.15);
-  if (uType == 36) return deSierpinskiTet(p);
-  if (uType == 37) return deKIFS(p);
+  if (uType == 36) return deSierpinskiTet(p, 2.0);
+  if (uType == 37) return deKIFS(p, 1.8, vec3(0.92, 0.18, 0.55));
   if (uType == 38) return deMengerR(p);
-  if (uType == 39) return deOctaFlake(p);
+  if (uType == 39) return deOctaFlake(p, 2.2);
+  // --- batch to 80: more baked-param variants of the proven DEs ---
+  if (uType == 40) return deMandelbulb(p, 5.0 + uBeat * uRMorph * 2.0);
+  if (uType == 41) return deMandelbulb(p, 7.0 + uBeat * uRMorph * 2.0);
+  if (uType == 42) return deMandelbulb(p, 9.0 + uBeat * uRMorph * 2.0);
+  if (uType == 43) return deMandelbulb(p, 10.0 + uBeat * uRMorph * 2.0);
+  if (uType == 44) return deMandelbulb(p, 12.0 + uBeat * uRMorph * 2.0);
+  if (uType == 45) return deJuliaBulb(p, 3.0 + uBeat * uRMorph * 1.5);
+  if (uType == 46) return deJuliaBulb(p, 4.0 + uBeat * uRMorph * 2.0);
+  if (uType == 47) return deJuliaBulb(p, 6.0 + uBeat * uRMorph * 2.0);
+  if (uType == 48) return deJuliaBulb(p, 8.0 + uBeat * uRMorph * 2.0);
+  if (uType == 49) return deJuliaBulb(p, 9.0 + uBeat * uRMorph * 2.0);
+  if (uType == 50) return deAmazingBox(p, 1.72 + uMid * uRMorph * 0.2);
+  if (uType == 51) return deAmazingBox(p, 1.9 + uMid * uRMorph * 0.2);
+  if (uType == 52) return deAmazingBox(p, 2.0 + uMid * uRMorph * 0.2);
+  if (uType == 53) return deAmazingBox(p, 2.05 + uMid * uRMorph * 0.2);
+  if (uType == 54) return deAmazingBox(p, 2.18 + uMid * uRMorph * 0.2);
+  if (uType == 55) return deTglad(p, 1.9 + uMid * uRMorph * 0.3);
+  if (uType == 56) return deTglad(p, 2.1 + uMid * uRMorph * 0.3);
+  if (uType == 57) return deTglad(p, 2.2 + uMid * uRMorph * 0.3);
+  if (uType == 58) return deTglad(p, 2.55 + uMid * uRMorph * 0.3);
+  if (uType == 59) return deAboxMod(p, -1.9 - uMid * uRMorph * 0.6);
+  if (uType == 60) return deAboxMod(p, -2.3 - uMid * uRMorph * 0.6);
+  if (uType == 61) return deAboxMod(p, -1.8 - uMid * uRMorph * 0.6);
+  if (uType == 62) return deKaliBox(p, -1.8 - uMid * uRMorph * 0.6);
+  if (uType == 63) return deKaliBox(p, -2.2 - uMid * uRMorph * 0.6);
+  if (uType == 64) return deMausoleum(p, 1.9 + uMid * uRMorph * 0.3);
+  if (uType == 65) return deMausoleum(p, 2.1 + uMid * uRMorph * 0.3);
+  if (uType == 66) return deMausoleum(p, 2.55 + uMid * uRMorph * 0.3);
+  if (uType == 67) return deHybridBulbBox(p, 3.0 + uBeat * uRMorph * 1.5);
+  if (uType == 68) return deHybridBulbBox(p, 5.0 + uBeat * uRMorph * 1.5);
+  if (uType == 69) return deHybridBulbBox(p, 6.0 + uBeat * uRMorph * 1.5);
+  if (uType == 70) return deHybridBulbBox(p, 8.0 + uBeat * uRMorph * 1.5);
+  if (uType == 71) return deQuaternion(p, vec2(0.3, -0.5) + uBeat * uRMorph * 0.15);
+  if (uType == 72) return deQuaternion(p, vec2(-0.45, 0.3) + uBeat * uRMorph * 0.15);
+  if (uType == 73) return deQuaternion(p, vec2(0.1, 0.7) + uBeat * uRMorph * 0.15);
+  if (uType == 74) return deSierpinskiTet(p, 1.8);
+  if (uType == 75) return deSierpinskiTet(p, 2.2);
+  if (uType == 76) return deOctaFlake(p, 2.0);
+  if (uType == 77) return deOctaFlake(p, 2.45);
+  if (uType == 78) return deKIFS(p, 1.6, vec3(0.7, 0.4, 0.3));
+  if (uType == 79) return deKIFS(p, 2.0, vec3(1.0, 0.2, 0.6));
   return deSierpinski(p);
 }
 
