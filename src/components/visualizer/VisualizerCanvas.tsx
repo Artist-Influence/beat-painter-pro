@@ -11,6 +11,7 @@ import { makeFractalVisualizer } from "@/components/visualizers/FractalVisualize
 import { makeProceduralVisualizer } from "@/components/visualizers/ProceduralPreset";
 import { makeCartoonVisualizer } from "@/components/visualizers/Cartoon2DVisualizer";
 import { makeMergeVisualizer } from "@/components/visualizers/MergeVisualizer";
+import { GradientOverlay } from "./GradientOverlay";
 import { makeSandVisualizer } from "@/components/visualizers/SandFlowVisualizer";
 import { usePresetStore } from "@/stores/presetStore";
 import type { Sand3DConfig } from "@/lib/sand3d/unicornEngine";
@@ -373,6 +374,8 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
               )}
             </Suspense>
           </group>
+          {/* Visual Style gradient, layered over EVERY visualizer type + captured in export */}
+          <GradientOverlay />
           <OrbitControls enablePan={false} enableZoom={false} />
         </Canvas>
       </div>

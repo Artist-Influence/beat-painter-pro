@@ -27,6 +27,7 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
   const groupRef = useRef<THREE.Group>(null);
   const audioDataRef = useRef(audioData);
   const timeRef = useRef(0);
+  const pulseRef = useRef(1);       // smoothed scale-pulse envelope (fast attack, slow release)
   const bandsRef = useRef({ bass: 0, mids: 0, highs: 0, rawBass: 0, rawMids: 0, rawHighs: 0 });
   const audioSensitivity = useStudioStore((s) => s.audioSensitivity);
   
@@ -213,16 +214,24 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     // Pump primarily on the BEAT (the kick/snare you hear) with a little continuous
     // bass swell underneath, so it visibly hits in time with the uploaded track.
     const gain = audioConfig.bass.target === 'expand' ? 0.7 : audioConfig.bass.target === 'scale' ? 0.55 : 0.45;
-    const pulse = Math.min(2.6, 1 + beatPop * 0.7 + bassEffect * gain);
-    groupRef.current.scale.setScalar(baseScale * pulse * zoomFx);
 
-    // Keep the model nearly centred with only a gentle drift + slow spin, plus a
-    // sharp rotational kick on each hit. The old full time-based wander made the
-    // motion look random and drowned the audio reaction.
-    groupRef.current.rotation.x = motionState.groupRotation.x * 0.5 + beat * 0.18;
-    groupRef.current.rotation.y = motionState.groupRotation.y * 0.6 + audioSensitivity.spinSpeed * time * 0.5 + beat * 0.24;
-    groupRef.current.rotation.z = motionState.groupRotation.z * 0.5;
-    groupRef.current.position.set(motionState.groupPosition.x * 0.25, motionState.groupPosition.y * 0.25, motionState.groupPosition.z * 0.25);
+    // Smoothed pulse envelope: snap UP on a beat, ease back DOWN. This makes the
+    // whole model visibly PUMP in time with the kick instead of jittering on every
+    // transient (which read as "random jumping").
+    const targetPulse = Math.min(2.6, 1 + beatPop * 0.95 + bassEffect * gain);
+    const pr = pulseRef.current;
+    pulseRef.current = pr + (targetPulse - pr) * (targetPulse > pr ? 0.5 : 0.12);
+    groupRef.current.scale.setScalar(baseScale * pulseRef.current * zoomFx);
+
+    // Intentional motion, NOT random wander: a slow steady spin + a sharp kick on
+    // each beat, and the model stays CENTRED. The old code drove rotation AND
+    // position from the time-based motionState, so models drifted/jumped around
+    // with no relation to the audio. motionState still feeds per-shape internals.
+    const spin = audioSensitivity.spinSpeed;
+    groupRef.current.rotation.y = time * (0.16 + spin * 0.5) + beat * 0.22;
+    groupRef.current.rotation.x = Math.sin(time * 0.22) * 0.12 + beat * 0.12;
+    groupRef.current.rotation.z = 0;
+    groupRef.current.position.set(0, beat * 0.06, 0); // tiny upward bob on the beat only
   });
   
   // Get the shape component for this family
