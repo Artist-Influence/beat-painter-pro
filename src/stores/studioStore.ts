@@ -469,13 +469,13 @@ export const useStudioStore = create<StudioState>()(persist((set) => ({
   },
 }), {
   name: 'bp_studio_v1',
-  version: 2,
+  version: 3,
   storage: createJSONStorage(() => localStorage),
-  // v2 retuned the reactivity defaults to be less jarring - drop any persisted
-  // reactivity tuning from older sessions so the calmer defaults take effect
-  // (layers, timeline, framing etc. are kept).
+  // v3 retuned reactivity for MAX punch (faster decay, less smoothing). Drop any
+  // persisted reactivity tuning from older sessions so the new crisp defaults take
+  // effect (layers, timeline, framing etc. are kept).
   migrate: (persisted: unknown, version: number) => {
-    if (version < 2 && persisted && typeof persisted === 'object') {
+    if (version < 3 && persisted && typeof persisted === 'object') {
       const p = persisted as Record<string, unknown>;
       delete p.reactivity; delete p.fractalReactivity; delete p.audioSensitivity;
     }

@@ -215,12 +215,12 @@ export function ProceduralVisualizer({ config, audioData, isPlaying = true }: Pr
     // bass swell underneath, so it visibly hits in time with the uploaded track.
     const gain = audioConfig.bass.target === 'expand' ? 0.7 : audioConfig.bass.target === 'scale' ? 0.55 : 0.45;
 
-    // Smoothed pulse envelope: snap UP on a beat, ease back DOWN. This makes the
-    // whole model visibly PUMP in time with the kick instead of jittering on every
-    // transient (which read as "random jumping").
-    const targetPulse = Math.min(2.6, 1 + beatPop * 0.95 + bassEffect * gain);
+    // Pulse envelope: SNAP up on a beat, fall back FAST so consecutive kicks/hats
+    // read as distinct snaps (quick attack + quick decay) rather than a smeared
+    // pulse. Centred, so a fast decay reads as crisp pumping, not random jumping.
+    const targetPulse = Math.min(2.7, 1 + beatPop * 1.05 + bassEffect * gain);
     const pr = pulseRef.current;
-    pulseRef.current = pr + (targetPulse - pr) * (targetPulse > pr ? 0.5 : 0.12);
+    pulseRef.current = pr + (targetPulse - pr) * (targetPulse > pr ? 0.65 : 0.32);
     groupRef.current.scale.setScalar(baseScale * pulseRef.current * zoomFx);
 
     // Intentional motion, NOT random wander: a slow steady spin + a sharp kick on

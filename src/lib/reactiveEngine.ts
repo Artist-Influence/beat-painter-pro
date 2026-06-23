@@ -30,21 +30,21 @@ export interface ReactivityConfig {
   dynamics: number;             // 0..1 - adaptive normalisation strength (0 raw, 1 fully levelled)
 }
 
-// Default tuned toward "lively but not jarring": still snaps to drums, but with a
-// gentler peak/transient dominance, more smoothing and a slightly longer decay so it
-// doesn't strobe. Users can pick the Hard/Punchy presets for the old aggressive feel.
+// Default tuned for MAX reactivity: instant attack + a short punchy decay so every
+// kick/snare/hat reads as a distinct snap and crescendos pop, instead of smearing
+// into a smooth pulse. Calmer feels are available via the Smooth/Balanced presets.
 export const DEFAULT_REACTIVITY: ReactivityConfig = {
   enabled: true,
-  transientSensitivity: 1.15,
-  attackMs: 6,
-  decayMs: 155,
-  bassResponse: 1.15,
-  midResponse: 1.05,
-  highResponse: 1.15,
-  peakBoost: 1.2,
-  smoothing: 0.2,
-  motionIntensity: 1.08,
-  dynamics: 0.66,
+  transientSensitivity: 1.4,
+  attackMs: 3,
+  decayMs: 105,
+  bassResponse: 1.25,
+  midResponse: 1.12,
+  highResponse: 1.22,
+  peakBoost: 1.45,
+  smoothing: 0.1,
+  motionIntensity: 1.28,
+  dynamics: 0.74,
 };
 
 /** Tasteful presets, all biased toward sharp impact. */
