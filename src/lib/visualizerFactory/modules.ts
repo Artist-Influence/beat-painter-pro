@@ -43,7 +43,23 @@ export type ShapeFamily =
   | 'terrain_mesh'      // Noise-displaced landscape
   | 'lissajous_curve'   // 3D Lissajous tube knot
   | 'gyroid_surface'    // Gyroid iso-surface dots
-  | 'tube_lattice';     // Cube-grid strut cage
+  | 'tube_lattice'      // Cube-grid strut cage
+  | 'tetra_cluster'     // Ball of tumbling tetrahedra
+  | 'octa_ring'         // Octahedra orbiting in a band
+  | 'icosa_orbit'       // Core with orbiting icosahedra
+  | 'dodeca_scatter'    // Dodecahedra on an expanding shell
+  | 'torus_stack'       // Tori stacked into a rippling vase
+  | 'gyro_rings'        // Orthogonal gimbal rings
+  | 'cube_spiral'       // Cubes along a vertical helix
+  | 'cone_crown'        // Cones radiating from a hub
+  | 'pillar_array'      // Equalizer grid of bars
+  | 'spike_urchin'      // Dense spikes from a core
+  | 'diamond_totem'     // Stacked octahedra totem
+  | 'ring_ripple'       // Concentric rippling rings
+  | 'atom'              // Nucleus with orbiting electrons
+  | 'blob_cluster'      // Merging sphere cluster
+  | 'star_grid'         // 3D lattice of pulsing stars
+  | 'prism_tower';      // Twisting hexagonal-prism tower
 
 export interface ShapeConfig {
   id: ShapeFamily;
@@ -90,6 +106,23 @@ export const SHAPE_FAMILIES: ShapeConfig[] = [
   { id: 'lissajous_curve', name: 'Lissajous Curve', elementRange: [1, 5], polyBudget: 22000, supportsWireframe: false, defaultScale: 2.5 },
   { id: 'gyroid_surface', name: 'Gyroid Surface', elementRange: [40, 90], polyBudget: 18000, supportsWireframe: false, defaultScale: 2.0 },
   { id: 'tube_lattice', name: 'Tube Lattice', elementRange: [27, 64], polyBudget: 18000, supportsWireframe: true, defaultScale: 2.5 },
+  // expansion pack - all internally bounded to ~1.2r, so a modest defaultScale frames them
+  { id: 'tetra_cluster', name: 'Tetra Cluster', elementRange: [14, 30], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'octa_ring', name: 'Octa Ring', elementRange: [8, 18], polyBudget: 10000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'icosa_orbit', name: 'Icosa Orbit', elementRange: [6, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'dodeca_scatter', name: 'Dodeca Scatter', elementRange: [10, 22], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'torus_stack', name: 'Torus Stack', elementRange: [6, 11], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'gyro_rings', name: 'Gyro Rings', elementRange: [1, 3], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cube_spiral', name: 'Cube Spiral', elementRange: [18, 40], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cone_crown', name: 'Cone Crown', elementRange: [10, 22], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'pillar_array', name: 'Pillar Array', elementRange: [16, 64], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'spike_urchin', name: 'Spike Urchin', elementRange: [40, 120], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'diamond_totem', name: 'Diamond Totem', elementRange: [5, 9], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'ring_ripple', name: 'Ring Ripple', elementRange: [5, 9], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'atom', name: 'Atom', elementRange: [1, 3], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'blob_cluster', name: 'Blob Cluster', elementRange: [7, 16], polyBudget: 16000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'star_grid', name: 'Star Grid', elementRange: [27, 64], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'prism_tower', name: 'Prism Tower', elementRange: [6, 12], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
 ];
 
 // =============================================================================

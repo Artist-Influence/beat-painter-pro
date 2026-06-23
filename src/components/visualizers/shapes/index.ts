@@ -83,6 +83,11 @@ import { TerrainMeshShape } from './TerrainMeshShape';
 import { LissajousShape } from './LissajousShape';
 import { GyroidShape } from './GyroidShape';
 import { TubeLatticeShape } from './TubeLatticeShape';
+// Expansion pack (50+ families): grouped under ./extra
+import { TetraClusterShape, OctaRingShape, IcosaOrbitShape, DodecaScatterShape } from './extra/PolyhedraShapes';
+import { TorusStackShape, GyroRingsShape, CubeSpiralShape, ConeCrownShape } from './extra/RingSpiralShapes';
+import { PillarArrayShape, SpikeUrchinShape, DiamondTotemShape, RingRippleShape } from './extra/BarSpikeShapes';
+import { AtomShape, BlobClusterShape, StarGridShape, PrismTowerShape } from './extra/OrganicMiscShapes';
 
 export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   lattice: LatticeShape,
@@ -120,4 +125,21 @@ export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   lissajous_curve: LissajousShape,
   gyroid_surface: GyroidShape,
   tube_lattice: TubeLatticeShape,
+  // expansion pack
+  tetra_cluster: TetraClusterShape,
+  octa_ring: OctaRingShape,
+  icosa_orbit: IcosaOrbitShape,
+  dodeca_scatter: DodecaScatterShape,
+  torus_stack: TorusStackShape,
+  gyro_rings: GyroRingsShape,
+  cube_spiral: CubeSpiralShape,
+  cone_crown: ConeCrownShape,
+  pillar_array: PillarArrayShape,
+  spike_urchin: SpikeUrchinShape,
+  diamond_totem: DiamondTotemShape,
+  ring_ripple: RingRippleShape,
+  atom: AtomShape,
+  blob_cluster: BlobClusterShape,
+  star_grid: StarGridShape,
+  prism_tower: PrismTowerShape,
 };

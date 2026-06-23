@@ -17,6 +17,10 @@ const ALL_SHAPES: ShapeFamily[] = [
   'klein_bottle', 'spring_coil', 'star_burst', 'cylinder_stack', 'pyramid_array', 'ring_system',
   'particle_galaxy', 'honeycomb', 'crystal_cluster', 'flower_3d', 'sphere_swarm', 'fibonacci_sphere',
   'terrain_mesh', 'lissajous_curve', 'gyroid_surface', 'tube_lattice',
+  // expansion pack
+  'tetra_cluster', 'octa_ring', 'icosa_orbit', 'dodeca_scatter', 'torus_stack', 'gyro_rings',
+  'cube_spiral', 'cone_crown', 'pillar_array', 'spike_urchin', 'diamond_totem', 'ring_ripple',
+  'atom', 'blob_cluster', 'star_grid', 'prism_tower',
 ];
 
 const KNOWN_SHAPES = new Set<string>(ALL_SHAPES);
