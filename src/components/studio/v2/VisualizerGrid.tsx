@@ -5,13 +5,15 @@ import { visualizerRegistry, FRACTAL_META, type VisualizerKey } from '@/componen
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { GeneratorModal } from './GeneratorModal';
 import { usePresetStore } from '@/stores/presetStore';
-import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark, Box, Square, Hexagon, Sparkles, Activity } from 'lucide-react';
+import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark } from 'lucide-react';
 
-// One accurate icon per category, used when a preset's emoji isn't unique in the
-// library (e.g. 80 sand flows all shared the same emoji). The category icon is
-// always correct, and the preset NAME differentiates within a category.
-const CAT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
-  models: Box, shapes: Square, fractal2d: Hexagon, fractal3d: Hexagon, sand: Sparkles, daw: Activity,
+// Deterministic gradient from any id - gives saved/custom/FX tiles a unique-ish
+// colour even without a real palette, so tiles never repeat (and no icons).
+const gradFromString = (s: string): [string, string] => {
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  const hue = Math.abs(h) % 360;
+  const hsl = (hh: number, sat: number, l: number) => `hsl(${((hh % 360) + 360) % 360} ${sat}% ${l}%)`;
+  return [hsl(hue, 55, 48), hsl(hue + 42, 50, 30)];
 };
 
 export function VisualizerGrid() {
@@ -47,8 +49,8 @@ export function VisualizerGrid() {
   const [query, setQuery] = useState('');
 
   const fractalVisualizers = [
-    { id: 'FractalRandom', name: 'Random Fractal', preview: '🎲', description: 'Re-rolls a unique fractal every click' },
-    ...FRACTAL_META.map((f) => ({ id: f.id, name: f.name, preview: f.emoji, description: f.kind })),
+    { id: 'FractalRandom', name: 'Random Fractal', preview: '🎲', description: 'Re-rolls a unique fractal every click', swatch: ['#ff4db8', '#4dd2ff'] as [string, string] },
+    ...FRACTAL_META.map((f) => ({ id: f.id, name: f.name, preview: f.emoji, description: f.kind, swatch: f.swatch })),
   ];
 
   const standardVisualizers = [
@@ -128,18 +130,11 @@ export function VisualizerGrid() {
   const CAP = 120;
   const shown = filtered.slice(0, CAP);
 
-  // Icon policy: a preset's emoji is shown ONLY if it's unique across the whole
-  // library (so it's genuinely distinctive + accurate). Anything shared by 2+
-  // tiles - the parametric bulk (sand/DAW/fractal rolls, repeated model glyphs) -
-  // falls back to its category icon, so we never show a wall of identical emojis.
-  const emojiCount: Record<string, number> = {};
-  for (const v of allVisualizers) emojiCount[v.preview] = (emojiCount[v.preview] || 0) + 1;
-  const tileIcon = (v: Viz, big: boolean) => {
-    if (v.preview && (emojiCount[v.preview] || 0) === 1) {
-      return <span className={big ? 'text-2xl' : 'text-lg'}>{v.preview}</span>;
-    }
-    const Ic = CAT_ICON[catOf(v)] || Star;
-    return <Ic className={big ? 'w-6 h-6 text-text-secondary' : 'w-[18px] h-[18px] text-text-tertiary'} />;
+  // Each tile is its own gradient card - from the preset's real palette, or a
+  // deterministic colour derived from its id. No icons, and no two tiles repeat.
+  const swatchOf = (v: Viz): [string, string] => {
+    const sw = (v as { swatch?: [string, string] }).swatch;
+    return sw && sw[0] && sw[1] ? sw : gradFromString(v.id);
   };
 
   return (
@@ -280,34 +275,32 @@ export function VisualizerGrid() {
                       }
                     }
                   }}
-                  className={`w-full aspect-square rounded-xl border transition-all overflow-hidden ${
+                  style={{ backgroundImage: `linear-gradient(135deg, ${swatchOf(viz)[0]}, ${swatchOf(viz)[1]})` }}
+                  className={`w-full aspect-square rounded-xl border transition-all overflow-hidden relative ${
                     targetSelected === viz.id
-                      ? 'bg-ai-red/[0.10] border-ai-red shadow-glow'
-                      : 'bg-surface-2/40 border-hairline/50 hover:border-ai-red/40 hover:bg-ai-red/[0.06]'
+                      ? 'border-ai-red ring-1 ring-ai-red shadow-glow'
+                      : 'border-hairline/40 hover:border-white/50'
                   }`}
                 >
-                  {/* Default content - unique emoji, else accurate category icon */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 group-hover:opacity-0 transition-opacity duration-200">
-                    <div className="mb-1 h-6 flex items-center justify-center">{tileIcon(viz, false)}</div>
-                    <div className="text-[10px] text-text-tertiary text-center leading-tight">
+                  {/* dark scrim for legibility; lifts on hover so the colour pops */}
+                  <div className="absolute inset-0 bg-black/45 group-hover:bg-black/20 transition-colors duration-200" />
+
+                  {/* name on the gradient */}
+                  <div className="absolute inset-x-0 bottom-0 p-1.5">
+                    <div className="text-[10px] font-medium text-white text-center leading-tight line-clamp-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
                       {viz.name}
                     </div>
                   </div>
 
-                  {/* Hover content - larger icon only */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="transform group-hover:scale-125 transition-transform duration-200">{tileIcon(viz, true)}</div>
-                  </div>
-
                   {/* Active indicator */}
                   {targetSelected === viz.id && (
-                    <div className="absolute top-2 right-2 w-2 h-2 bg-ai-red rounded-full shadow-glow"></div>
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-white rounded-full shadow-glow"></div>
                   )}
 
                   {/* Saved/Custom indicator */}
                   {(viz.isCustom || viz.isPreset) && (
                     <div className="absolute top-1.5 left-1.5">
-                      <Bookmark className="w-3 h-3 text-ai-red fill-ai-red" />
+                      <Bookmark className="w-3 h-3 text-white fill-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
                     </div>
                   )}
                 </motion.button>

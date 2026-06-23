@@ -248,10 +248,12 @@ const DAW_CURATED: DawConfig[] = [
 // 80 browsable bases: 6 curated + 74 deterministic layout x mode x palette combos.
 const DAW_GEN_MODES: WaveMode[] = ['filled', 'mirrored', 'line', 'bars', 'pixel', 'smoothed', 'clipped', 'glitch', 'stereo', 'freqsep', 'granular', 'peakhold'];
 const DAW_GEN_LAYOUTS: DawLayout[] = ['full', 'split', 'stacked', 'minimal'];
-const DAW_GEN_COLORS: [string, string][] = [
-  ['#1fd0ff', '#1f8bff'], ['#22f0ff', '#6a3bff'], ['#19e6ff', '#ff1493'], ['#00f0ff', '#ff8a00'],
-  ['#a4f573', '#19e6ff'], ['#ff73b7', '#7a3bff'], ['#15d8ff', '#15d8ff'], ['#ffd23f', '#ff5e3a'],
-];
+const dhsl = (h: number, s: number, l: number) => {
+  h = (((h % 360) + 360) % 360) / 360; s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => { const k = (n + h * 12) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); };
+  return `#${f(0)}${f(8)}${f(4)}`;
+};
 const DAW_GEN_PLACE = ['left', 'right', 'top', 'background'] as const;
 export const DAW_PRESETS: DawConfig[] = [
   ...DAW_CURATED,
@@ -261,11 +263,11 @@ export const DAW_PRESETS: DawConfig[] = [
   ...Array.from({ length: 74 }, (_, i): DawConfig => {
     const layout = DAW_GEN_LAYOUTS[i % 4];              // period 4
     const mode = DAW_GEN_MODES[Math.floor(i / 4) % 12]; // period 48
-    const col = DAW_GEN_COLORS[Math.floor(i / 48) % DAW_GEN_COLORS.length]; // flips after the 48 layout×mode combos
+    const hue = (i * 49) % 360;                          // spread hues so every preset's colour (and library swatch) is distinct
     return {
       ...BASE, id: `DawGen${i}`, name: `DAW ${i + 7}`, emoji: '🎛️',
       layout, waveMode: mode,
-      waveColor: col[0], waveColor2: col[1], waveHeight: 0.45 + (i % 6) * 0.09, waveThickness: 2 + (i % 3),
+      waveColor: dhsl(hue, 88, 60), waveColor2: dhsl(hue + 36, 80, 50), waveHeight: 0.45 + (i % 6) * 0.09, waveThickness: 2 + (i % 3),
       glow: 5 + (i % 7) * 5, beatPulse: 0.08 + (i % 5) * 0.05,
       spectro: i % 3 === 0, spectroPlacement: DAW_GEN_PLACE[i % DAW_GEN_PLACE.length], spectroPalette: i % 5,
       spectroIntensity: 0.7 + (i % 4) * 0.2, grain: (i % 4) * 0.03,
