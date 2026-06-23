@@ -10,6 +10,7 @@ import { CustomVisualizerLoader } from "@/components/visualizers/CustomVisualize
 import { makeFractalVisualizer } from "@/components/visualizers/FractalVisualizer";
 import { makeProceduralVisualizer } from "@/components/visualizers/ProceduralPreset";
 import { makeCartoonVisualizer } from "@/components/visualizers/Cartoon2DVisualizer";
+import { makeMergeVisualizer } from "@/components/visualizers/MergeVisualizer";
 import { makeSandVisualizer } from "@/components/visualizers/SandFlowVisualizer";
 import { usePresetStore } from "@/stores/presetStore";
 import type { Sand3DConfig } from "@/lib/sand3d/unicornEngine";
@@ -127,6 +128,11 @@ const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({ canvasRef, logoBehi
       }
       if (item?.kind === 'daw') {
         return { Visualizer: makeDawLazy(item.daw), scale: 1, initialCode: undefined, initialConfig: undefined };
+      }
+      if (item?.kind === 'merge') {
+        // both procedural -> 3D scene scale (0.5); shader pairs use full scale
+        const sc = item.a.kind === 'procedural' && item.b.kind === 'procedural' ? 0.5 : 1;
+        return { Visualizer: makeMergeVisualizer(item.a, item.b), scale: sc, initialCode: undefined, initialConfig: undefined };
       }
       return { Visualizer: undefined, scale: 1, initialCode: undefined, initialConfig: undefined };
     }

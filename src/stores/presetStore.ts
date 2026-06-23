@@ -14,7 +14,9 @@ export type PresetItem =
   | { kind: 'cartoon'; cartoon: Cartoon2DConfig; standalone?: boolean }
   | { kind: 'sand'; sand: SandConfig; standalone?: boolean }
   | { kind: 'sand3d'; sand3d: Sand3DConfig; standalone?: boolean }
-  | { kind: 'daw'; daw: DawConfig; standalone?: boolean };
+  | { kind: 'daw'; daw: DawConfig; standalone?: boolean }
+  // merge: two bases rendered together as one visualizer (N bases -> N^2 combos)
+  | { kind: 'merge'; a: PresetItem; b: PresetItem; standalone?: boolean };
 
 export interface SavedPreset {
   id: string;          // registry key, e.g. "preset_1718000000_0"

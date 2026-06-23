@@ -12,10 +12,11 @@ import { useStudioStore } from '@/stores/studioStore';
 import { usePresetStore, type PresetItem } from '@/stores/presetStore';
 import { Switch } from '@/components/ui/switch';
 
-type Kind = 'surprise' | '2d' | '3d' | 'model' | 'cartoon' | 'sand' | 'sand3d' | 'daw';
+type Kind = 'surprise' | 'merge' | '2d' | '3d' | 'model' | 'cartoon' | 'sand' | 'sand3d' | 'daw';
 
 const KINDS: { key: Kind; label: string }[] = [
   { key: 'surprise', label: 'Surprise' },
+  { key: 'merge', label: 'Merge ×2' },
   { key: '2d', label: 'Fractal 2D' },
   { key: '3d', label: 'Fractal 3D' },
   { key: 'model', label: '3D Model' },
@@ -27,6 +28,26 @@ const KINDS: { key: Kind; label: string }[] = [
 
 const familyFor = (k: Kind): FractalFamily | undefined => (k === '2d' ? '2d' : k === '3d' ? '3d' : undefined);
 const isModelKind = (k: Kind) => k === 'model';
+
+// Build a merge of two same-type bases (models, cartoons, or fractals) so N bases
+// yield N^2 combinations. Models compose cleanest, so they're weighted heaviest.
+function rollMergeItem(seed: number, sa: boolean): { item: PresetItem; name: string } {
+  const seed2 = (seed * 2654435761 + 1013904223) >>> 0;
+  const t = ['model', 'model', 'model', 'cartoon', 'fractal'][seed % 5];
+  let a: PresetItem, b: PresetItem;
+  if (t === 'cartoon') {
+    a = { kind: 'cartoon', cartoon: randomCartoon(seed) };
+    b = { kind: 'cartoon', cartoon: randomCartoon(seed2) };
+  } else if (t === 'fractal') {
+    const fam = seed % 2 === 0 ? '2d' : '3d';
+    a = { kind: 'fractal', fractal: randomFractal(seed, fam) };
+    b = { kind: 'fractal', fractal: randomFractal(seed2, fam) };
+  } else {
+    a = { kind: 'procedural', procedural: generateModelConfig(seed, { complex: true }) };
+    b = { kind: 'procedural', procedural: generateModelConfig(seed2, { complex: true }) };
+  }
+  return { item: { kind: 'merge', a, b, standalone: sa }, name: 'Merge' };
+}
 
 interface Props {
   isOpen: boolean;
@@ -65,11 +86,15 @@ export function GeneratorModal({ isOpen, onClose, onSaved }: Props) {
     let next: PresetItem;
     let nm: string;
     const theme = parsePrompt(promptRef.current);
-    // Surprise: pick a wildly different visualizer kind every time
+    // Surprise: pick a wildly different visualizer kind every time (incl. merges)
     const k: Kind = kind === 'surprise'
-      ? (['2d', '3d', 'model', 'cartoon', 'sand', 'sand3d', 'daw'] as Kind[])[Math.floor(Math.random() * 7)]
+      ? (['2d', '3d', 'model', 'cartoon', 'sand', 'sand3d', 'daw', 'merge', 'merge'] as Kind[])[Math.floor(Math.random() * 9)]
       : kind;
-    if (k === 'daw') {
+    if (k === 'merge') {
+      const m = rollMergeItem(seed, sa);
+      next = m.item;
+      nm = theme?.label ?? m.name;
+    } else if (k === 'daw') {
       useStudioStore.getState().resetDawOverride();
       const daw = randomDaw(seed, { label: theme?.label });
       next = { kind: 'daw', daw, standalone: sa };
@@ -118,13 +143,19 @@ export function GeneratorModal({ isOpen, onClose, onSaved }: Props) {
   const handleKind = (k: Kind) => { setKind(k); roll(k); };
   const handleStandalone = (v: boolean) => { setStandalone(v); standaloneRef.current = v; applyStandalone(v); };
 
-  const emojiFor = (it: PresetItem) =>
+  const emojiFor = (it: PresetItem): string =>
     it.kind === 'fractal' ? it.fractal.emoji
     : it.kind === 'cartoon' ? it.cartoon.emoji
     : it.kind === 'sand' ? it.sand.emoji
     : it.kind === 'sand3d' ? it.sand3d.emoji
     : it.kind === 'daw' ? it.daw.emoji
+    : it.kind === 'merge' ? '🔀'
     : modelEmoji(it.procedural);
+  const subShort = (it: PresetItem): string =>
+    it.kind === 'procedural' ? it.procedural.shape.replace(/_/g, ' ')
+    : it.kind === 'cartoon' ? cartoonShapeName(it.cartoon.shape)
+    : it.kind === 'fractal' ? it.fractal.typeName
+    : it.kind;
   const labelFor = (it: PresetItem | null) => {
     if (!it) return '';
     if (it.kind === 'fractal') return `${it.fractal.family.toUpperCase()} · ${it.fractal.typeName.replace(/([A-Z])/g, ' $1').toUpperCase()}`;
@@ -132,6 +163,7 @@ export function GeneratorModal({ isOpen, onClose, onSaved }: Props) {
     if (it.kind === 'sand') return `SAND · ${it.sand.shape.mode.toUpperCase()}`;
     if (it.kind === 'sand3d') return `3D SAND · ${SAND3D_PALETTES[it.sand3d.paletteIndex].name.toUpperCase()}`;
     if (it.kind === 'daw') return `DAW · ${it.daw.layout.toUpperCase()} · ${it.daw.waveMode.toUpperCase()}`;
+    if (it.kind === 'merge') return `MERGE · ${subShort(it.a).toUpperCase()} + ${subShort(it.b).toUpperCase()}`;
     return `3D MODEL · ${it.procedural.shape.replace(/_/g, ' ').toUpperCase()}`;
   };
 

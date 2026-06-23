@@ -42,6 +42,15 @@ if (typeof window !== 'undefined') {
         setPrev({ kind: 'sand3d', sand3d, standalone: false }); setSel('__preview__');
         return { palette: sand3d.paletteIndex, shapeBias: +sand3d.shapeBias.toFixed(2), scatter: +sand3d.scatter.toFixed(2), speed: +sand3d.speed.toFixed(2) };
       };
+      // Merge two bases (kind: 'model' | 'cartoon' | 'fractal3d') into one render.
+      (window as unknown as { __previewMerge?: unknown }).__previewMerge = (seedA: number, seedB: number, kind = 'model') => {
+        const mk = (sd: number) => kind === 'cartoon' ? { kind: 'cartoon', cartoon: c.randomCartoon(sd) }
+          : kind === 'fractal3d' ? { kind: 'fractal', fractal: f.randomFractal(sd, '3d') }
+          : { kind: 'procedural', procedural: m.generateModelConfig(sd, { complex: true }) };
+        const a = mk(seedA), b = mk(seedB);
+        setPrev({ kind: 'merge', a, b, standalone: false }); setSel('__preview__');
+        return { a: (a as any).procedural?.shape ?? (a as any).cartoon?.shape ?? (a as any).fractal?.typeName, b: (b as any).procedural?.shape ?? (b as any).cartoon?.shape ?? (b as any).fractal?.typeName };
+      };
     });
   }
 }
