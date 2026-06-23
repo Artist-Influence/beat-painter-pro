@@ -36,6 +36,8 @@ export function VisualizerGrid() {
   const savedPresets = usePresetStore((s) => s.presets);
   const removePreset = usePresetStore((s) => s.removePreset);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [category, setCategory] = useState<string>('all');
+  const [query, setQuery] = useState('');
 
   const fractalVisualizers = [
     { id: 'FractalRandom', name: 'Random Fractal', preview: '🎲', description: 'Re-rolls a unique fractal every click' },
@@ -89,6 +91,36 @@ export function VisualizerGrid() {
       customId: cv.id,
     })),
   ];
+
+  // ---- categorize + filter the library ----
+  type Viz = (typeof allVisualizers)[number];
+  const catOf = (v: Viz): string => {
+    const d = v.description || '';
+    if (/MODEL/.test(d)) return 'models';
+    if (/CARTOON/.test(d)) return 'shapes';
+    if (/ESCAPE|RAYMARCH|FRACTAL/.test(d) || v.id === 'FractalRandom') return 'fractals';
+    if (/SAND|PARTICLE/.test(d)) return 'sand';
+    if (/DAW|WAVEFORM/.test(d)) return 'daw';
+    return 'effects';
+  };
+  const isSaved = (v: Viz) => !!(v.isPreset || v.isCustom);
+  const CHIPS = [
+    { key: 'all', label: 'All' }, { key: 'saved', label: '★ Saved' },
+    { key: 'models', label: '3D Models' }, { key: 'shapes', label: '2D Shapes' },
+    { key: 'fractals', label: 'Fractals' }, { key: 'sand', label: 'Sand' },
+    { key: 'daw', label: 'DAW' }, { key: 'effects', label: 'FX' },
+  ];
+  const counts: Record<string, number> = { all: allVisualizers.length, saved: allVisualizers.filter(isSaved).length };
+  for (const c of CHIPS) if (c.key !== 'all' && c.key !== 'saved') counts[c.key] = allVisualizers.filter((v) => catOf(v) === c.key).length;
+  const q = query.trim().toLowerCase();
+  const filtered = allVisualizers.filter((v) => {
+    if (category === 'saved') { if (!isSaved(v)) return false; }
+    else if (category !== 'all') { if (catOf(v) !== category) return false; }
+    if (q && !`${v.name} ${v.description}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const CAP = 120;
+  const shown = filtered.slice(0, CAP);
 
   return (
     <>
@@ -177,19 +209,43 @@ export function VisualizerGrid() {
             <p className="text-eyebrow">library</p>
             <div className="flex items-center gap-2">
               <h3 className="text-text-primary text-sm font-semibold">Visualizers</h3>
-              {customVisualizers.length > 0 && (
-                <span className="chip">{customVisualizers.length} saved</span>
-              )}
+              <span className="chip">{allVisualizers.length}</span>
             </div>
           </div>
-        
+
+          {/* search */}
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${allVisualizers.length} templates...`}
+            className="w-full h-8 px-2.5 rounded-md bg-surface-2/40 border border-hairline/50 text-xs text-text-primary placeholder:text-text-tertiary focus:border-ai-red/50 outline-none"
+          />
+
+          {/* category chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {CHIPS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setCategory(c.key)}
+                className={`pill text-xs ${category === c.key ? 'pill-active' : ''}`}
+              >
+                {c.label}
+                <span className="ml-1 opacity-50 font-mono-num">{counts[c.key] ?? 0}</span>
+              </button>
+            ))}
+          </div>
+
+          {shown.length === 0 && (
+            <p className="text-caption py-6 text-center">No templates match. Try another category or clear the search.</p>
+          )}
+
           <div className="grid grid-cols-3 gap-2">
-            {allVisualizers.map((viz, index) => (
+            {shown.map((viz, index) => (
               <motion.div
                 key={viz.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
+                transition={{ delay: Math.min(index, 10) * 0.015 }}
                 className="group relative"
               >
                 <motion.button
@@ -282,6 +338,12 @@ export function VisualizerGrid() {
               </motion.div>
             ))}
           </div>
+
+          {filtered.length > CAP && (
+            <p className="text-caption text-center pt-1">
+              Showing {CAP} of {filtered.length} - search or pick a category to narrow.
+            </p>
+          )}
         </div>
       </div>
 

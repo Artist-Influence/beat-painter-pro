@@ -5,7 +5,7 @@
  */
 import { generateVisualizer, getShapeConfig } from '@/lib/visualizerFactory';
 import type { VisualizerConfig } from '@/lib/visualizerFactory/config';
-import type { ShapeFamily } from '@/lib/visualizerFactory/modules';
+import { SHAPE_FAMILIES, type ShapeFamily } from '@/lib/visualizerFactory/modules';
 
 // Every shape that has a wired renderer (SHAPE_COMPONENTS). The factory already
 // picks across all of these; we list them so prompt-driven themes can target any
@@ -110,3 +110,20 @@ export function generateModelConfig(seed: number, opts: ModelOpts = {}): Visuali
     },
   };
 }
+
+/**
+ * 80 browsable MODEL bases - one complex roll per shape family. Console is
+ * silenced during the one-time generation so the factory's per-roll log doesn't
+ * spam 80 lines at module load. (Configs carry no id; the registry assigns
+ * `Model{i}` in components/visualizers/index.ts.)
+ */
+export const MODEL_PRESETS: VisualizerConfig[] = (() => {
+  const log = console.log;
+  console.log = () => {};
+  try {
+    return SHAPE_FAMILIES.map((sh, i) =>
+      generateModelConfig(70011 + i * 9176 + i * i * 31, { complex: true, shapes: [sh.id] }));
+  } finally {
+    console.log = log;
+  }
+})();

@@ -18,6 +18,8 @@ import { makeFractalVisualizer, RandomFractalVisualizer } from "./FractalVisuali
 import { FRACTAL_PRESETS } from "@/lib/fractal/engine";
 import { makeCartoonVisualizer } from "./Cartoon2DVisualizer";
 import { CARTOON_PRESETS } from "@/lib/cartoon/cartoonEngine";
+import { makeProceduralVisualizer, modelName, modelEmoji } from "./ProceduralPreset";
+import { MODEL_PRESETS } from "@/lib/modelGenerator";
 import { lazy } from "react";
 import { makeSandVisualizer } from "./SandFlowVisualizer";
 import { SAND_PRESETS } from "@/lib/sand/sandEngine";
@@ -53,15 +55,20 @@ const sand3dComponents = Object.fromEntries(
 const dawComponents = Object.fromEntries(
   DAW_PRESETS.map((c) => [c.id, makeDawLazy(c)]),
 );
+// 80 browsable 3D model bases (configs carry no id; assign Model{i} here).
+const modelComponents = Object.fromEntries(
+  MODEL_PRESETS.map((c, i) => [`Model${i}`, makeProceduralVisualizer(c)]),
+);
 export const FRACTAL_META = [
-  ...DAW_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: 'DAW · WAVEFORM' })),
+  ...MODEL_PRESETS.map((c, i) => ({ id: `Model${i}`, name: modelName(c), emoji: modelEmoji(c), kind: '3D · MODEL' })),
+  ...CARTOON_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: '2D · CARTOON' })),
   ...FRACTAL_PRESETS.map((c) => ({
     id: c.id, name: c.name, emoji: c.emoji,
     kind: c.family === '3d' ? '3D · RAYMARCH' : '2D · ESCAPE',
   })),
   ...SAND3D_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: 'PARTICLE · 3D SAND' })),
   ...SAND_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: 'PARTICLE · SAND' })),
-  ...CARTOON_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: '2D · CARTOON' })),
+  ...DAW_PRESETS.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, kind: 'DAW · WAVEFORM' })),
 ];
 
 // Normalized scales for consistent sizing across all visualizers
@@ -87,6 +94,8 @@ export const VISUALIZER_SCALES: Record<string, number> = {
   ...Object.fromEntries(SAND_PRESETS.map((c) => [c.id, 1])),
   ...Object.fromEntries(SAND3D_PRESETS.map((c) => [c.id, 1])),
   ...Object.fromEntries(DAW_PRESETS.map((c) => [c.id, 1])),
+  // 3D models render in-scene; match the procedural preview scale
+  ...Object.fromEntries(MODEL_PRESETS.map((_, i) => [`Model${i}`, 0.5])),
   FractalRandom: 1,
 };
 
@@ -96,6 +105,7 @@ export const visualizerRegistry = {
   ...sandComponents,
   ...sand3dComponents,
   ...dawComponents,
+  ...modelComponents,
   FractalRandom: RandomFractalVisualizer,
   DiamondOrbVisualizer,
   AlienMembraneVisualizer,

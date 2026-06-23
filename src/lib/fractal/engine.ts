@@ -663,4 +663,11 @@ export const FRACTAL_PRESETS: FractalConfig[] = [
     palette: PALETTES.gold, camDist: 8.5, camSpeed: 0.1, glow: 1.0,
     react: { ...defaultReact(), glow: 0.9, rotation: 0.4 },
   }),
+  // 69 generated rolls (alternating 2D/3D) -> 80 browsable fractal bases
+  ...Array.from({ length: 69 }, (_, i): FractalConfig => {
+    const fam: FractalFamily = i % 2 === 0 ? '2d' : '3d';
+    const f = randomFractal(9001 + i * 131 + i * i * 7, fam);
+    const nm = (f.typeName || 'fractal').replace(/([A-Z0-9]+)/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
+    return { ...f, id: `FractalGen${i}`, name: nm, emoji: fam === '3d' ? '🔮' : '🌀' };
+  }),
 ];

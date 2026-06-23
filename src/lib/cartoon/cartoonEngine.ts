@@ -319,9 +319,7 @@ export function composeScene(promptRaw: string, seed: number, label?: string): C
   };
 }
 
-export const CARTOON_PRESETS: Cartoon2DConfig[] = [
-  randomCartoon(101, { shape: 1, hueBase: 48, label: 'Star Pop' }),
-  randomCartoon(202, { shape: 2, hueBase: 340, label: 'Heart Bounce' }),
-  randomCartoon(303, { shape: 0, hueBase: 150, label: 'Slime Blob' }),
-  randomCartoon(404, { shape: 5, hueBase: 290, label: 'Flower Spin' }),
-].map((c, i) => ({ ...c, id: `FractalCartoon${i}` }));
+// 80 browsable CARTOON bases - one per shape, with spread hues.
+export const CARTOON_PRESETS: Cartoon2DConfig[] = SHAPE_META.map((m, i) =>
+  randomCartoon(101 + i * 137 + i * i * 7, { shape: m.id, hueBase: (i * 47) % 360, label: m.name }),
+).map((c, i) => ({ ...c, id: `FractalCartoon${i}` }));
