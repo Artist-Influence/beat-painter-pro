@@ -401,6 +401,47 @@ float sdLatinCross(vec2 p){
 float sdLollipop(vec2 p){
   return min(sdCircle(p - vec2(0.0,0.18), 0.3), sdBox(p - vec2(0.0,-0.3), vec2(0.04,0.26)));
 }
+float sdCactus(vec2 p){
+  float trunk = min(sdBox(p - vec2(0.0,-0.05), vec2(0.13,0.4)), sdCircle(p - vec2(0.0,0.35), 0.13));
+  float la = min(sdBox(p - vec2(-0.24,0.0), vec2(0.12,0.08)), sdBox(p - vec2(-0.32,0.12), vec2(0.08,0.18)));
+  float ra = min(sdBox(p - vec2(0.24,-0.08), vec2(0.12,0.08)), sdBox(p - vec2(0.32,0.04), vec2(0.08,0.18)));
+  return min(trunk, min(la, ra));
+}
+float sdMug(vec2 p){
+  float body = sdBox(p - vec2(-0.06,0.0), vec2(0.28,0.34));
+  float handle = max(abs(length(p - vec2(0.28,0.0)) - 0.18) - 0.05, -(p.x - 0.2));
+  return min(body, handle);
+}
+float sdBowtie(vec2 p){
+  float l = sdEquiTriangle(rot(1.5708) * (p - vec2(-0.22,0.0)) * 1.2, 0.4);
+  float r = sdEquiTriangle(rot(-1.5708) * (p - vec2(0.22,0.0)) * 1.2, 0.4);
+  return min(min(l, r), sdBox(p, vec2(0.06,0.11)));
+}
+float sdGiftBox(vec2 p){
+  float box = sdBox(p - vec2(0.0,-0.06), vec2(0.36,0.3));
+  float bow = min(sdCircle(p - vec2(-0.12,0.3), 0.1), sdCircle(p - vec2(0.12,0.3), 0.1));
+  return min(box, bow);
+}
+float sdPennant(vec2 p){
+  float flag = sdEquiTriangle(rot(-1.5708) * (p - vec2(-0.04,0.18)) * 0.9, 0.5);
+  return min(flag, sdBox(p - vec2(-0.34,0.0), vec2(0.03,0.46)));
+}
+float sdHourglass(vec2 p){
+  float t = sdEquiTriangle(vec2(p.x, -p.y + 0.28) * 1.0, 0.42);
+  float b = sdEquiTriangle(vec2(p.x, p.y + 0.28) * 1.0, 0.42);
+  return min(t, b);
+}
+float sdBookmark(vec2 p){
+  return max(sdBox(p - vec2(0.0,0.06), vec2(0.22,0.42)), -sdEquiTriangle(vec2(p.x, p.y + 0.36) * 1.4, 0.26));
+}
+float sdPinwheel(vec2 p){
+  float d = 1e3;
+  for (int i = 0; i < 4; i++){
+    vec2 q = rot(float(i) * 1.5708) * p;
+    d = min(d, sdEquiTriangle((q - vec2(0.2,0.1)) * 1.3 * rot(0.6), 0.3));
+  }
+  return min(d, sdCircle(p, 0.08));
+}
 
 float shapeSDF(vec2 p, float t){
   if (uShape==0){ float a=atan(p.y,p.x); return length(p) - 0.5*(1.0+0.13*sin(a*6.0+t*1.5)); }
@@ -476,6 +517,14 @@ float shapeSDF(vec2 p, float t){
   if (uShape==159) return sdTrophy(p);                        // trophy
   if (uShape==160) return sdLatinCross(p);                    // cross
   if (uShape==161) return sdLollipop(p);                      // lollipop
+  if (uShape==162) return sdCactus(p);                        // cactus
+  if (uShape==163) return sdMug(p);                           // mug
+  if (uShape==164) return sdBowtie(p);                        // bowtie
+  if (uShape==165) return sdGiftBox(p);                       // gift box
+  if (uShape==166) return sdPennant(p);                       // pennant
+  if (uShape==167) return sdHourglass(p);                     // hourglass
+  if (uShape==168) return sdBookmark(p);                      // bookmark
+  if (uShape==169) return sdPinwheel(p);                      // pinwheel
   return sdCircle(p, 0.5);
 }
 

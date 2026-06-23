@@ -84,6 +84,14 @@ export const SHAPE_META: { id: number; name: string; emoji: string }[] = [
   { id: 159, name: 'Trophy', emoji: '🏆' },
   { id: 160, name: 'Cross', emoji: '✝️' },
   { id: 161, name: 'Lollipop', emoji: '🍭' },
+  { id: 162, name: 'Cactus', emoji: '🌵' },
+  { id: 163, name: 'Mug', emoji: '☕' },
+  { id: 164, name: 'Bowtie', emoji: '🎀' },
+  { id: 165, name: 'Gift Box', emoji: '🎁' },
+  { id: 166, name: 'Pennant', emoji: '🚩' },
+  { id: 167, name: 'Hourglass', emoji: '⏳' },
+  { id: 168, name: 'Bookmark', emoji: '🔖' },
+  { id: 169, name: 'Pinwheel', emoji: '🌬️' },
 ];
 // pool of single-shape ids eligible for random rolls
 export const CARTOON_SHAPE_IDS: number[] = SHAPE_META.map((s) => s.id);

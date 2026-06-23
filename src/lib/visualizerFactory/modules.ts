@@ -79,7 +79,16 @@ export type ShapeFamily =
   | 'bloom_cones'       // Cones opening like a bloom
   | 'orbit_swarm'       // Cubes whirling on tilted orbits
   | 'gem_cluster'       // Faceted icosahedra gemstone
-  | 'cylinder_fan';     // Cylinders fanning from a hub
+  | 'cylinder_fan'      // Cylinders fanning from a hub
+  | 'cube_ring'         // Cubes orbiting a ring
+  | 'cone_ring'         // Upright cones in a circle
+  | 'pillar_ring'       // Standing slabs (stonehenge)
+  | 'sphere_cage'       // Spheres on a cube cage
+  | 'plate_stack'       // Fanned disc stack
+  | 'orbit_rings'       // Tilted flat rings
+  | 'tetra_tower'       // Stacked flipped tetrahedra
+  | 'wedge_fan'         // Wedges fanning radially
+  | 'burst_lines';      // Thin rods radiating out
 
 export interface ShapeConfig {
   id: ShapeFamily;
@@ -164,6 +173,16 @@ export const SHAPE_FAMILIES: ShapeConfig[] = [
   { id: 'orbit_swarm', name: 'Orbit Swarm', elementRange: [24, 80], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
   { id: 'gem_cluster', name: 'Gem Cluster', elementRange: [8, 18], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
   { id: 'cylinder_fan', name: 'Cylinder Fan', elementRange: [6, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  // expansion pack III - all internally bounded to ~1.2r
+  { id: 'cube_ring', name: 'Cube Ring', elementRange: [8, 16], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'cone_ring', name: 'Cone Ring', elementRange: [8, 16], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'pillar_ring', name: 'Pillar Ring', elementRange: [7, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'sphere_cage', name: 'Sphere Cage', elementRange: [20, 20], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'plate_stack', name: 'Plate Stack', elementRange: [7, 13], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'orbit_rings', name: 'Orbit Rings', elementRange: [9, 18], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'tetra_tower', name: 'Tetra Tower', elementRange: [6, 11], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'wedge_fan', name: 'Wedge Fan', elementRange: [6, 14], polyBudget: 12000, supportsWireframe: false, defaultScale: 2.0 },
+  { id: 'burst_lines', name: 'Burst Lines', elementRange: [30, 90], polyBudget: 14000, supportsWireframe: false, defaultScale: 2.0 },
 ];
 
 // =============================================================================

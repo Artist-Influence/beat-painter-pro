@@ -93,6 +93,8 @@ import { TetraRingShape, PyramidRingShape, CapsuleRingShape, TorusChainShape, Sp
 import { ConeSpiralShape, BoxTowerShape, SphereHelixShape, HelixDoubleShape, CrystalSpireShape } from './extra/TowerFamily2';
 import { DiamondGridShape, CubeCrossShape, NestedShellsShape, RingTunnelShape, FanBladesShape } from './extra/GridFamily2';
 import { StarTetraShape, BloomConesShape, OrbitSwarmShape, GemClusterShape, CylinderFanShape } from './extra/ClusterFamily2';
+// Expansion pack III (-> 80)
+import { CubeRingShape, ConeRingShape, PillarRingShape, SphereCageShape, PlateStackShape, OrbitRingsShape, TetraTowerShape, WedgeFanShape, BurstLinesShape } from './extra/ExtraFamily3';
 
 export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   lattice: LatticeShape,
@@ -168,4 +170,14 @@ export const SHAPE_COMPONENTS: Record<ShapeFamily, FC<ShapeProps>> = {
   orbit_swarm: OrbitSwarmShape,
   gem_cluster: GemClusterShape,
   cylinder_fan: CylinderFanShape,
+  // expansion pack III
+  cube_ring: CubeRingShape,
+  cone_ring: ConeRingShape,
+  pillar_ring: PillarRingShape,
+  sphere_cage: SphereCageShape,
+  plate_stack: PlateStackShape,
+  orbit_rings: OrbitRingsShape,
+  tetra_tower: TetraTowerShape,
+  wedge_fan: WedgeFanShape,
+  burst_lines: BurstLinesShape,
 };
