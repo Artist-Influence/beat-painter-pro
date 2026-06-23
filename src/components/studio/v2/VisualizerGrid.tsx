@@ -5,7 +5,14 @@ import { visualizerRegistry, FRACTAL_META, type VisualizerKey } from '@/componen
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { GeneratorModal } from './GeneratorModal';
 import { usePresetStore } from '@/stores/presetStore';
-import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark } from 'lucide-react';
+import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark, Box, Square, Hexagon, Sparkles, Activity, Zap } from 'lucide-react';
+
+// One accurate icon per category, used when a preset's emoji isn't unique in the
+// library (e.g. 80 sand flows all shared the same emoji). The category icon is
+// always correct, and the preset NAME differentiates within a category.
+const CAT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  models: Box, shapes: Square, fractals: Hexagon, sand: Sparkles, daw: Activity, effects: Zap,
+};
 
 export function VisualizerGrid() {
   const { selected, setSelected, setBackgroundTransparent, activeLayerId, layers, setLayerSelected, addLayer, removeLayer, setActiveLayerId, timeline, updateClip } = useStudioStore();
@@ -121,6 +128,20 @@ export function VisualizerGrid() {
   });
   const CAP = 120;
   const shown = filtered.slice(0, CAP);
+
+  // Icon policy: a preset's emoji is shown ONLY if it's unique across the whole
+  // library (so it's genuinely distinctive + accurate). Anything shared by 2+
+  // tiles - the parametric bulk (sand/DAW/fractal rolls, repeated model glyphs) -
+  // falls back to its category icon, so we never show a wall of identical emojis.
+  const emojiCount: Record<string, number> = {};
+  for (const v of allVisualizers) emojiCount[v.preview] = (emojiCount[v.preview] || 0) + 1;
+  const tileIcon = (v: Viz, big: boolean) => {
+    if (v.preview && (emojiCount[v.preview] || 0) === 1) {
+      return <span className={big ? 'text-2xl' : 'text-lg'}>{v.preview}</span>;
+    }
+    const Ic = CAT_ICON[catOf(v)] || Star;
+    return <Ic className={big ? 'w-6 h-6 text-text-secondary' : 'w-[18px] h-[18px] text-text-tertiary'} />;
+  };
 
   return (
     <>
@@ -266,17 +287,17 @@ export function VisualizerGrid() {
                       : 'bg-surface-2/40 border-hairline/50 hover:border-ai-red/40 hover:bg-ai-red/[0.06]'
                   }`}
                 >
-                  {/* Default content */}
+                  {/* Default content - unique emoji, else accurate category icon */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-2 group-hover:opacity-0 transition-opacity duration-200">
-                    <div className="text-lg mb-1">{viz.preview}</div>
+                    <div className="mb-1 h-6 flex items-center justify-center">{tileIcon(viz, false)}</div>
                     <div className="text-[10px] text-text-tertiary text-center leading-tight">
                       {viz.name}
                     </div>
                   </div>
 
-                  {/* Hover content - larger emoji only */}
+                  {/* Hover content - larger icon only */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="text-2xl transform group-hover:scale-125 transition-transform duration-200">{viz.preview}</div>
+                    <div className="transform group-hover:scale-125 transition-transform duration-200">{tileIcon(viz, true)}</div>
                   </div>
 
                   {/* Active indicator */}
