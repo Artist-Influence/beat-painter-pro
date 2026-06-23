@@ -212,6 +212,101 @@ float subjSDF(vec2 p, int k){
   if (k==5){ float a=atan(p.y,p.x); return length(p)-(0.34+0.18*abs(sin(a*2.5))); }
   return sdCircle(p,0.45);
 }
+
+// ---- extra single-shape SDFs (ids 120+) ----
+float sdStarN(vec2 p, float r, float n, float m){
+  float an = 3.141593/n;
+  float en = 3.141593/m;
+  vec2 acs = vec2(cos(an), sin(an));
+  vec2 ecs = vec2(cos(en), sin(en));
+  float bn = mod(atan(p.x, p.y), 2.0*an) - an;
+  p = length(p) * vec2(cos(bn), abs(sin(bn)));
+  p -= r * acs;
+  p += ecs * clamp(-dot(p, ecs), 0.0, r*acs.y/ecs.y);
+  return length(p) * sign(p.x);
+}
+float sdHexagram2(vec2 p){
+  return min(sdEquiTriangle(p, 0.52), sdEquiTriangle(rot(3.141593)*p, 0.52));
+}
+float sdCrown(vec2 p){
+  float base = sdBox(p - vec2(0.0,-0.18), vec2(0.42,0.14));
+  float c0 = sdEquiTriangle((p - vec2(0.0,0.12))*1.1, 0.34);
+  float c1 = sdEquiTriangle((p - vec2(-0.32,0.04))*1.3, 0.26);
+  float c2 = sdEquiTriangle((p - vec2(0.32,0.04))*1.3, 0.26);
+  return min(base, min(c0, min(c1, c2)));
+}
+float sdButterfly(vec2 p){
+  vec2 q = vec2(abs(p.x), p.y);
+  float w = sdCircle(q - vec2(0.26,0.12), 0.24);
+  w = min(w, sdCircle(q - vec2(0.22,-0.16), 0.19));
+  return min(w, sdBox(p, vec2(0.035,0.34)));
+}
+float sdFlowerN(vec2 p, float n){
+  float a = atan(p.y, p.x);
+  return length(p) - (0.32 + 0.16*cos(a*n));
+}
+float sdApple(vec2 p){
+  float d = max(sdCircle(p - vec2(0.0,-0.04), 0.42), -sdCircle(p - vec2(0.0,0.42), 0.16));
+  return min(d, sdBox(p - vec2(0.05,0.4), vec2(0.03,0.12)));
+}
+float sdGhost(vec2 p){
+  float d = min(sdCircle(p - vec2(0.0,0.14), 0.36), sdBox(p - vec2(0.0,-0.18), vec2(0.36,0.32)));
+  for (int i=0;i<5;i++){ float fi=float(i)-2.0;
+    d = max(d, -sdCircle(p - vec2(fi*0.18,-0.48), 0.1));
+  }
+  return d;
+}
+float sdBalloon(vec2 p){
+  return min(sdCircle(p - vec2(0.0,0.1), 0.34), sdEquiTriangle((p - vec2(0.0,-0.26))*rot(3.141593)*2.4, 0.16));
+}
+float sdPlanet(vec2 p){
+  vec2 rp = rot(0.42)*p;
+  return min(sdCircle(p, 0.3), abs(length(rp*vec2(1.0,2.7)) - 0.5) - 0.035);
+}
+float sdComet(vec2 p){
+  float head = sdCircle(p - vec2(0.22,0.18), 0.2);
+  float t = sdSegment(p, vec2(0.22,0.18), vec2(-0.34,-0.3)) - mix(0.16,0.01, clamp((p.x+0.34)/0.6,0.0,1.0));
+  return min(head, t);
+}
+float sdMushroom(vec2 p){
+  float cap = max(sdCircle(p - vec2(0.0,0.06), 0.4), -(p.y-0.06));
+  return min(cap, sdBox(p - vec2(0.0,-0.26), vec2(0.15,0.26)));
+}
+float sdBell(vec2 p){
+  float body = max(sdCircle(p - vec2(0.0,0.08), 0.36), -(p.y+0.28));
+  return min(body, min(sdBox(p - vec2(0.0,-0.26), vec2(0.4,0.07)), sdCircle(p - vec2(0.0,-0.38), 0.07)));
+}
+float sdPaw(vec2 p){
+  float t = sdCircle(p - vec2(-0.26,0.1), 0.12);
+  t = min(t, sdCircle(p - vec2(-0.09,0.24), 0.12));
+  t = min(t, sdCircle(p - vec2(0.09,0.24), 0.12));
+  t = min(t, sdCircle(p - vec2(0.26,0.1), 0.12));
+  return min(sdCircle(p - vec2(0.0,-0.12), 0.25), t);
+}
+float sdClover(vec2 p){
+  float d = sdCircle(p - vec2(0.0,0.22), 0.2);
+  d = min(d, sdCircle(p - vec2(0.0,-0.22), 0.2));
+  d = min(d, sdCircle(p - vec2(0.22,0.0), 0.2));
+  return min(d, sdCircle(p - vec2(-0.22,0.0), 0.2));
+}
+float sdSpade(vec2 p){
+  return min(sdHeart(vec2(p.x,-p.y)*1.5)*0.66, sdEquiTriangle((p - vec2(0.0,-0.32))*rot(3.141593)*1.9, 0.2));
+}
+float sdClub(vec2 p){
+  float d = sdCircle(p - vec2(0.0,0.18), 0.19);
+  d = min(d, sdCircle(p - vec2(-0.2,-0.04), 0.19));
+  d = min(d, sdCircle(p - vec2(0.2,-0.04), 0.19));
+  return min(d, sdEquiTriangle((p - vec2(0.0,-0.32))*rot(3.141593)*1.9, 0.2));
+}
+float sdInfinity(vec2 p){
+  float a = abs(length(p - vec2(-0.22,0.0)) - 0.2) - 0.055;
+  float b = abs(length(p - vec2(0.22,0.0)) - 0.2) - 0.055;
+  return min(a, b);
+}
+float sdEyeShape(vec2 p){
+  return min(sdVesica(p.yx, 0.62, 0.34), sdCircle(p, 0.15));
+}
+
 float shapeSDF(vec2 p, float t){
   if (uShape==0){ float a=atan(p.y,p.x); return length(p) - 0.5*(1.0+0.13*sin(a*6.0+t*1.5)); }
   if (uShape==1) return sdStar5(p, 0.5, 0.42);
@@ -244,6 +339,28 @@ float shapeSDF(vec2 p, float t){
   if (uShape==117) return sdSunRays(p, t);                       // sun with rays
   if (uShape==118) return sdSnowflake(p);                        // snowflake
   if (uShape==119) return sdCatFace(p);                          // cat face
+  if (uShape==120) return sdStarN(p, 0.5, 4.0, 2.3);          // 4-point sparkle
+  if (uShape==121) return sdStarN(p, 0.5, 6.0, 3.0);          // 6-point star
+  if (uShape==122) return sdStarN(p, 0.5, 8.0, 3.2);          // 8-point star
+  if (uShape==123) return sdHexagram2(p);                     // hexagram
+  if (uShape==124) return sdCrown(p);                         // crown
+  if (uShape==125) return sdButterfly(p);                     // butterfly
+  if (uShape==126) return sdFlowerN(p, 6.0);                  // 6-petal flower
+  if (uShape==127) return sdFlowerN(p, 8.0);                  // 8-petal flower
+  if (uShape==128) return sdApple(p);                         // apple
+  if (uShape==129) return sdGhost(p);                         // ghost
+  if (uShape==130) return sdBalloon(p);                       // balloon
+  if (uShape==131) return sdPlanet(p);                        // ringed planet
+  if (uShape==132) return sdComet(p);                         // comet
+  if (uShape==133) return sdMushroom(p);                      // mushroom
+  if (uShape==134) return sdBell(p);                          // bell
+  if (uShape==135) return sdPaw(p);                           // paw print
+  if (uShape==136) return sdClover(p);                        // clover
+  if (uShape==137) return sdSpade(p);                         // spade
+  if (uShape==138) return sdClub(p);                          // club
+  if (uShape==139) return sdInfinity(p);                      // infinity
+  if (uShape==140) return sdEyeShape(p);                      // eye
+  if (uShape==141) return sdStarN(p, 0.5, 12.0, 2.6);         // starburst
   return sdCircle(p, 0.5);
 }
 
