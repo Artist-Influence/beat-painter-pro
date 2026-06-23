@@ -86,24 +86,8 @@ export function DawControls() {
       <div>
         <p className="text-eyebrow">daw / waveform</p>
         <h3 className="text-text-primary text-sm font-semibold">Waveform Studio</h3>
-        <p className="text-caption mt-1">Pick a preset, upload a track - or tweak everything below.</p>
+        <p className="text-caption mt-1">Browse 80 presets in the Library panel - or tweak this one below.</p>
       </div>
-
-      {/* Presets first */}
-      <div className="space-y-2">
-        <p className="text-eyebrow">presets</p>
-        <div className="grid grid-cols-2 gap-2">
-          {DAW_PRESETS.map((p) => (
-            <button key={p.id} onClick={() => { resetOverride(); setSelected(p.id as any); }}
-              className={`rounded-lg border p-2 text-left transition-all ${selected === p.id ? 'border-ai-red bg-ai-red/[0.08]' : 'border-hairline/50 bg-surface-2/40 hover:border-ai-red/40'}`}>
-              <span className="text-base mr-1">{p.emoji}</span>
-              <span className="text-xs text-text-secondary">{p.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="hairline" />
 
       {/* Layout & mode */}
       <div className="space-y-2"><p className="text-eyebrow">layout</p><Pills value={cfg.layout} options={LAYOUTS} onChange={(v) => set({ layout: v })} /></div>

@@ -5,13 +5,13 @@ import { visualizerRegistry, FRACTAL_META, type VisualizerKey } from '@/componen
 import { useCustomVisualizers } from '@/hooks/useCustomVisualizers';
 import { GeneratorModal } from './GeneratorModal';
 import { usePresetStore } from '@/stores/presetStore';
-import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark, Box, Square, Hexagon, Sparkles, Activity, Zap } from 'lucide-react';
+import { Wand2, Trash2, Crown, Star, RefreshCcw, Bookmark, Box, Square, Hexagon, Sparkles, Activity } from 'lucide-react';
 
 // One accurate icon per category, used when a preset's emoji isn't unique in the
 // library (e.g. 80 sand flows all shared the same emoji). The category icon is
 // always correct, and the preset NAME differentiates within a category.
 const CAT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
-  models: Box, shapes: Square, fractals: Hexagon, sand: Sparkles, daw: Activity, effects: Zap,
+  models: Box, shapes: Square, fractal2d: Hexagon, fractal3d: Hexagon, sand: Sparkles, daw: Activity,
 };
 
 export function VisualizerGrid() {
@@ -103,19 +103,18 @@ export function VisualizerGrid() {
   type Viz = (typeof allVisualizers)[number];
   const catOf = (v: Viz): string => {
     const d = v.description || '';
-    if (/MODEL/.test(d)) return 'models';
     if (/CARTOON/.test(d)) return 'shapes';
-    if (/ESCAPE|RAYMARCH|FRACTAL/.test(d) || v.id === 'FractalRandom') return 'fractals';
+    if (/ESCAPE|RAYMARCH|FRACTAL/.test(d) || v.id === 'FractalRandom') return /3D|RAYMARCH/.test(d) ? 'fractal3d' : 'fractal2d';
     if (/SAND|PARTICLE/.test(d)) return 'sand';
     if (/DAW|WAVEFORM/.test(d)) return 'daw';
-    return 'effects';
+    return 'models'; // 3D models + FX collapsed into one category
   };
   const isSaved = (v: Viz) => !!(v.isPreset || v.isCustom);
   const CHIPS = [
     { key: 'all', label: 'All' }, { key: 'saved', label: '★ Saved' },
     { key: 'models', label: '3D Models' }, { key: 'shapes', label: '2D Shapes' },
-    { key: 'fractals', label: 'Fractals' }, { key: 'sand', label: 'Sand' },
-    { key: 'daw', label: 'DAW' }, { key: 'effects', label: 'FX' },
+    { key: 'fractal2d', label: 'Fractal 2D' }, { key: 'fractal3d', label: 'Fractal 3D' },
+    { key: 'sand', label: 'Sand' }, { key: 'daw', label: 'DAW' },
   ];
   const counts: Record<string, number> = { all: allVisualizers.length, saved: allVisualizers.filter(isSaved).length };
   for (const c of CHIPS) if (c.key !== 'all' && c.key !== 'saved') counts[c.key] = allVisualizers.filter((v) => catOf(v) === c.key).length;
