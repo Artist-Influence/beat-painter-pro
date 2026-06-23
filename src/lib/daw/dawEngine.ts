@@ -255,13 +255,18 @@ const DAW_GEN_COLORS: [string, string][] = [
 const DAW_GEN_PLACE = ['left', 'right', 'top', 'background'] as const;
 export const DAW_PRESETS: DawConfig[] = [
   ...DAW_CURATED,
+  // Mixed-radix mapping so each preset's (layout, mode, color) triple is UNIQUE
+  // across all 74 - the old (i%4, (i+1)%12, i%8) cycled every 24 and produced
+  // near-identical presets (DAW 7 == DAW 31 == DAW 55).
   ...Array.from({ length: 74 }, (_, i): DawConfig => {
-    const col = DAW_GEN_COLORS[i % DAW_GEN_COLORS.length];
+    const layout = DAW_GEN_LAYOUTS[i % 4];              // period 4
+    const mode = DAW_GEN_MODES[Math.floor(i / 4) % 12]; // period 48
+    const col = DAW_GEN_COLORS[Math.floor(i / 48) % DAW_GEN_COLORS.length]; // flips after the 48 layout×mode combos
     return {
       ...BASE, id: `DawGen${i}`, name: `DAW ${i + 7}`, emoji: '🎛️',
-      layout: DAW_GEN_LAYOUTS[i % DAW_GEN_LAYOUTS.length], waveMode: DAW_GEN_MODES[(i + 1) % DAW_GEN_MODES.length],
-      waveColor: col[0], waveColor2: col[1], waveHeight: 0.5 + (i % 5) * 0.1, waveThickness: 2 + (i % 3),
-      glow: 5 + (i % 6) * 5, beatPulse: 0.08 + (i % 5) * 0.05,
+      layout, waveMode: mode,
+      waveColor: col[0], waveColor2: col[1], waveHeight: 0.45 + (i % 6) * 0.09, waveThickness: 2 + (i % 3),
+      glow: 5 + (i % 7) * 5, beatPulse: 0.08 + (i % 5) * 0.05,
       spectro: i % 3 === 0, spectroPlacement: DAW_GEN_PLACE[i % DAW_GEN_PLACE.length], spectroPalette: i % 5,
       spectroIntensity: 0.7 + (i % 4) * 0.2, grain: (i % 4) * 0.03,
     };
