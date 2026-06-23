@@ -47,6 +47,20 @@ export const TYPE_2D = {
   simonbrot: 24,
   celticMandelbrot: 25,
   burningShipPower3: 26,
+  // --- batch to 40 (ids stable) ---
+  multibrot6: 27,
+  multibrot7: 28,
+  multibrot8: 29,
+  burningShipPower4: 30,
+  burningShipPower5: 31,
+  celticPower3: 32,
+  celticPower4: 33,
+  heartPower3: 34,
+  buffalo: 35,
+  buffaloPower3: 36,
+  tricornPower4: 37,
+  mandelbarPower5: 38,
+  perpBurningPower3: 39,
 } as const;
 export const TYPE_3D = {
   mandelbulb: 0,
@@ -72,6 +86,25 @@ export const TYPE_3D = {
   kleinianGroup: 19,
   mausoleumBox: 20,
   coral: 21,
+  // --- batch to 40 (ids stable): baked-param variants + new IFS ---
+  mandelbulbP4: 22,
+  mandelbulbP8: 23,
+  mandelbulbP3: 24,
+  mandelbulbP6: 25,
+  juliaBulbP5: 26,
+  juliaBulbP7: 27,
+  amazingBoxHi: 28,
+  amazingBoxLo: 29,
+  tgladHi: 30,
+  aboxModB: 31,
+  kaliBoxB: 32,
+  mausoleumB: 33,
+  hybridBulbBoxB: 34,
+  quaternionB: 35,
+  sierpinskiTet: 36,
+  kifs: 37,
+  mengerRound: 38,
+  octaFlake: 39,
 } as const;
 
 /* --------------------------------------------------------------------------
@@ -110,6 +143,12 @@ export const FIT_3D: Record<string, number> = {
   pseudoKleinian: 8.0,
   kleinianGroup: 8.5,
   coral: 7.5,
+  // batch-to-40 variants
+  mandelbulbP4: 4.6, mandelbulbP8: 4.6, mandelbulbP3: 4.6, mandelbulbP6: 4.6,
+  juliaBulbP5: 4.6, juliaBulbP7: 4.6, quaternionB: 4.4,
+  amazingBoxHi: 3.4, amazingBoxLo: 3.4, tgladHi: 3.6, aboxModB: 3.4,
+  kaliBoxB: 3.4, mausoleumB: 3.8, hybridBulbBoxB: 3.8,
+  sierpinskiTet: 4.8, kifs: 5.0, mengerRound: 5.6, octaFlake: 5.0,
 };
 const fit3d = (typeName: string): number => FIT_3D[typeName] ?? 5.0;
 
@@ -120,6 +159,7 @@ const fit3d = (typeName: string): number => FIT_3D[typeName] ?? 5.0;
 // as a compact form the camera can actually frame.
 const BOX_FOLD = new Set<string>([
   'mandelbox', 'amazingBox', 'aboxMod', 'tgladBox', 'kaliBox', 'mausoleumBox', 'hybridBulbBox',
+  'amazingBoxHi', 'amazingBoxLo', 'tgladHi', 'aboxModB', 'kaliBoxB', 'mausoleumB', 'hybridBulbBoxB',
 ]);
 // Genuinely space-filling tilings (use fract()/inversion to repeat forever). There
 // is no "whole form" to frame - they are immersive detail views by nature.
@@ -135,6 +175,10 @@ const WELL_FRAMED_3D: string[] = [
   'mandelbulb', 'juliaBulb', 'quaternion', 'quaternionCubic',
   'sierpinski', 'sierpinskiOctahedron', 'octahedralIFS',
   'menger', 'mandelbrotCylinder', 'mandelbox',
+  // batch-to-40 framable variants
+  'mandelbulbP4', 'mandelbulbP8', 'mandelbulbP3', 'mandelbulbP6',
+  'juliaBulbP5', 'juliaBulbP7', 'quaternionB',
+  'sierpinskiTet', 'mengerRound', 'octaFlake', 'kifs',
 ];
 
 export type Fractal2DType = keyof typeof TYPE_2D;

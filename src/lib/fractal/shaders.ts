@@ -425,6 +425,32 @@ void main() {
     } else if (uType == 26) {              // burning ship power 3
       vec2 za = abs(z);
       z = cpow(za, 3.0) + c;
+    } else if (uType == 27) {              // multibrot power 6
+      z = cpow(z, 6.0) + c;
+    } else if (uType == 28) {              // multibrot power 7
+      z = cpow(z, 7.0) + c;
+    } else if (uType == 29) {              // multibrot power 8
+      z = cpow(z, 8.0) + c;
+    } else if (uType == 30) {              // burning ship power 4
+      z = cpow(abs(z), 4.0) + c;
+    } else if (uType == 31) {              // burning ship power 5
+      z = cpow(abs(z), 5.0) + c;
+    } else if (uType == 32) {              // celtic power 3
+      vec2 z3 = cpow(z, 3.0); z = vec2(abs(z3.x), z3.y) + c;
+    } else if (uType == 33) {              // celtic power 4
+      vec2 z4 = cpow(z, 4.0); z = vec2(abs(z4.x), z4.y) + c;
+    } else if (uType == 34) {              // heart power 3 (|Im| fold)
+      vec2 z3 = cpow(z, 3.0); z = vec2(z3.x, abs(z3.y)) + c;
+    } else if (uType == 35) {              // buffalo (double-abs square)
+      vec2 z2 = cmul(z, z); z = vec2(abs(z2.x), abs(z2.y)) + c;
+    } else if (uType == 36) {              // buffalo power 3
+      vec2 z3 = cpow(z, 3.0); z = vec2(abs(z3.x), abs(z3.y)) + c;
+    } else if (uType == 37) {              // tricorn power 4
+      vec2 zc = vec2(z.x, -z.y); z = cpow(zc, 4.0) + c;
+    } else if (uType == 38) {              // mandelbar power 5
+      vec2 zc = vec2(z.x, -z.y); z = cpow(zc, 5.0) + c;
+    } else if (uType == 39) {              // perpendicular burning ship power 3
+      z = cpow(vec2(abs(z.x), -abs(z.y)), 3.0) + c;
     } else {                               // mandelbrot / julia
       z = cmul(z, z) + c;
     }
@@ -851,6 +877,65 @@ float deCoral(vec3 p) {
   return 0.4 * length(z) / dr;
 }
 
+// Sierpinski tetrahedron IFS (classic 4-vertex fold) - distinct from the octa.
+float deSierpinskiTet(vec3 z) {
+  float scale = 2.0;
+  vec3 a1 = vec3(1.0, 1.0, 1.0), a2 = vec3(-1.0, -1.0, 1.0), a3 = vec3(1.0, -1.0, -1.0), a4 = vec3(-1.0, 1.0, -1.0);
+  for (int i = 0; i < 12; i++) {
+    z = uRotMat * z;
+    vec3 c = a1; float d = length(z - a1);
+    float t = length(z - a2); if (t < d) { c = a2; d = t; }
+    t = length(z - a3); if (t < d) { c = a3; d = t; }
+    t = length(z - a4); if (t < d) { c = a4; d = t; }
+    z = z * scale - c * (scale - 1.0);
+  }
+  return length(z) * pow(scale, -float(12));
+}
+// Kaleidoscopic IFS - abs fold + sort + rotate + scale toward an offset.
+float deKIFS(vec3 z) {
+  float scale = 1.8; float dr = 1.0;
+  vec3 off = vec3(0.92, 0.18, 0.55);
+  for (int i = 0; i < 14; i++) {
+    z = abs(z);
+    if (z.x < z.y) z.xy = z.yx;
+    if (z.x < z.z) z.xz = z.zx;
+    if (z.y < z.z) z.yz = z.zy;
+    z = uRotMat * z;
+    z = z * scale - off * (scale - 1.0);
+    dr *= scale;
+  }
+  return length(z) / abs(dr);
+}
+// Rounded Menger sponge - menger subtraction with a softened bounding box.
+float deMengerR(vec3 p) {
+  // no julia mix -> always bounded by the box; rotation gives the variety
+  float d = sdBox(p, vec3(1.15)) - 0.05;
+  float s = 1.0;
+  for (int i = 0; i < 4; i++) {
+    p = uRotMat * p;
+    vec3 a = mod(p * s, 2.0) - 1.0;
+    s *= 3.0;
+    vec3 r = 1.0 - 3.0 * abs(a);            // proper menger carve (no outer abs)
+    float da = max(r.x, r.y), db = max(r.y, r.z), dc = max(r.z, r.x);
+    float c = (min(da, min(db, dc)) - 1.0) / s;
+    d = max(d, c);
+  }
+  return d;
+}
+// Octahedron flake - octahedral fold at a larger scale (sparser than octa IFS).
+float deOctaFlake(vec3 z) {
+  float scale = 2.2; vec3 v = normalize(vec3(1.0, 1.0, 1.0));
+  for (int i = 0; i < 10; i++) {
+    z = uRotMat * z;
+    z = abs(z);
+    if (z.x + z.y < 0.0) z.xy = -z.yx;
+    if (z.x + z.z < 0.0) z.xz = -z.zx;
+    if (z.y + z.z < 0.0) z.yz = -z.zy;
+    z = z * scale - v * (scale - 1.0);
+  }
+  return length(z) * pow(scale, -float(10));
+}
+
 float map(vec3 p) {
   if (uType == 0) return deMandelbulb(p, uPower + uBeat * uRMorph * 3.2);
   if (uType == 1) return deMandelbox(p, -1.5 - uMid * uRMorph * 1.3);
@@ -873,6 +958,25 @@ float map(vec3 p) {
   if (uType == 19) return deKleinianGroup(p);
   if (uType == 20) return deMausoleum(p, 2.0 + uMid * uRMorph * 0.5);
   if (uType == 21) return deCoral(p);
+  // --- appended bulb/box/quaternion variants (distinct baked params) ---
+  if (uType == 22) return deMandelbulb(p, 4.0 + uBeat * uRMorph * 2.0);
+  if (uType == 23) return deMandelbulb(p, 8.0 + uBeat * uRMorph * 2.0);
+  if (uType == 24) return deMandelbulb(p, 3.0 + uBeat * uRMorph * 1.5);
+  if (uType == 25) return deMandelbulb(p, 6.0 + uBeat * uRMorph * 2.0);
+  if (uType == 26) return deJuliaBulb(p, 5.0 + uBeat * uRMorph * 2.0);
+  if (uType == 27) return deJuliaBulb(p, 7.0 + uBeat * uRMorph * 2.0);
+  if (uType == 28) return deAmazingBox(p, 2.12 + uMid * uRMorph * 0.3);
+  if (uType == 29) return deAmazingBox(p, 1.8 + uMid * uRMorph * 0.3);
+  if (uType == 30) return deTglad(p, 2.4 + uMid * uRMorph * 0.4);
+  if (uType == 31) return deAboxMod(p, -2.1 - uMid * uRMorph * 0.8);
+  if (uType == 32) return deKaliBox(p, -2.0 - uMid * uRMorph * 0.8);
+  if (uType == 33) return deMausoleum(p, 2.4 + uMid * uRMorph * 0.4);
+  if (uType == 34) return deHybridBulbBox(p, 4.0 + uBeat * uRMorph * 1.5);
+  if (uType == 35) return deQuaternion(p, vec2(-0.2, 0.65) + uBeat * uRMorph * 0.15);
+  if (uType == 36) return deSierpinskiTet(p);
+  if (uType == 37) return deKIFS(p);
+  if (uType == 38) return deMengerR(p);
+  if (uType == 39) return deOctaFlake(p);
   return deSierpinski(p);
 }
 

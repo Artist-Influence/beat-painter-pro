@@ -32,6 +32,14 @@ if (typeof window !== 'undefined') {
         setPrev({ kind: 'fractal', fractal, standalone: false }); setSel('__preview__');
         return { type: fractal.typeName, camDist: fractal.camDist };
       };
+      // Force a specific fractal type id (for verifying new types render). e2e only.
+      (window as unknown as { __previewFractalType?: unknown }).__previewFractalType = (family: '2d' | '3d', typeId: number, camDist?: number) => {
+        const fractal = f.randomFractal(family === '3d' ? typeId * 101 + 7 : typeId * 53 + 3, family) as { type: number; typeName: string; camDist: number };
+        fractal.type = typeId;
+        if (camDist) fractal.camDist = camDist;
+        setPrev({ kind: 'fractal', fractal: fractal as never, standalone: false }); setSel('__preview__');
+        return { type: fractal.type, camDist: fractal.camDist };
+      };
       (window as unknown as { __previewCartoon?: unknown }).__previewCartoon = (seed: number, shape?: number) => {
         const cartoon = c.randomCartoon(seed, shape !== undefined ? { shape } : {});
         setPrev({ kind: 'cartoon', cartoon, standalone: false }); setSel('__preview__');
